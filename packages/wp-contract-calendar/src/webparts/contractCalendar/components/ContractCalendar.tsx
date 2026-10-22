@@ -1,7 +1,6 @@
 import * as React from 'react';
 import styles from './ContractCalendar.module.scss';
 import type { IContractCalendarProps } from './IContractCalendarProps';
-import { escape } from '@microsoft/sp-lodash-subset';
 import { orpheusTokens } from '@orpheussystems/shared-ui/tokens';
 import { DataContext } from '../DataContext';
 
@@ -22,7 +21,7 @@ const ContractCalendar: React.FC<IContractCalendarProps> = () => {
 
   return (
     <section className={styles.contractCalendar}>
-      <div style={{ color: orpheusTokens.amber }}>{escape(summary)}</div>
+      <div style={{ color: orpheusTokens.amber }}>{summary}</div>
     </section>
   );
 };

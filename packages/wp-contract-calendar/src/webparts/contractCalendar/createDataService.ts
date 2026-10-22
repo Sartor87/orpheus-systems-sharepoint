@@ -33,3 +33,10 @@ export function createDataService(
     currentUser
   );
 }
+
+const REBUILD_PATHS = ['useLocalData', 'demoUserId', 'contractsListId', 'entriesListId', 'holidaysListId'];
+
+/** Only data-source properties require a new service; display properties just re-render. */
+export function requiresServiceRebuild(propertyPath: string): boolean {
+  return REBUILD_PATHS.indexOf(propertyPath) !== -1;
+}

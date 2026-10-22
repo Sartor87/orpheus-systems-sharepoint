@@ -6,7 +6,8 @@ jest.mock('@orpheussystems/shared-core/sharepoint', () => ({
 
 import { LocalDataService } from '@orpheussystems/shared-core';
 import { SharePointDataService } from '@orpheussystems/shared-core/sharepoint';
-import { createDataService } from '../createDataService';
+import { createDataService, requiresServiceRebuild } from '../createDataService';
+import { filterListsByContentType } from '../filterListsByContentType';
 import type { IContractCalendarWebPartProps } from '../IContractCalendarWebPartProps';
 
 const base: IContractCalendarWebPartProps = {
@@ -49,5 +50,41 @@ describe('createDataService', () => {
     expect(() => createDataService(
       { ...base, useLocalData: false, contractsListId: 'c', entriesListId: 'e', holidaysListId: 'h' }, sp, false))
       .toThrow('Current user is not resolved');
+  });
+});
+
+describe('shipped default (no useLocalData, not debug, no lists)', () => {
+  it('throws the configuration message', () => {
+    expect(() => createDataService(base, undefined, false))
+      .toThrow('Select the Contracts, Calendar entries and Holidays lists in the property pane');
+  });
+});
+
+describe('requiresServiceRebuild', () => {
+  it.each(['useLocalData', 'demoUserId', 'contractsListId', 'entriesListId', 'holidaysListId'])('%s rebuilds', p => {
+    expect(requiresServiceRebuild(p)).toBe(true);
+  });
+  it.each(['monthsToShow', 'blockWeekends', 'approvingOrgLabel', 'serviceProviderLabel'])('%s does not', p => {
+    expect(requiresServiceRebuild(p)).toBe(false);
+  });
+});
+
+describe('filterListsByContentType', () => {
+  const all = [{ Id: 'A', Title: 'a' }, { Id: 'b', Title: 'b' }, { Id: 'C', Title: 'c' }];
+  it('keeps only lists with the content type, ignoring id case', () => {
+    const cts = [
+      { Id: 'a', Title: 'a', ContentTypes: [{ Name: 'Orpheus Contract' }] },
+      { Id: 'b', Title: 'b', ContentTypes: [{ Name: 'Item' }] },
+      { Id: 'c', Title: 'c', ContentTypes: [{ Name: 'Orpheus Contract' }] }
+    ];
+    expect(filterListsByContentType(all, cts, 'Orpheus Contract').map(l => l.Id)).toEqual(['A', 'C']);
+  });
+  it('excludes lists without ContentTypes', () => {
+    const cts = [{ Id: 'a', Title: 'a' } as never, { Id: 'b', Title: 'b', ContentTypes: [{ Name: 'X' }] }];
+    expect(filterListsByContentType(all, cts, 'X').map(l => l.Id)).toEqual(['b']);
+  });
+  it('returns all lists unchanged when listsWithCts is empty or undefined', () => {
+    expect(filterListsByContentType(all, [], 'X')).toBe(all);
+    expect(filterListsByContentType(all, undefined, 'X')).toBe(all);
   });
 });
