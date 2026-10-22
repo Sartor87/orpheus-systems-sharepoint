@@ -1,29 +1,447 @@
+// Day colours from the original planner mock.
+$onSiteFull: #1976D2;
+$onSiteHalf: #9C27B0;
+$offSiteFull: #4CAF50;
+$offSiteHalf: #FFC107;
+$blocked: #FFCCCC;
+$blockedText: #990000;
+$over: #C26700;
+$ok: #2E9E5B;
+
+$surface: #FFFFFF;
+$surfaceText: #1F2329;
+$surfaceMuted: #6B7280;
+$surfaceBorder: #E3E6EA;
+
 .contractCalendar {
-  overflow: hidden;
-  padding: 1em;
-  color: "[theme:bodyText, default: #323130]";
-  color: var(--bodyText);
-}
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: $surfaceText;
+  -webkit-font-smoothing: antialiased;
 
-.welcome {
-  text-align: center;
-}
-
-.welcomeImage {
-  width: 100%;
-  max-width: 420px;
-}
-
-.links {
-  a {
-    text-decoration: none;
-    color: "[theme:link, default:#03787c]";
-    color: var(--link); // note: CSS Custom Properties support is limited to modern browsers only
-
-    &:hover {
-      text-decoration: underline;
-      color: "[theme:linkHovered, default: #014446]";
-      color: var(--linkHovered); // note: CSS Custom Properties support is limited to modern browsers only
-    }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
   }
+}
+
+// ---------- Header card (Orpheus dark palette) ----------
+
+.headerCard {
+  background: var(--orpheus-bg);
+  color: var(--orpheus-text);
+  border: 1px solid var(--orpheus-border);
+  border-top: 3px solid var(--orpheus-amber);
+  border-radius: 14px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 8px 24px rgba(11, 13, 16, 0.18);
+}
+
+.headerTop {
+  display: grid;
+  grid-template-columns: 1fr minmax(220px, 320px);
+  gap: 16px 24px;
+  align-items: end;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.brandMark {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 2px solid var(--orpheus-amber);
+  background:
+    linear-gradient(135deg, transparent 0 46%, var(--orpheus-amber) 46% 54%, transparent 54%),
+    var(--orpheus-bg-elevated);
+}
+
+.wordmark {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--orpheus-text);
+}
+
+.wordmarkAccent {
+  color: var(--orpheus-amber);
+}
+
+.subtitle {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--orpheus-text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viewOnly {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--orpheus-amber);
+  border: 1px solid var(--orpheus-amber);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.contractPicker {
+  min-width: 0;
+}
+
+.metaStrip {
+  grid-column: 1 / -1;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  border: 1px solid var(--orpheus-border);
+  border-radius: 10px;
+  background: var(--orpheus-bg-elevated);
+  overflow: hidden;
+}
+
+.metaItem {
+  padding: 10px 14px;
+  border-right: 1px solid var(--orpheus-border);
+  min-width: 0;
+
+  &:last-child {
+    border-right: 0;
+  }
+
+  dt {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--orpheus-text-muted);
+    margin: 0 0 4px;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--orpheus-text);
+    overflow-wrap: anywhere;
+  }
+}
+
+.headerBottom {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr);
+  gap: 20px 24px;
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.choiceLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+  line-height: 20px;
+  font-size: 14px;
+}
+
+.swatch {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  position: relative;
+}
+
+.swatchHalf::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  top: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--orpheus-text);
+}
+
+.legendNote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--orpheus-text-muted);
+}
+
+// ---------- Stats ----------
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.statCard {
+  background: var(--orpheus-bg-elevated);
+  border: 1px solid var(--orpheus-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.statHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--orpheus-text-muted);
+}
+
+.statDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.statUsed {
+  font-size: 14px;
+
+  strong {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--orpheus-text);
+  }
+}
+
+.statTarget {
+  color: var(--orpheus-text-muted);
+}
+
+.meter {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--orpheus-border);
+  overflow: hidden;
+}
+
+.meterFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.25s ease;
+}
+
+.statBreakdown {
+  font-size: 12px;
+  color: var(--orpheus-text-muted);
+}
+
+.remainingOk,
+.remainingOver {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.remainingOk {
+  color: #5FD08C; // green, lifted for the dark card
+}
+
+.remainingOver {
+  color: $over;
+}
+
+// ---------- Messages ----------
+
+.message {
+  border-radius: 8px;
+}
+
+.loading {
+  padding: 32px 0;
+}
+
+// ---------- Months ----------
+
+.months {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.month {
+  background: $surface;
+  border: 1px solid $surfaceBorder;
+  border-radius: 12px;
+  padding: 14px 14px 16px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+}
+
+.monthTitle {
+  margin: 0 0 10px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: $surfaceText;
+}
+
+.monthYear {
+  color: $surfaceMuted;
+  font-weight: 400;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: $surfaceMuted;
+  padding: 4px 0 6px;
+}
+
+.weekend {
+  color: #A0A6AE;
+}
+
+.pad {
+  aspect-ratio: 1;
+}
+
+.day {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 1px solid $surfaceBorder;
+  border-radius: 7px;
+  background: $surface;
+  color: $surfaceText;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+
+  &:hover:not([aria-disabled='true']) {
+    transform: scale(1.06);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+    z-index: 1;
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #E0A83A;
+    outline-offset: 2px;
+    z-index: 2;
+  }
+}
+
+.dayNumber {
+  line-height: 1;
+}
+
+.onSiteFull,
+.onSiteHalf,
+.offSiteFull,
+.offSiteHalf {
+  font-weight: 700;
+  border-color: transparent;
+}
+
+.onSiteFull {
+  background: $onSiteFull;
+  color: #FFFFFF;
+}
+
+.onSiteHalf {
+  background: $onSiteHalf;
+  color: #FFFFFF;
+}
+
+.offSiteFull {
+  background: $offSiteFull;
+  color: #FFFFFF;
+}
+
+.offSiteHalf {
+  background: $offSiteHalf;
+  color: #1F2329;
+}
+
+.halfBadge {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.blocked {
+  background: $blocked;
+  color: $blockedText;
+  border-color: transparent;
+  font-weight: 600;
+  cursor: not-allowed;
+}
+
+.outside {
+  background: #F4F5F7;
+  color: #B6BBC2;
+  border-color: transparent;
+  cursor: not-allowed;
+}
+
+.readOnlyDay {
+  cursor: default;
+}
+
+.today {
+  box-shadow: inset 0 0 0 2px #E0A83A;
 }
