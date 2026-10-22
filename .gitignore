@@ -10,3 +10,4 @@ sharepoint/solution
 *.log
 .superpowers/
 *.tsbuildinfo
+docs/superpowers/
