@@ -1,0 +1,7 @@
+{
+  "name": "@orpheussystems/agent-contract-calendar",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Declarative Copilot agent (Microsoft 365 Agents Toolkit project) for the Contract Calendar MCP server"
+}

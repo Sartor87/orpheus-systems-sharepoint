@@ -1,0 +1,31 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.8/schema.json",
+  "version": "v1.8",
+  "name": "Contract Calendar${{APP_NAME_SUFFIX}}",
+  "description": "Helps contractors book contract days, and contract managers and HR review contracts, vendors and used and remaining days.",
+  "instructions": "$[file('instruction.txt')]",
+  "conversation_starters": [
+    {
+      "title": "My contracts",
+      "text": "Which contracts do I have and how many days are left?"
+    },
+    {
+      "title": "Book days",
+      "text": "Book 3.11 to 7.11 for me"
+    },
+    {
+      "title": "Vendors of a manager",
+      "text": "Show the contracts of my vendors"
+    },
+    {
+      "title": "Remove days",
+      "text": "Remove my booked days on 12.11"
+    }
+  ],
+  "actions": [
+    {
+      "id": "contractCalendarPlugin",
+      "file": "ai-plugin.json"
+    }
+  ]
+}

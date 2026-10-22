@@ -1,0 +1,125 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/plugin/v2.4/schema.json",
+  "schema_version": "v2.4",
+  "namespace": "contractcalendar",
+  "name_for_human": "Contract Calendar",
+  "description_for_human": "Book and review contract days.",
+  "description_for_model": "Contract Calendar tools. Use them to list the signed-in user's contracts, show a contract's calendar, list contracts grouped by vendor (managers and HR), look up public holidays, and book or remove contract days (contractors only).",
+  "functions": [
+    { "name": "get_my_contracts", "description": "Lists the contracts you can see, with roles, today's date and used/remaining days. Start here to learn who you are and which contract ids to use. Closed contracts are excluded." },
+    { "name": "list_contracts", "description": "Lists contracts grouped by vendor (the company the contractor works through), with used and remaining days. For contract managers and HR only. Optionally filter by vendor or manager; if several managers match, returns needs_choice." },
+    { "name": "get_calendar", "description": "Returns the calendar entries, holidays and totals of one contract for a date range (max 366 days). Dates are yyyy-MM-dd." },
+    {
+      "name": "book_days",
+      "description": "Books calendar days for the signed-in contractor. Dates are yyyy-MM-dd. Weekends and holidays are skipped and reported. If a day falls in two overlapping contracts and contractId is missing, returns needs_choice; ask the user, never guess. Only contractors can book.",
+      "capabilities": { "security_info": { "data_handling": ["ResourceStateUpdate"] } }
+    },
+    {
+      "name": "remove_days",
+      "description": "Removes the signed-in contractor's booked days from one of their own active contracts. Dates are yyyy-MM-dd. Days with no entry are reported as notFound. Only contractors can remove days.",
+      "capabilities": { "security_info": { "data_handling": ["ResourceStateUpdate"] } }
+    },
+    { "name": "get_holidays", "description": "Returns public holidays for a country (2-letter code, e.g. BG) in a date range (max 366 days). Dates are yyyy-MM-dd." }
+  ],
+  "runtimes": [
+    {
+      "type": "RemoteMCPServer",
+      "auth": {
+        "type": "OAuthPluginVault",
+        "reference_id": "${{MCP_AUTH_REFERENCE_ID}}"
+      },
+      "run_for_functions": [
+        "get_my_contracts",
+        "list_contracts",
+        "get_calendar",
+        "book_days",
+        "remove_days",
+        "get_holidays"
+      ],
+      "spec": {
+        "url": "${{MCP_SERVER_URL}}",
+        "mcp_tool_description": {
+          "tools": [
+            {
+              "name": "get_my_contracts",
+              "description": "Lists the contracts you can see, with roles, today's date and used/remaining days.",
+              "inputSchema": { "type": "object", "properties": {} }
+            },
+            {
+              "name": "list_contracts",
+              "description": "Lists contracts grouped by vendor, with used and remaining days. Managers and HR only.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "vendor": { "type": "string", "description": "Vendor (company) name, case-insensitive" },
+                  "manager": { "type": "string", "description": "Manager name or email" },
+                  "includeClosed": { "type": "boolean" }
+                }
+              }
+            },
+            {
+              "name": "get_calendar",
+              "description": "Returns the calendar entries, holidays and totals of one contract for a date range (max 366 days).",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "contractId": { "type": "integer", "minimum": 1 },
+                  "from": { "type": "string", "description": "yyyy-MM-dd" },
+                  "to": { "type": "string", "description": "yyyy-MM-dd" }
+                },
+                "required": ["contractId", "from", "to"]
+              }
+            },
+            {
+              "name": "book_days",
+              "description": "Books calendar days for the signed-in contractor. Weekends and holidays are skipped and reported.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "from": { "type": "string", "description": "yyyy-MM-dd" },
+                  "to": { "type": "string", "description": "yyyy-MM-dd" },
+                  "type": { "type": "string", "enum": ["OnSiteFull", "OnSiteHalf", "OffSiteFull", "OffSiteHalf"], "description": "Defaults to OnSiteFull" },
+                  "contractId": { "type": "integer", "minimum": 1 },
+                  "note": { "type": "string", "maxLength": 255 }
+                },
+                "required": ["from", "to"]
+              }
+            },
+            {
+              "name": "remove_days",
+              "description": "Removes the signed-in contractor's booked days from one of their own active contracts.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "from": { "type": "string", "description": "yyyy-MM-dd" },
+                  "to": { "type": "string", "description": "yyyy-MM-dd" },
+                  "contractId": { "type": "integer", "minimum": 1 }
+                },
+                "required": ["from", "to", "contractId"]
+              }
+            },
+            {
+              "name": "get_holidays",
+              "description": "Returns public holidays for a country (2-letter code, e.g. BG) in a date range (max 366 days).",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "country": { "type": "string", "minLength": 2, "maxLength": 2 },
+                  "from": { "type": "string", "description": "yyyy-MM-dd" },
+                  "to": { "type": "string", "description": "yyyy-MM-dd" }
+                },
+                "required": ["country", "from", "to"]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "capabilities": {
+    "conversation_starters": [
+      { "title": "My contracts", "text": "Which contracts do I have and how many days are left?" },
+      { "title": "Book days", "text": "Book 3.11 to 7.11 for me" }
+    ]
+  }
+}

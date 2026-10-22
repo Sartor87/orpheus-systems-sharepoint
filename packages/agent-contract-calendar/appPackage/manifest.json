@@ -1,0 +1,35 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.30/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.30",
+  "version": "0.1.0",
+  "id": "${{TEAMS_APP_ID}}",
+  "developer": {
+    "name": "Orpheus Systems",
+    "websiteUrl": "https://orpheussystems.com/",
+    "privacyUrl": "https://orpheussystems.com/privacy",
+    "termsOfUseUrl": "https://orpheussystems.com/terms"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "Contract Calendar${{APP_NAME_SUFFIX}}",
+    "full": "Contract Calendar agent"
+  },
+  "description": {
+    "short": "Book and review contract days in Copilot.",
+    "full": "Contract Calendar lets contractors book and remove contract days in plain language, and lets contract managers and HR review contracts, vendors and used and remaining days. It works on the same data as the Contract Calendar web part and respects your role."
+  },
+  "accentColor": "#1F4E79",
+  "copilotAgents": {
+    "declarativeAgents": [
+      {
+        "id": "contractCalendarAgent",
+        "file": "declarativeAgent.json"
+      }
+    ]
+  },
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": []
+}
