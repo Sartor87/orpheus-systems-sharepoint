@@ -388,9 +388,12 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
     if (!shown) { return; }
     const items = pending.deferred.map(d => ({ contractId: shown.id, date: d, type: selectionType, current: entries[d] }));
     if (chosen) {
-      pending.dates
-        .filter(d => isWithin(d, chosen.startDate, chosen.latestExecutionDate))
-        .forEach(d => items.push({ contractId: chosen.id, date: d, type: selectionType, current: entries[d] }));
+      // With three or more contracts the chosen one may not cover every overlap day. Those days go to the shown
+      // contract, which covers every day of the range (days outside its period were filtered out as blocked).
+      pending.dates.forEach(d => items.push({
+        contractId: isWithin(d, chosen.startDate, chosen.latestExecutionDate) ? chosen.id : shown.id,
+        date: d, type: selectionType, current: entries[d]
+      }));
     }
     await writeMany(items);
   }, [pendingOverlap, selectionType, entries, write, writeMany]);

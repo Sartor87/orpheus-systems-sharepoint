@@ -55,7 +55,7 @@ const DayCell: React.FC<IDayCellProps> = ({ date, day, type, blocked, outside, b
       data-date={date}
       onClick={readOnly ? undefined : e => handlers.click(date, e)}
       onPointerDown={readOnly ? undefined : e => handlers.pointerDown(date, e)}
-      onPointerOver={readOnly ? undefined : () => handlers.pointerOver(date)}
+      onPointerOver={readOnly ? undefined : e => handlers.pointerOver(date, e)}
       onKeyDown={readOnly ? undefined : e => handlers.keyDown(date, e)}
     >
       <span className={styles.dayNumber}>{day}</span>

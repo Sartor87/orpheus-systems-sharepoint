@@ -59,10 +59,9 @@ const ContractCalendar: React.FC<IContractCalendarProps> = () => {
   const state = useCalendarState();
   const { selected, readOnly } = state;
   const [timesheetOpen, setTimesheetOpen] = React.useState(false);
-  const monthsRef = React.useRef<HTMLDivElement>(null);
   const range = useRangeDrag({
     enabled: !readOnly && !state.loading && !state.loadError,
-    rootRef: monthsRef,
+    resetKey: `${selected ? selected.id : 0}:${state.selectionType}`,
     isDayBlocked: state.isDayBlocked,
     modeAt: date => rangeMode(state.entries[date]?.type, state.selectionType),
     onClick: date => { state.clickDay(date).catch(() => undefined); },
@@ -135,7 +134,7 @@ const ContractCalendar: React.FC<IContractCalendarProps> = () => {
       )}
 
       {!state.loading && selected && !state.loadError && (
-        <div ref={monthsRef} className={range.dragging ? `${styles.months} ${styles.dragging}` : styles.months}>
+        <div ref={range.rootRef} className={range.dragging ? `${styles.months} ${styles.dragging}` : styles.months}>
           {state.months.map(m => {
             const clipped = preview && clipToMonth(preview, m.year, m.month);
             return (

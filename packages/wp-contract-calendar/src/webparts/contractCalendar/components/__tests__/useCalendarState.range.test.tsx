@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { renderHook, act } from '@testing-library/react-hooks/dom';
-import type { DateKey, IDataService } from '@orpheussystems/shared-core';
+import type { Contract, DateKey, IDataService } from '@orpheussystems/shared-core';
 import { DataContext } from '../../DataContext';
 import type { IContractCalendarWebPartProps } from '../../IContractCalendarWebPartProps';
 import { useCalendarState } from '../useCalendarState';
@@ -160,5 +160,35 @@ describe('useCalendarState.applyRange', () => {
     expect(result.current.pendingOverlap?.dates).toEqual(['2027-02-05']);
     await act(() => result.current.resolveOverlap(1));
     expect(await stored(service, 1, '2027-02-05', '2027-02-05')).toEqual(['2027-02-05:OffSiteFull']);
+  });
+});
+
+/** Adds a third contract for user 1 covering 3 Feb .. 31 Mar 2027 (writes to it are held, never applied). */
+class ThreeContractsService extends ControlledService {
+  public async getMyContracts(): Promise<Contract[]> {
+    const mine = await super.getMyContracts();
+    const third: Contract = { ...mine[1], id: 5, title: '001187_2027', startDate: '2027-02-03', latestExecutionDate: '2027-03-31' };
+    return [...mine, third];
+  }
+}
+
+describe('useCalendarState.resolveOverlap with three contracts', () => {
+  beforeAll(() => { jest.useFakeTimers({ now: new Date(2026, 9, 22, 12), advanceTimers: true }); });
+  afterAll(() => { jest.useRealTimers(); });
+
+  it('sends overlap days outside the chosen contract to the shown contract instead of dropping them', async () => {
+    const service = new ThreeContractsService(1);
+    const { result } = await loaded(service);
+    expect(result.current.selected?.id).toBe(1);
+    // Mon 1 .. Fri 5 Feb 2027: 1-2 covered by {1, 2}, 3-5 by {1, 2, 5}.
+    await act(() => result.current.applyRange(datesBetween('2027-02-01', '2027-02-05'), 'paint'));
+    expect(result.current.pendingOverlap?.dates).toEqual(['2027-02-01', '2027-02-02', '2027-02-03', '2027-02-04', '2027-02-05']);
+    expect(result.current.pendingOverlap?.candidates.map(c => c.id)).toEqual([1, 2, 5]);
+
+    service.setHoldWrites(true);
+    act(() => { result.current.resolveOverlap(5).catch(() => undefined); });
+    expect(service.held.map(h => `${h.contractId}:${h.date}`).sort()).toEqual([
+      '1:2027-02-01', '1:2027-02-02', '5:2027-02-03', '5:2027-02-04', '5:2027-02-05'
+    ]);
   });
 });

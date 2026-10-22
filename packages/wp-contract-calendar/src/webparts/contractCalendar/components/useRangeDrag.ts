@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { addDays, compareKeys } from '@orpheussystems/shared-core';
 import type { DateKey } from '@orpheussystems/shared-core';
-import { datesBetween } from './rangeSelection';
-import type { RangeMode } from './rangeSelection';
+import { beyondSlop, datesBetween } from './rangeSelection';
+import type { IPoint, RangeMode } from './rangeSelection';
 
 /** Inclusive, ascending bounds of the range being previewed. */
 export interface RangePreview { from: DateKey; to: DateKey }
@@ -10,7 +10,7 @@ export interface RangePreview { from: DateKey; to: DateKey }
 /** One stable set of handlers shared by every day cell; each call names its date. */
 export interface IDayHandlers {
   pointerDown(date: DateKey, e: React.PointerEvent<HTMLElement>): void;
-  pointerOver(date: DateKey): void;
+  pointerOver(date: DateKey, e: React.PointerEvent<HTMLElement>): void;
   click(date: DateKey, e: React.MouseEvent<HTMLElement>): void;
   keyDown(date: DateKey, e: React.KeyboardEvent<HTMLElement>): void;
 }
@@ -18,8 +18,11 @@ export interface IDayHandlers {
 export interface RangeDragOptions {
   /** False for read-only users and while the grid is locked: every gesture is ignored. */
   enabled: boolean;
-  /** The element holding all day cells (each carries `data-date`). */
-  rootRef: React.RefObject<HTMLElement>;
+  /**
+   * Changes whenever the meaning of an anchor changes (selected contract, selection type). A change forgets the
+   * Shift+click anchor and any pending range, so a stale paint/erase mode is never reused.
+   */
+  resetKey: string;
   isDayBlocked(date: DateKey): boolean;
   /** The mode a range anchored on `date` takes, decided when the range starts. */
   modeAt(date: DateKey): RangeMode;
@@ -32,13 +35,15 @@ export interface RangeDrag {
   preview?: RangePreview;
   /** True while a pointer drag is in progress (the grid then disables touch panning). */
   dragging: boolean;
+  /** Callback ref for the element holding all day cells (each carries `data-date`). */
+  rootRef(el: HTMLElement | null): void; // eslint-disable-line @rushstack/no-new-null
   handlers: IDayHandlers;
 }
 
 interface Pending { anchor: DateKey; current: DateKey; mode: RangeMode }
-interface Drag extends Pending { pointerId: number; moved: boolean; armed: boolean }
+interface Drag extends Pending { pointerId: number; touch: boolean; start: IPoint; moved: boolean; armed: boolean }
 
-/** A touch press must rest this long before it drags; a quicker swipe scrolls the page as usual. */
+/** A touch press must rest this long (within the slop) before it drags; a quicker or wider swipe scrolls. */
 const TOUCH_ARM_MS = 350;
 
 const ARROWS: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
@@ -47,11 +52,17 @@ function bounds(a: DateKey, b: DateKey): RangePreview {
   return compareKeys(a, b) <= 0 ? { from: a, to: b } : { from: b, to: a };
 }
 
+/** Mouse and pen report the held buttons; zero means the release happened where the page could not see it. */
+function releasedUnseen(e: { pointerType: string; buttons: number }): boolean {
+  return e.pointerType !== 'touch' && e.buttons === 0;
+}
+
 /**
  * Pointer and keyboard range selection over the day cells.
  * Drag: press on a day, move over others (per-cell pointerover, plus elementFromPoint on pointermove for
- * touch/pen), release anywhere to commit; Esc cancels. Shift+click extends from the last clicked day.
- * Shift+Arrow grows a pending range from the focused day; Enter commits, Esc cancels.
+ * touch/pen), release anywhere to commit; Esc, window blur or pointercancel cancels. Only the pointer that started
+ * the drag counts. Shift+click extends from the last clicked day. Shift+Arrow grows a pending range from the
+ * focused day; Enter on its end commits, Esc or leaving the grid cancels.
  * Nothing is written until commit; the handlers object never changes identity.
  */
 export function useRangeDrag(options: RangeDragOptions): RangeDrag {
@@ -60,12 +71,14 @@ export function useRangeDrag(options: RangeDragOptions): RangeDrag {
   const [preview, setPreview] = React.useState<RangePreview | undefined>();
   const [dragging, setDragging] = React.useState(false);
 
-  const api = React.useRef<{ handlers: IDayHandlers; detach(): void } | undefined>();
+  const api = React.useRef<{ handlers: IDayHandlers; rootRef: RangeDrag['rootRef']; reset(): void; dispose(): void } | undefined>();
   if (!api.current) {
+    let root: HTMLElement | undefined;
     let drag: Drag | undefined;
     let keyRange: Pending | undefined;
     let clickAnchor: { date: DateKey; mode: RangeMode } | undefined;
     let suppressClick = false;
+    let movingFocus = false;
     let armTimer: ReturnType<typeof setTimeout> | undefined;
 
     const show = (range: Pending | undefined): void => {
@@ -74,6 +87,12 @@ export function useRangeDrag(options: RangeDragOptions): RangeDrag {
         const next = bounds(range.anchor, range.current);
         return prev && prev.from === next.from && prev.to === next.to ? prev : next;
       });
+    };
+
+    const clearKeyRange = (): void => {
+      if (!keyRange) { return; }
+      keyRange = undefined;
+      setPreview(undefined);
     };
 
     const moveTo = (date: DateKey): void => {
@@ -101,24 +120,29 @@ export function useRangeDrag(options: RangeDragOptions): RangeDrag {
       }
     };
 
+    const ours = (ev: PointerEvent): boolean => !!drag && ev.pointerId === drag.pointerId;
+
     const onPointerMove = (ev: PointerEvent): void => {
-      if (!drag || ev.pointerId !== drag.pointerId || typeof document.elementFromPoint !== 'function') { return; }
+      if (!drag || !ours(ev)) { return; }
+      if (releasedUnseen(ev)) { finish(false); return; }
+      if (drag.touch && !drag.armed) {
+        // A finger that wanders before the press has rested is scrolling, not selecting.
+        if (beyondSlop(drag.start, { x: ev.clientX, y: ev.clientY })) { finish(false); }
+        return;
+      }
+      if (typeof document.elementFromPoint !== 'function') { return; }
       const cell = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-date]');
-      const root = opts.current.rootRef.current;
       const date = cell && root && root.contains(cell) ? cell.getAttribute('data-date') : undefined;
       if (date) { moveTo(date); }
     };
-    const onPointerUp = (): void => { finish(true); };
-    const onPointerCancel = (): void => { finish(false); };
+    const onPointerUp = (ev: PointerEvent): void => { if (ours(ev)) { finish(true); } };
+    const onPointerCancel = (ev: PointerEvent): void => { if (ours(ev)) { finish(false); } };
+    const onWindowBlur = (): void => { finish(false); };
     const onKeyDown = (ev: KeyboardEvent): void => {
       if (ev.key === 'Escape') {
         ev.preventDefault();
         finish(false);
       }
-    };
-    // Once a touch drag is armed, the finger must not scroll the page.
-    const onTouchMove = (ev: TouchEvent): void => {
-      if (drag && drag.armed && ev.cancelable) { ev.preventDefault(); }
     };
 
     const detach = (): void => {
@@ -127,23 +151,63 @@ export function useRangeDrag(options: RangeDragOptions): RangeDrag {
       document.removeEventListener('pointerup', onPointerUp);
       document.removeEventListener('pointercancel', onPointerCancel);
       document.removeEventListener('keydown', onKeyDown, true);
-      document.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('blur', onWindowBlur);
+    };
+
+    // Root listeners stay attached for the root's lifetime. touchstart/touchmove must be non-passive from the
+    // first touch, because the browser decides on panning at touchstart; they only block it once a drag is armed.
+    const onTouchStart = (): void => { /* registered non-passive so touchmove may be cancelled */ };
+    const onTouchMove = (ev: TouchEvent): void => {
+      if (drag && drag.armed && ev.cancelable) { ev.preventDefault(); }
+    };
+    const onFocusOut = (ev: FocusEvent): void => {
+      if (movingFocus || !keyRange) { return; }
+      const next = ev.relatedTarget;
+      if (!(next instanceof Node) || !root || !root.contains(next)) { clearKeyRange(); }
+    };
+    const unbindRoot = (): void => {
+      if (!root) { return; }
+      root.removeEventListener('touchstart', onTouchStart);
+      root.removeEventListener('touchmove', onTouchMove);
+      root.removeEventListener('focusout', onFocusOut);
+      root = undefined;
+    };
+    const rootRef = (el: HTMLElement | null): void => {
+      if (el === root) { return; }
+      unbindRoot();
+      if (!el) { return; }
+      root = el;
+      el.addEventListener('touchstart', onTouchStart, { passive: false });
+      el.addEventListener('touchmove', onTouchMove, { passive: false });
+      el.addEventListener('focusout', onFocusOut);
+    };
+
+    const reset = (): void => {
+      if (drag) { finish(false); }
+      clearKeyRange();
+      clickAnchor = undefined;
     };
 
     const handlers: IDayHandlers = {
       pointerDown(date: DateKey, e: React.PointerEvent<HTMLElement>): void {
         const o = opts.current;
-        if (drag) { finish(false); }
+        if (drag) {
+          if (e.pointerId !== drag.pointerId) { return; } // a second finger (pinch) neither starts nor ends a drag
+          finish(false);
+        }
         suppressClick = false;
         if (!o.enabled || e.shiftKey || (typeof e.button === 'number' && e.button !== 0)) { return; }
-        if (keyRange) { keyRange = undefined; setPreview(undefined); }
+        clearKeyRange();
         // Touch gives the pressed element implicit capture, which would hide every other cell from hit-testing.
         const el = e.currentTarget;
         if (typeof el.hasPointerCapture === 'function' && el.hasPointerCapture(e.pointerId)) {
           el.releasePointerCapture(e.pointerId);
         }
         const touch = e.pointerType === 'touch';
-        drag = { anchor: date, current: date, mode: o.modeAt(date), pointerId: e.pointerId, moved: false, armed: !touch };
+        drag = {
+          anchor: date, current: date, mode: o.modeAt(date), pointerId: e.pointerId, touch,
+          start: { x: e.clientX, y: e.clientY }, moved: false, armed: !touch
+        };
         if (touch) {
           armTimer = setTimeout(() => {
             armTimer = undefined;
@@ -157,10 +221,12 @@ export function useRangeDrag(options: RangeDragOptions): RangeDrag {
         document.addEventListener('pointerup', onPointerUp);
         document.addEventListener('pointercancel', onPointerCancel);
         document.addEventListener('keydown', onKeyDown, true);
-        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        window.addEventListener('blur', onWindowBlur);
       },
 
-      pointerOver(date: DateKey): void {
+      pointerOver(date: DateKey, e: React.PointerEvent<HTMLElement>): void {
+        if (!drag || e.pointerId !== drag.pointerId) { return; }
+        if (releasedUnseen(e)) { finish(false); return; }
         moveTo(date);
       },
 
@@ -171,7 +237,7 @@ export function useRangeDrag(options: RangeDragOptions): RangeDrag {
           return;
         }
         if (!o.enabled) { return; }
-        if (keyRange) { keyRange = undefined; setPreview(undefined); }
+        clearKeyRange();
         if (e.shiftKey && clickAnchor) {
           // The anchor stays put, so further Shift+clicks re-extend from the same day.
           o.onRange(datesBetween(clickAnchor.date, date), clickAnchor.mode);
@@ -191,34 +257,48 @@ export function useRangeDrag(options: RangeDragOptions): RangeDrag {
           e.preventDefault();
           const base: Pending = keyRange && keyRange.current === date ? keyRange : { anchor: date, current: date, mode: o.modeAt(date) };
           const next = addDays(base.current, step);
-          const root = o.rootRef.current;
           const target = root?.querySelector<HTMLElement>(`[data-date="${next}"]`);
           if (!target) { return; } // the edge of the shown months
           keyRange = { ...base, current: next };
           show(keyRange);
-          target.focus();
+          movingFocus = true;
+          try { target.focus(); } finally { movingFocus = false; }
           return;
         }
         if (!keyRange) { return; }
+        if (keyRange.current !== date) {
+          // Focus moved on (Tab, click) since the range was extended: it is stale, and this key acts as usual.
+          clearKeyRange();
+          return;
+        }
         if (e.key === 'Enter') {
           e.preventDefault(); // no click toggle on the focused day
           const k = keyRange;
-          keyRange = undefined;
-          setPreview(undefined);
+          clearKeyRange();
           clickAnchor = { date: k.anchor, mode: k.mode };
           o.onRange(datesBetween(k.anchor, k.current), k.mode);
         } else if (e.key === 'Escape') {
           e.preventDefault();
-          keyRange = undefined;
-          setPreview(undefined);
+          clearKeyRange();
         }
       }
     };
 
-    api.current = { handlers, detach };
+    api.current = {
+      handlers,
+      rootRef,
+      reset,
+      dispose: () => {
+        drag = undefined;
+        detach();
+        unbindRoot();
+      }
+    };
   }
 
-  React.useEffect(() => () => { api.current?.detach(); }, []);
+  const { resetKey } = options;
+  React.useEffect(() => { api.current?.reset(); }, [resetKey]);
+  React.useEffect(() => () => { api.current?.dispose(); }, []);
 
-  return { preview, dragging, handlers: api.current.handlers };
+  return { preview, dragging, rootRef: api.current.rootRef, handlers: api.current.handlers };
 }

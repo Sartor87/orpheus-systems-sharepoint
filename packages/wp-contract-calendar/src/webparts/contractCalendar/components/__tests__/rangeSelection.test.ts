@@ -1,5 +1,5 @@
 import { DateKey, Holiday, isBlocked, isWithin } from '@orpheussystems/shared-core';
-import { datesBetween, eligibleDates, rangeMode } from '../rangeSelection';
+import { beyondSlop, datesBetween, eligibleDates, rangeMode } from '../rangeSelection';
 
 describe('datesBetween', () => {
   it('lists every day from the first to the last key, inclusive and ascending, across months', () => {
@@ -51,5 +51,18 @@ describe('rangeMode', () => {
   it('paints when the anchor is empty or holds another type', () => {
     expect(rangeMode(undefined, 'OffSiteFull')).toBe('paint');
     expect(rangeMode('OnSiteHalf', 'OffSiteFull')).toBe('paint');
+  });
+});
+
+describe('beyondSlop', () => {
+  it('is false while the pointer stays within the slop radius, inclusive', () => {
+    expect(beyondSlop({ x: 10, y: 10 }, { x: 15, y: 15 })).toBe(false);
+    expect(beyondSlop({ x: 0, y: 0 }, { x: 0, y: 8 })).toBe(false);
+  });
+
+  it('is true once the pointer moves further than the slop in any direction', () => {
+    expect(beyondSlop({ x: 0, y: 0 }, { x: 0, y: 9 })).toBe(true);
+    expect(beyondSlop({ x: 0, y: 0 }, { x: -6, y: -6 })).toBe(true);
+    expect(beyondSlop({ x: 0, y: 0 }, { x: 3, y: 0 }, 2)).toBe(true);
   });
 });

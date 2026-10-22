@@ -22,3 +22,15 @@ export function eligibleDates(dates: DateKey[], isBlocked: (date: DateKey) => bo
 export function rangeMode(anchorType: EntryType | undefined, selectedType: EntryType): RangeMode {
   return anchorType === selectedType ? 'erase' : 'paint';
 }
+
+/** How far (px) a touch may wander before it arms a drag; beyond it the gesture is a scroll. */
+export const TOUCH_SLOP_PX = 8;
+
+export interface IPoint { x: number; y: number }
+
+/** True once `now` is further than `slop` from `start` (the slop distance itself still counts as resting). */
+export function beyondSlop(start: IPoint, now: IPoint, slop: number = TOUCH_SLOP_PX): boolean {
+  const dx = now.x - start.x;
+  const dy = now.y - start.y;
+  return dx * dx + dy * dy > slop * slop;
+}
