@@ -88,12 +88,28 @@ describe('buildTemplateDocDefinition', () => {
     expect(err.message).toContain('Image "logo.png": cannot load logo.png');
   });
 
-  it('throws the fill errors without resolving images', async () => {
+  it('reports fill errors and image errors together', async () => {
+    const resolve = jest.fn<Promise<string>, [string]>(src => Promise.reject(new Error(`cannot load ${src}`)));
+    const err = await build('<p>{{foo}}</p><img src="logo.png">', {}, resolve).catch(x => x);
+    expect(err).toBeInstanceOf(TemplateValidationError);
+    expect(err.errors).toEqual([
+      'Unknown placeholder {{foo}}', 'The template must contain {{grid}} or {{grid.days}}',
+      'Image "logo.png": cannot load logo.png'
+    ]);
+    expect(resolve).toHaveBeenCalledWith('logo.png');
+  });
+
+  it('still throws the fill errors when every image resolves', async () => {
     const resolve = jest.fn<Promise<string>, [string]>(() => Promise.resolve(PNG));
     const err = await build('<p>{{foo}}</p><img src="logo.png">', {}, resolve).catch(x => x);
     expect(err).toBeInstanceOf(TemplateValidationError);
     expect(err.errors).toEqual(['Unknown placeholder {{foo}}', 'The template must contain {{grid}} or {{grid.days}}']);
-    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown orpheusBlock value written by the author', async () => {
+    const err = await build(`<div>{{grid}}</div><div data-pdfmake='{"orpheusBlock":"nope"}'>x</div>`).catch(x => x);
+    expect(err).toBeInstanceOf(TemplateValidationError);
+    expect(err.errors).toEqual(['Unknown block "nope"']);
   });
 
   it('renders a 14-month period as one grid table with a repeating header row', async () => {

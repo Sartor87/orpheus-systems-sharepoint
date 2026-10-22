@@ -22,6 +22,9 @@ export type ImageResolver = (src: string) => Promise<string>;
 type PdfNode = Record<string, unknown>;
 
 const DATA_URL = /^data:image\/(png|jpe?g);base64,/i;
+const BLOCK_NAMES: BlockName[] = ['grid', 'grid.days', 'totals', 'header', 'signatures'];
+
+interface SwapContext { model: TimesheetModel; blocks: WeakSet<object>; errors: string[] }
 
 function blockContent(model: TimesheetModel, name: BlockName): Content[] {
   switch (name) {
@@ -54,29 +57,36 @@ async function inlineImages(filled: FilledTemplate, resolveImage: ImageResolver)
  * keeps its other properties (colSpan, rowSpan, fillColor, styles, …) and gets the block as `stack`.
  * Inline text that contains a block is split into a stack of text runs and blocks.
  */
-function swapBlocks(content: unknown, model: TimesheetModel, blocks: WeakSet<object>): unknown {
-  if (Array.isArray(content)) { return content.map(c => swapBlocks(c, model, blocks)); }
+function swapBlocks(content: unknown, ctx: SwapContext): unknown {
+  if (Array.isArray(content)) { return content.map(c => swapBlocks(c, ctx)); }
   if (!content || typeof content !== 'object') { return content; }
   const node = content as PdfNode;
+  const { model, blocks } = ctx;
 
-  const name = node[TEMPLATE_BLOCK_KEY] as BlockName | undefined;
-  if (name) {
+  if (TEMPLATE_BLOCK_KEY in node) {
+    const name = node[TEMPLATE_BLOCK_KEY];
     const { [TEMPLATE_BLOCK_KEY]: _marker, text: _text, ...rest } = node;
-    const replaced = { ...rest, stack: blockContent(model, name) };
+    if (typeof name !== 'string' || BLOCK_NAMES.indexOf(name as BlockName) < 0) {
+      // Only an author-written data-pdfmake can carry another value: orpheusBlock is reserved.
+      const msg = `Unknown block "${String(name)}"`;
+      if (ctx.errors.indexOf(msg) < 0) { ctx.errors.push(msg); }
+      return rest;
+    }
+    const replaced = { ...rest, stack: blockContent(model, name as BlockName) };
     blocks.add(replaced);
     return replaced;
   }
 
   const out: PdfNode = { ...node };
   ['stack', 'columns', 'ul', 'ol'].forEach(k => {
-    if (Array.isArray(out[k])) { out[k] = swapBlocks(out[k], model, blocks); }
+    if (Array.isArray(out[k])) { out[k] = swapBlocks(out[k], ctx); }
   });
   const table = out.table as { body?: unknown[][] } | undefined;
   if (table && Array.isArray(table.body)) {
-    out.table = { ...table, body: table.body.map(row => swapBlocks(row, model, blocks)) };
+    out.table = { ...table, body: table.body.map(row => swapBlocks(row, ctx)) };
   }
   if (Array.isArray(out.text)) {
-    const runs = swapBlocks(out.text, model, blocks) as unknown[];
+    const runs = swapBlocks(out.text, ctx) as unknown[];
     if (runs.some(r => !!r && typeof r === 'object' && blocks.has(r))) {
       // pdfmake text arrays cannot hold tables/columns: turn this node into a stack.
       const stack: unknown[] = [];
@@ -104,14 +114,17 @@ function swapBlocks(content: unknown, model: TimesheetModel, blocks: WeakSet<obj
 export async function buildTemplateDocDefinition(
   model: TimesheetModel, filled: FilledTemplate, resolveImage: ImageResolver, win: Window
 ): Promise<TDocumentDefinitions> {
-  if (filled.errors.length) { throw new TemplateValidationError(filled.errors.slice()); }
+  // Images are resolved even when the fill found errors, so every problem is listed together.
   const imageErrors = await inlineImages(filled, resolveImage);
-  if (imageErrors.length) { throw new TemplateValidationError(imageErrors); }
+  const errors = filled.errors.concat(imageErrors);
+  if (errors.length) { throw new TemplateValidationError(errors); }
 
   // Loaded lazily so html-to-pdfmake stays in the PDF chunk next to pdfmake.
   const htmlToPdfmake = (await import('html-to-pdfmake')).default;
   const converted = htmlToPdfmake(filled.doc.body.innerHTML, { window: win, tableAutoSize: true });
-  const swapped = swapBlocks(Array.isArray(converted) ? converted : [converted], model, new WeakSet()) as Content[];
+  const ctx: SwapContext = { model, blocks: new WeakSet(), errors: [] };
+  const swapped = swapBlocks(Array.isArray(converted) ? converted : [converted], ctx) as Content[];
+  if (ctx.errors.length) { throw new TemplateValidationError(ctx.errors); }
 
   return {
     pageSize: filled.page.pageSize,
