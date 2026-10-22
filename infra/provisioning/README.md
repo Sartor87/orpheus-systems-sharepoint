@@ -229,6 +229,13 @@ on the contract with `ContractCode` `1185-Jane-Doe`, only when they differ. The 
 values become `TemplateFields` lines. Seed that contract with
 `Provision-OrpheusSite.ps1 -SeedDemoData` first.
 
+Troubleshooting: if the columns exist on the `Orpheus Contract` content type but not on the
+Contracts list, the web part shows empty values for them. Add them to the list again (list
+settings, "Add from existing site columns"), or push the content type to the list (site
+content type settings, edit one of the columns, "Update all content types inheriting from
+this type": Yes). A plain re-run of the script does not help here: it sees the FieldRefs on
+the content type and writes nothing.
+
 The mock test runs without a tenant and without Pester:
 
 ```powershell
