@@ -1,5 +1,5 @@
 /** @jest-environment jsdom */
-import { ContractTemplateData } from '@orpheussystems/shared-core';
+import { Contract, ContractTemplateData } from '@orpheussystems/shared-core';
 import { buildTimesheetModel } from '../pdf/timesheetModel';
 import { templateValues } from '../pdf/templateValues';
 import { contract, e, labels } from './fixtures';
@@ -48,5 +48,17 @@ describe('templateValues', () => {
   it('builds period label for single month and range', () => {
     expect(values('2026-02-01', '2026-02-28')['period.label']).toBe('February 2026');
     expect(values('2026-02-01', '2026-03-31')['period.label']).toBe('February 2026 – March 2026');
+  });
+  it('turns null optional columns into empty strings', () => {
+    // Optional SharePoint columns arrive as null despite the TS types.
+    const c = contract({ frameworkContract: null as unknown as string, modality: null as unknown as Contract['modality'] });
+    const model = buildTimesheetModel(c, [], [], { from: '2026-02-01', to: '2026-02-28' }, labels);
+    const nulls: ContractTemplateData = { ...data, lot: null as unknown as string, custom: { note: null as unknown as string } };
+    const v = templateValues(model, c, nulls, '2026-03-05');
+    expect(v['contract.frameworkContract']).toBe('');
+    expect(v['contract.modality']).toBe('');
+    expect(v['contract.lot']).toBe('');
+    expect(v['custom.note']).toBe('');
+    Object.keys(v).forEach(k => expect(typeof v[k]).toBe('string'));
   });
 });

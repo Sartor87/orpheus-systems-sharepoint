@@ -10,6 +10,9 @@ export function formatMonthYear(key: DateKey): string {
 
 function n2(n: number): string { return n.toFixed(2); }
 
+/** Optional SharePoint columns arrive as null despite the TS types; a placeholder must never print "null". */
+function str(v: unknown): string { return v == null ? '' : String(v); }
+
 /** Scalar placeholder values (see spec section 3). Values are plain text; escaping happens by DOM insertion. */
 export function templateValues(
   model: TimesheetModel, contract: Contract, data: ContractTemplateData, today: DateKey
@@ -17,7 +20,7 @@ export function templateValues(
   const h = model.header;
   const fromLabel = formatMonthYear(model.period.from);
   const toLabel = formatMonthYear(model.period.to);
-  const values: Record<string, string> = {
+  const raw: Record<string, unknown> = {
     'contract.title': h.specificContract,
     'contract.code': contract.contractCode,
     'contract.frameworkContract': h.frameworkContract,
@@ -49,6 +52,9 @@ export function templateValues(
     'labels.approvingOrg': model.labels.approvingOrg,
     'generatedOn': formatLongDate(today)
   };
-  Object.keys(data.custom).forEach(k => { values[`custom.${k}`] = data.custom[k]; });
+  const custom = data.custom || {};
+  Object.keys(custom).forEach(k => { raw[`custom.${k}`] = custom[k]; });
+  const values: Record<string, string> = {};
+  Object.keys(raw).forEach(k => { values[k] = str(raw[k]); });
   return values;
 }
