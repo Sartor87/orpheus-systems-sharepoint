@@ -6,13 +6,19 @@ jest.mock('@pnp/sp/items', () => ({}));
 jest.mock('@pnp/sp/site-users', () => ({}));
 jest.mock('@pnp/sp/site-groups', () => ({}));
 jest.mock('@pnp/sp/batching', () => ({}));
+// Role derivation is shared-core's (its own tests); here only the delegation is checked.
+jest.mock('@orpheussystems/shared-core/sharepoint', () => ({
+  ...jest.requireActual('@orpheussystems/shared-core/sharepoint'),
+  deriveRolesForContracts: jest.fn()
+}));
 
 import type { SPFI } from '@pnp/sp';
-import type { SPContractItem } from '@orpheussystems/shared-core/sharepoint';
+import { deriveRolesForContracts, type SPContractItem } from '@orpheussystems/shared-core/sharepoint';
 import type { ContractDraft } from '../formModel';
 import {
   draftToItem,
   loadContract,
+  loadFormRoles,
   loadOthersOfContractor,
   spErrorMessage,
   saveContract
@@ -151,5 +157,23 @@ describe('formService', () => {
     expect(spErrorMessage(new Error(`[403] Forbidden ::> ${verbose}`))).toBe('Access denied.');
     expect(spErrorMessage(new Error('Network down'))).toBe('Network down');
     expect(spErrorMessage('odd')).toBe('odd');
+  });
+});
+
+describe('loadFormRoles', () => {
+  const deriveMock = deriveRolesForContracts as jest.MockedFunction<typeof deriveRolesForContracts>;
+  beforeEach(() => deriveMock.mockReset());
+
+  it('derives the roles of the current user from the contracts list', async () => {
+    deriveMock.mockResolvedValue(['ContractManager']);
+    const sp = {} as SPFI;
+    await expect(loadFormRoles(sp, 'list-guid', 12)).resolves.toEqual(['ContractManager']);
+    expect(deriveMock).toHaveBeenCalledWith(sp, 'list-guid', 12);
+  });
+
+  it('rejects (so the form fails closed) when the lookup fails or there is no user id', async () => {
+    deriveMock.mockRejectedValue(new Error('403'));
+    await expect(loadFormRoles({} as SPFI, 'list-guid', 12)).rejects.toThrow('403');
+    await expect(loadFormRoles({} as SPFI, 'list-guid', 0)).rejects.toThrow();
   });
 });

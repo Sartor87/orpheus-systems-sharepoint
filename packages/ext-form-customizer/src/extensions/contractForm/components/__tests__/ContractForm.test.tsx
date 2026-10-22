@@ -1,6 +1,7 @@
 jest.mock('../../formService', () => ({
   loadContract: jest.fn(),
   loadOthersOfContractor: jest.fn(),
+  loadFormRoles: jest.fn(),
   saveContract: jest.fn()
 }));
 jest.mock('@orpheussystems/shared-ui/toast', () => ({ showToast: jest.fn() }));
@@ -36,12 +37,13 @@ import { act } from 'react-dom/test-utils';
 import type { SPFI } from '@pnp/sp';
 import type { Contract } from '@orpheussystems/shared-core';
 import { showToast } from '@orpheussystems/shared-ui/toast';
-import { loadContract, loadOthersOfContractor, saveContract } from '../../formService';
+import { loadContract, loadFormRoles, loadOthersOfContractor, saveContract } from '../../formService';
 import ContractForm, { IContractFormProps } from '../ContractForm';
 
 const loadMock = loadContract as jest.MockedFunction<typeof loadContract>;
 const othersMock = loadOthersOfContractor as jest.MockedFunction<typeof loadOthersOfContractor>;
 const saveMock = saveContract as jest.MockedFunction<typeof saveContract>;
+const rolesMock = loadFormRoles as jest.MockedFunction<typeof loadFormRoles>;
 const toastMock = showToast as jest.MockedFunction<typeof showToast>;
 
 const WEB = 'https://contoso.example/sites/s';
@@ -82,6 +84,8 @@ beforeEach(() => {
   othersMock.mockReset().mockResolvedValue([]);
   saveMock.mockReset();
   toastMock.mockReset();
+  // Most tests run as a site admin; the role gate has its own tests below.
+  rolesMock.mockReset().mockResolvedValue(['Admin']);
 });
 
 afterEach(() => {
@@ -109,6 +113,7 @@ async function render(props: Partial<IContractFormProps>): Promise<void> {
     webUrl: WEB,
     calendarPageUrl: 'SitePages/ContractCalendar.aspx',
     peoplePickerContext: {} as IContractFormProps['peoplePickerContext'],
+    userId: 12,
     onSaved,
     onClosed,
     ...props
@@ -447,5 +452,94 @@ describe('ContractForm — display', () => {
     expect(othersMock).not.toHaveBeenCalled();
     act(() => { button('Close').click(); });
     expect(onClosed).toHaveBeenCalledTimes(1);
+  });
+});
+
+const DENIED = 'Only the contract manager or a site admin can edit contracts.';
+
+describe('ContractForm — who may create or edit', () => {
+  /** Renders, then lets Fluent's MessageBar show its (delayed) text. */
+  async function open(props: Partial<IContractFormProps>): Promise<void> {
+    await render(props);
+    await tick();
+  }
+
+  it('shows a spinner while the roles load, and no fields', async () => {
+    rolesMock.mockReturnValue(new Promise(() => undefined));
+    await open({ mode: 'new' });
+    expect(host.querySelector('.ms-Spinner')).not.toBeNull();
+    expect(host.querySelector('input')).toBeNull();
+    expect(() => button('Save')).toThrow();
+  });
+
+  it('New: a contract manager gets the fields', async () => {
+    rolesMock.mockResolvedValue(['ContractManager']);
+    await open({ mode: 'new', userId: 5 });
+    expect(rolesMock).toHaveBeenCalledWith(sp, 'list-guid', 5);
+    expect(input('Title').value).toBe('');
+    expect(host.textContent).not.toContain(DENIED);
+  });
+
+  it('New: a contractor gets the notice and a Close button, no fields', async () => {
+    rolesMock.mockResolvedValue(['Contractor']);
+    await open({ mode: 'new', userId: 11 });
+    expect(host.textContent).toContain(DENIED);
+    expect(host.querySelector('input')).toBeNull();
+    expect(() => button('Save')).toThrow();
+    act(() => { button('Close').click(); });
+    expect(onClosed).toHaveBeenCalledTimes(1);
+  });
+
+  it('Edit: the contract manager of the item can edit', async () => {
+    rolesMock.mockResolvedValue(['ContractManager']);
+    loadMock.mockResolvedValue(c7);
+    await open({ mode: 'edit', itemId: 7, userId: 12 });
+    expect(input('Title').value).toBe('001185_2026');
+    expect(host.textContent).not.toContain(DENIED);
+  });
+
+  it('Edit: an admin who does not manage the item can edit', async () => {
+    rolesMock.mockResolvedValue(['Admin']);
+    loadMock.mockResolvedValue(c7);
+    await open({ mode: 'edit', itemId: 7, userId: 99 });
+    expect(input('Title').value).toBe('001185_2026');
+  });
+
+  it("Edit: a manager of other contracts sees the read-only view and the notice", async () => {
+    rolesMock.mockResolvedValue(['ContractManager']);
+    loadMock.mockResolvedValue(c7);
+    await open({ mode: 'edit', itemId: 7, userId: 99 });
+    expect(host.textContent).toContain(DENIED);
+    expect(host.querySelector('input, textarea, [role="combobox"]')).toBeNull();
+    expect(host.textContent).toContain('1185-Iliev');
+    expect(() => button('Save')).toThrow();
+    act(() => { button('Close').click(); });
+    expect(onClosed).toHaveBeenCalledTimes(1);
+  });
+
+  it("Edit: the item's contractor sees the read-only view and the notice", async () => {
+    rolesMock.mockResolvedValue(['Contractor']);
+    loadMock.mockResolvedValue(c7);
+    await open({ mode: 'edit', itemId: 7, userId: 11 });
+    expect(host.textContent).toContain(DENIED);
+    expect(host.querySelector('input')).toBeNull();
+  });
+
+  it('fails closed: when the roles cannot be resolved, shows an error toast and no editing', async () => {
+    rolesMock.mockRejectedValue(new Error('403 Access denied'));
+    loadMock.mockResolvedValue(c7);
+    await open({ mode: 'edit', itemId: 7, userId: 12 });
+    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error', text: '403 Access denied' }));
+    expect(host.textContent).toContain(DENIED);
+    expect(host.querySelector('input')).toBeNull();
+    expect(saveMock).not.toHaveBeenCalled();
+  });
+
+  it('Display is open to everyone and does not look up roles', async () => {
+    loadMock.mockResolvedValue(c7);
+    await open({ mode: 'display', itemId: 7, userId: 11 });
+    expect(rolesMock).not.toHaveBeenCalled();
+    expect(host.textContent).not.toContain(DENIED);
+    expect(host.textContent).toContain('1185-Iliev');
   });
 });

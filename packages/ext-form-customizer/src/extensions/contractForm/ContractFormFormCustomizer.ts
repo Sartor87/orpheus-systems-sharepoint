@@ -60,6 +60,7 @@ export default class ContractFormFormCustomizer
         msGraphClientFactory: this.context.msGraphClientFactory,
         spHttpClient: this.context.spHttpClient
       } as unknown as IPeoplePickerContext,
+      userId: this.context.pageContext.legacyPageContext.userId as number,
       onSaved: this._onSave,
       onClosed: this._onClose
     };

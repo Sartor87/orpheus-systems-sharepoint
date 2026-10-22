@@ -11,13 +11,14 @@ import {
 } from '@fluentui/react';
 import type { SPFI } from '@pnp/sp';
 import type { IPeoplePickerContext } from '@pnp/spfx-controls-react/lib/PeoplePicker';
-import type { Contract } from '@orpheussystems/shared-core';
+import { canCreateContract, canEditContract } from '@orpheussystems/shared-core';
+import type { Contract, Role } from '@orpheussystems/shared-core';
 import { showToast } from '@orpheussystems/shared-ui/toast';
 import { orpheusBrand, orpheusMarkFrame, orpheusMarkPoints, orpheusMarkStrokeWidth, orpheusMarkViewBox } from '@orpheussystems/shared-ui/brand';
 import { orpheusTokens } from '@orpheussystems/shared-ui/tokens';
 
 import { FieldErrors, findOverlaps, overlapNotice, validateContract } from '../formModel';
-import { loadContract, loadOthersOfContractor, saveContract } from '../formService';
+import { loadContract, loadFormRoles, loadOthersOfContractor, saveContract } from '../formService';
 import { calendarLink } from '../links';
 import {
   ContractFormFields,
@@ -43,6 +44,8 @@ export interface IContractFormProps {
   webUrl: string;
   calendarPageUrl: string;
   peoplePickerContext: IPeoplePickerContext;
+  /** The current user's site user id (who may create or edit is derived from it). */
+  userId: number;
   /** After a successful save (the host calls formSaved). */
   onSaved(): void;
   /** Cancel / Close (the host calls formClosed). */
@@ -53,6 +56,10 @@ export interface IContractFormProps {
 const OVERLAP_DEBOUNCE_MS = 300;
 
 type Load = { state: 'loading' } | { state: 'ready'; contract?: Contract } | { state: 'error'; message: string };
+/** Roles of the current user; New/Edit only (Display is open to everyone). */
+type Access = { state: 'checking' } | { state: 'ready'; roles: Role[] };
+
+export const NOT_ALLOWED_MESSAGE = 'Only the contract manager or a site admin can edit contracts.';
 
 const cssVars = {
   '--orpheus-bg': orpheusTokens.bg,
@@ -78,7 +85,7 @@ const Mark: React.FC = () => (
 );
 
 const ContractForm: React.FC<IContractFormProps> = props => {
-  const { mode, sp, listId, itemId, codePattern, defaultCountry, webUrl, calendarPageUrl, peoplePickerContext, onSaved, onClosed } = props;
+  const { mode, sp, listId, itemId, codePattern, defaultCountry, webUrl, calendarPageUrl, peoplePickerContext, userId, onSaved, onClosed } = props;
   const [ids] = React.useState(() => ({ prefix: getId('orpheus-contract'), heading: getId('orpheus-contract-heading') }));
   const [load, setLoad] = React.useState<Load>(() =>
     mode === 'new' ? { state: 'ready' }
@@ -90,6 +97,7 @@ const ContractForm: React.FC<IContractFormProps> = props => {
   const [saving, setSaving] = React.useState(false);
   const [others, setOthers] = React.useState<{ contractorId: number; list: Contract[] } | undefined>();
   const [dismissedNotice, setDismissedNotice] = React.useState<string | undefined>();
+  const [access, setAccess] = React.useState<Access>(() => (mode === 'display' ? { state: 'ready', roles: [] } : { state: 'checking' }));
 
   const mounted = React.useRef(true);
   const othersCache = React.useRef(new Map<number, Promise<Contract[]>>());
@@ -112,6 +120,24 @@ const ContractForm: React.FC<IContractFormProps> = props => {
         if (mounted.current) { setLoad({ state: 'error', message: e instanceof Error ? e.message : String(e) }); }
       });
   }, [mode, sp, listId, itemId]);
+
+  // New / Edit: who may write. Fails closed: if the roles cannot be resolved, nobody edits here.
+  React.useEffect(() => {
+    if (mode === 'display') { return; }
+    loadFormRoles(sp, listId, userId)
+      .then(roles => { if (mounted.current) { setAccess({ state: 'ready', roles }); } })
+      .catch((e: unknown) => {
+        if (!mounted.current) { return; }
+        showToast({ kind: 'error', title: 'Your permissions could not be checked', text: e instanceof Error ? e.message : String(e) });
+        setAccess({ state: 'ready', roles: [] });
+      });
+  }, [mode, sp, listId, userId]);
+
+  const loaded = load.state === 'ready' ? load.contract : undefined;
+  const roles = access.state === 'ready' ? access.roles : [];
+  const canWrite = mode === 'new' ? canCreateContract(roles)
+    : mode === 'edit' && !!loaded && canEditContract(roles, loaded, userId);
+  const editing = mode !== 'display' && access.state === 'ready' && canWrite;
 
   const draft = React.useMemo(() => draftFromValues(values), [values]);
   const allErrors = React.useMemo(() => validateContract(draft, codePattern), [draft, codePattern]);
@@ -139,14 +165,14 @@ const ContractForm: React.FC<IContractFormProps> = props => {
   // Overlap check once contractor and both dates are set (debounced; cached per contractor).
   const { contractorId, startDate, latestExecutionDate } = draft;
   React.useEffect(() => {
-    if (mode === 'display' || load.state !== 'ready' || contractorId === undefined || !startDate || !latestExecutionDate) { return; }
+    if (!editing || load.state !== 'ready' || contractorId === undefined || !startDate || !latestExecutionDate) { return; }
     let cancelled = false;
     const t = setTimeout(() => {
       getOthers(contractorId).then(list => { if (!cancelled && mounted.current) { setOthers({ contractorId, list }); } })
         .catch(() => { /* getOthers never rejects */ });
     }, OVERLAP_DEBOUNCE_MS);
     return () => { cancelled = true; clearTimeout(t); };
-  }, [mode, load.state, contractorId, startDate, latestExecutionDate, getOthers]);
+  }, [editing, load.state, contractorId, startDate, latestExecutionDate, getOthers]);
 
   const overlaps = React.useMemo(
     () => findOverlaps(draft, others && others.contractorId === draft.contractorId ? others.list : [], itemId),
@@ -178,7 +204,7 @@ const ContractForm: React.FC<IContractFormProps> = props => {
   const submitting = React.useRef(false);
 
   const save = async (confirmedOverlap: boolean): Promise<void> => {
-    if (submitting.current) { return; }
+    if (submitting.current || !editing) { return; }
     if (!valid) { revealErrors(); return; }
     submitting.current = true;
     // Locks fields and buttons until done, so the saved snapshot is exactly what the user sees.
@@ -213,19 +239,24 @@ const ContractForm: React.FC<IContractFormProps> = props => {
     }
   };
 
-  const loaded = load.state === 'ready' ? load.contract : undefined;
   const initialPeople = React.useMemo(() => {
     const v = loaded && formValuesFromContract(loaded);
     return { contractor: v && v.contractor && v.contractor.key, contractManager: v && v.contractManager && v.contractManager.key };
   }, [loaded]);
   const heading = mode === 'new' ? 'New contract'
-    : loaded ? `${mode === 'edit' ? 'Edit contract' : 'Contract'} ${loaded.title}`
+    : loaded ? `${mode === 'edit' && (access.state === 'checking' || editing) ? 'Edit contract' : 'Contract'} ${loaded.title}`
       : mode === 'edit' ? 'Edit contract' : 'Contract';
 
   let body: React.ReactNode;
   let footer: React.ReactNode;
-  if (load.state === 'loading') {
-    body = <Spinner size={SpinnerSize.large} label="Loading contract…" className={styles.status} />;
+  const notAllowed = (
+    <MessageBar messageBarType={MessageBarType.info} isMultiline className={styles.status}>
+      {NOT_ALLOWED_MESSAGE}
+    </MessageBar>
+  );
+  if (load.state === 'loading' || access.state === 'checking') {
+    const label = load.state === 'loading' ? 'Loading contract…' : 'Checking permissions…';
+    body = <Spinner size={SpinnerSize.large} label={label} className={styles.status} />;
     footer = <DefaultButton text="Cancel" onClick={onClosed} />;
   } else if (load.state === 'error') {
     body = (
@@ -234,8 +265,17 @@ const ContractForm: React.FC<IContractFormProps> = props => {
       </MessageBar>
     );
     footer = <DefaultButton text="Close" onClick={onClosed} />;
-  } else if (mode === 'display' && loaded) {
-    body = <ContractFormView contract={loaded} />;
+  } else if (mode === 'new' && !editing) {
+    body = notAllowed;
+    footer = <DefaultButton text="Close" onClick={onClosed} />;
+  } else if (!editing && loaded) {
+    // Display, or Edit without the right to edit: the read-only view (with the notice for Edit).
+    body = (
+      <>
+        {mode === 'edit' && notAllowed}
+        <ContractFormView contract={loaded} />
+      </>
+    );
     footer = (
       <>
         <a className={styles.link} href={calendarLink(webUrl, calendarPageUrl, loaded.id)}>Open calendar</a>

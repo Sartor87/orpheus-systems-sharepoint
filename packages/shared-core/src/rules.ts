@@ -1,4 +1,4 @@
-import { CalendarEntry, Contract, DateKey, EntryType, Holiday } from './models';
+import { CalendarEntry, Contract, DateKey, EntryType, Holiday, Role } from './models';
 import { isWeekend, isWithin } from './dates';
 
 export interface Totals {
@@ -67,4 +67,15 @@ export function contractsCoveringDate(contracts: Contract[], date: DateKey): Con
 export function isBlocked(date: DateKey, holidays: Holiday[], country: string, blockWeekends: boolean): boolean {
   if (blockWeekends && isWeekend(date)) { return true; }
   return holidays.some(h => h.date === date && (h.country === country || h.country === '*'));
+}
+
+/** May create contracts: an Admin, or a user who manages at least one contract. UI gate only (spec: no item permissions). */
+export function canCreateContract(roles: Role[]): boolean {
+  return roles.indexOf('Admin') >= 0 || roles.indexOf('ContractManager') >= 0;
+}
+
+/** May edit this contract: an Admin, or its own contract manager (`userId` is the current user's id). */
+export function canEditContract(roles: Role[], contract: Pick<Contract, 'contractManager'>, userId: number): boolean {
+  if (roles.indexOf('Admin') >= 0) { return true; }
+  return roles.indexOf('ContractManager') >= 0 && !!userId && contract.contractManager.id === userId;
 }

@@ -1,4 +1,4 @@
-import { computeRemaining, computeTotals, contractsCoveringDate, dayValue, hasContractPeriod, hoursFor, isBlocked, isOnSite, usageRatio } from '../rules';
+import { canCreateContract, canEditContract, computeRemaining, computeTotals, contractsCoveringDate, dayValue, hasContractPeriod, hoursFor, isBlocked, isOnSite, usageRatio } from '../rules';
 import { contract, e, hol } from './fixtures';
 
 test('computeTotals counts halves as 0.5', () => {
@@ -42,4 +42,20 @@ test('hasContractPeriod requires both dates', () => {
   expect(hasContractPeriod(contract())).toBe(true);
   expect(hasContractPeriod(contract({ startDate: '' }))).toBe(false);
   expect(hasContractPeriod(contract({ latestExecutionDate: '' }))).toBe(false);
+});
+test('canCreateContract: Admin or ContractManager', () => {
+  expect(canCreateContract(['Admin'])).toBe(true);
+  expect(canCreateContract(['ContractManager'])).toBe(true);
+  expect(canCreateContract(['Contractor'])).toBe(false);
+  expect(canCreateContract([])).toBe(false);
+});
+test("canEditContract: Admin, or the contract's own manager", () => {
+  const c = contract();
+  const managerId = c.contractManager.id;
+  expect(canEditContract(['Admin'], c, 99)).toBe(true);
+  expect(canEditContract(['ContractManager'], c, managerId)).toBe(true);
+  expect(canEditContract(['ContractManager'], c, 99)).toBe(false);
+  expect(canEditContract(['Contractor'], c, c.contractor.id)).toBe(false);
+  expect(canEditContract([], c, managerId)).toBe(false);
+  expect(canEditContract(['ContractManager'], contract({ contractManager: { ...c.contractManager, id: 0 } }), 0)).toBe(false);
 });

@@ -3,7 +3,7 @@
   "solution": {
     "name": "ext-form-customizer-client-side-solution",
     "id": "f5fa93dd-a37d-498c-8c17-87a94be561e5",
-    "version": "1.0.0.0",
+    "version": "1.0.1.0",
     "includeClientSideAssets": true,
     "iconPath": "images/orpheus-icon-96.png",
     "skipFeatureDeployment": true,

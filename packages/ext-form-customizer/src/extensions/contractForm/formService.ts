@@ -3,12 +3,13 @@ import '@pnp/sp/webs';
 import '@pnp/sp/lists';
 import '@pnp/sp/items';
 import type { IItems } from '@pnp/sp/items';
-import type { Contract, UserRef } from '@orpheussystems/shared-core';
+import type { Contract, Role, UserRef } from '@orpheussystems/shared-core';
 import {
   CONTRACT_EXPAND,
   CONTRACT_SELECT,
   type SPContractItem,
   contractsOfContractorQuery,
+  deriveRolesForContracts,
   mapContract,
   toContractItem
 } from '@orpheussystems/shared-core/sharepoint';
@@ -35,6 +36,15 @@ export async function loadOthersOfContractor(sp: SPFI, listId: string, contracto
     .filter(contractsOfContractorQuery(contractorId))
     .select(...CONTRACT_SELECT).expand(...CONTRACT_EXPAND).top(500)()) as SPContractItem[];
   return rows.map(mapContract);
+}
+
+/**
+ * Roles of the current user (`userId`), derived from the contracts list and the web's owners group by the shared
+ * helper the header uses. Rejects on any failure, so the form can fail closed (unlike the header's loadRoles).
+ */
+export async function loadFormRoles(sp: SPFI, listId: string, userId: number): Promise<Role[]> {
+  if (!userId) { throw new Error('The current user could not be identified.'); }
+  return deriveRolesForContracts(sp, listId, userId);
 }
 
 const person = (id: number | undefined): UserRef | undefined =>
