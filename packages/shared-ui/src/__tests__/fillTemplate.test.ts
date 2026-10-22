@@ -25,8 +25,8 @@ describe('fillTemplate', () => {
   });
   it('marks block elements', () => {
     const r = fill('<table><tr><td>{{grid}}</td><td> {{totals}} </td></tr></table>');
-    const td = r.doc.querySelector(`td[${TEMPLATE_BLOCK_ATTR}="grid"]`)!;
-    expect(td).not.toBeNull();
+    const td = r.doc.querySelector(`td[${TEMPLATE_BLOCK_ATTR}]`)!;
+    expect(JSON.parse(td.getAttribute(TEMPLATE_BLOCK_ATTR)!)).toEqual({ orpheusBlock: 'grid' });
     expect(td.childNodes).toHaveLength(0);
     expect(r.blocks).toEqual(['grid', 'totals']);
     expect(r.errors).toEqual([]);

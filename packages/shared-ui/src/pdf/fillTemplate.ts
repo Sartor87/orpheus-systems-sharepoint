@@ -4,11 +4,17 @@ export interface FilledTemplate {
   doc: Document; blocks: BlockName[]; page: PageSetup; images: HTMLImageElement[]; errors: string[];
 }
 
-/** Marker attribute set on block elements. The marker mechanism lives in setBlockMarker only. */
-export const TEMPLATE_BLOCK_ATTR = 'data-orpheus-block';
+/**
+ * Marker attribute set on block elements. The marker mechanism lives in setBlockMarker only.
+ * html-to-pdfmake drops plain data-* attributes but copies the JSON in data-pdfmake onto the
+ * converted node, so a block element becomes a node carrying `{ orpheusBlock: '<name>' }`.
+ */
+export const TEMPLATE_BLOCK_ATTR = 'data-pdfmake';
+/** Property the converted pdfmake node carries for a block element. */
+export const TEMPLATE_BLOCK_KEY = 'orpheusBlock';
 export function setBlockMarker(el: Element, name: BlockName): void {
   while (el.firstChild) { el.removeChild(el.firstChild); }
-  el.setAttribute(TEMPLATE_BLOCK_ATTR, name);
+  el.setAttribute(TEMPLATE_BLOCK_ATTR, JSON.stringify({ [TEMPLATE_BLOCK_KEY]: name }));
 }
 
 const BLOCKS: BlockName[] = ['grid', 'grid.days', 'totals', 'header', 'signatures'];
