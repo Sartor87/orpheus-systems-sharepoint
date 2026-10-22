@@ -85,4 +85,89 @@ describe('useCalendarState toasts', () => {
     expect(activeToasts()[0].title).toBe('Timesheet downloaded');
     expect(activeToasts()[0].text).toMatch(/^Timesheet_.*\.pdf$/);
   });
+
+  it('toasts the days counted against the contract chosen for an overlap', async () => {
+    const service = new ControlledService(1);
+    const { result } = await loaded(service);
+    const title2 = (result.current.contracts.filter(c => c.id === 2)[0]).title;
+    await act(() => result.current.applyRange(datesBetween('2027-01-28', '2027-02-03'), 'paint'));
+    await act(() => result.current.resolveOverlap(2));
+    const titles = activeToasts().map(t => t.title);
+    expect(titles).toContain(`Counted 3 days against ${title2}`);
+    expect(titles).toContain('Saved 2 days to 001185_2026');
+  });
+
+  it('toasts a single-day overlap choice', async () => {
+    const service = new ControlledService(1);
+    const { result } = await loaded(service);
+    const title2 = (result.current.contracts.filter(c => c.id === 2)[0]).title;
+    await act(() => result.current.clickDay('2027-02-02'));
+    await act(() => result.current.resolveOverlap(2));
+    expect(activeToasts()[0].title).toBe(`Counted 1 day against ${title2}`);
+  });
+
+  it('retries a failed single-day save', async () => {
+    const service = new ControlledService(1);
+    const { result } = await loaded(service);
+    service.setHoldWrites(true);
+    act(() => { result.current.clickDay('2026-11-09').catch(() => undefined); });
+    await settle(() => service.held[0].fail('Throttled'));
+    const err = activeToasts().filter(t => t.kind === 'error')[0];
+    expect(err.title).toBe('Could not save 9 Nov 2026');
+    service.setHoldWrites(false);
+    const before = service.calls.upsertEntry;
+    await act(async () => {
+      (err.action as { onClick(): void }).onClick();
+      for (let i = 0; i < 20; i++) { await Promise.resolve(); }
+    });
+    expect(service.calls.upsertEntry - before).toBe(1);
+    expect(result.current.entries['2026-11-09']?.type).toBe('OffSiteFull');
+  });
+
+  it('does not write on Retry after the contract was switched', async () => {
+    const service = new ControlledService(1);
+    const { result } = await loaded(service);
+    const title1 = (result.current.contracts.filter(c => c.id === 1)[0]).title;
+    service.setHoldWrites(true);
+    act(() => { result.current.clickDay('2026-11-09').catch(() => undefined); });
+    await settle(() => service.held[0].fail('Throttled'));
+    const err = activeToasts().filter(t => t.kind === 'error')[0];
+    service.setHoldWrites(false);
+    await settle(() => result.current.selectContract(2));
+    const before = service.calls.upsertEntry;
+    await act(async () => {
+      (err.action as { onClick(): void }).onClick();
+      for (let i = 0; i < 20; i++) { await Promise.resolve(); }
+    });
+    expect(service.calls.upsertEntry).toBe(before);
+    expect(activeToasts()[0].title).toBe(`Switch back to ${title1} to retry.`);
+  });
+
+  it('refreshes one write toast for rapid saves instead of stacking', async () => {
+    const service = new ControlledService(1);
+    const { result } = await loaded(service);
+    await act(() => result.current.clickDay('2026-11-09'));
+    await act(() => result.current.clickDay('2026-11-10'));
+    const saved = activeToasts().filter(t => t.kind === 'success');
+    expect(saved).toHaveLength(1);
+    expect(saved[0].title).toBe('Saved 10 Nov 2026');
+  });
+
+  it('dismisses its write toasts when the contract is switched', async () => {
+    const service = new ControlledService(1);
+    const { result } = await loaded(service);
+    await act(() => result.current.clickDay('2026-11-09'));
+    expect(activeToasts()).toHaveLength(1);
+    await settle(() => result.current.selectContract(2));
+    expect(activeToasts()).toHaveLength(0);
+  });
+
+  it('dismisses its toasts when the calendar unmounts', async () => {
+    const service = new ControlledService(1);
+    const { result, unmount } = await loaded(service);
+    await act(() => result.current.clickDay('2026-11-09'));
+    expect(activeToasts()).toHaveLength(1);
+    unmount();
+    expect(activeToasts()).toHaveLength(0);
+  });
 });

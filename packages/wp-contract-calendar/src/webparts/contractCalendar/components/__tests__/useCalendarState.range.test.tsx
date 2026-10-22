@@ -6,6 +6,11 @@ import type { IContractCalendarWebPartProps } from '../../IContractCalendarWebPa
 import { useCalendarState } from '../useCalendarState';
 import { datesBetween } from '../rangeSelection';
 import { ControlledService } from './controlledService';
+import { activeToasts, unmountToastHost } from '@orpheussystems/shared-ui/toast';
+
+const errorToasts = (): ReturnType<typeof activeToasts> => activeToasts().filter(t => t.kind === 'error');
+beforeEach(() => { unmountToastHost(); });
+
 
 const baseProps: IContractCalendarWebPartProps = {
   useLocalData: true,
@@ -61,7 +66,7 @@ describe('useCalendarState.applyRange', () => {
     ]);
     expect(result.current.entries['2026-11-07']).toBeUndefined();
     expect(result.current.entries['2026-11-09']?.type).toBe('OffSiteFull');
-    expect(result.current.error).toBeUndefined();
+    expect(errorToasts()).toHaveLength(0);
   });
 
   it('does not rewrite days that already hold the selected type when painting', async () => {
@@ -141,7 +146,7 @@ describe('useCalendarState.applyRange', () => {
     for (const d of ['2026-11-09', '2026-11-10', '2026-11-12', '2026-11-13']) {
       expect(result.current.entries[d]?.type).toBe('OffSiteFull');
     }
-    expect(result.current.error).toBe('1 of 5 days could not be saved.');
+    expect(errorToasts().map(t => t.title)).toEqual(['1 of 5 days could not be saved']);
   });
 
   it('is a no-op for a read-only user', async () => {

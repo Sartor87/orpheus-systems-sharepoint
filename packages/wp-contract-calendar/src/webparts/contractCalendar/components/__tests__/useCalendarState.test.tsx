@@ -4,6 +4,11 @@ import { IDataService, LocalDataService } from '@orpheussystems/shared-core';
 import { DataContext } from '../../DataContext';
 import type { IContractCalendarWebPartProps } from '../../IContractCalendarWebPartProps';
 import { computeMonths, useCalendarState } from '../useCalendarState';
+import { activeToasts, unmountToastHost } from '@orpheussystems/shared-ui/toast';
+
+const errorToasts = (): ReturnType<typeof activeToasts> => activeToasts().filter(t => t.kind === 'error');
+beforeEach(() => { unmountToastHost(); });
+
 
 const baseProps: IContractCalendarWebPartProps = {
   useLocalData: true,
@@ -77,7 +82,7 @@ describe('useCalendarState', () => {
     const before = result.current.totals.totalDays;
     await act(() => result.current.clickDay('2026-03-03')); // Liberation Day (BG)
     expect(result.current.entries['2026-03-03']).toBeUndefined();
-    expect(result.current.error).toBeUndefined();
+    expect(errorToasts()).toHaveLength(0);
     expect(result.current.totals.totalDays).toBe(before);
     expect(await service.getEntries(1, '2026-03-03', '2026-03-03')).toEqual([]);
   });
@@ -109,9 +114,9 @@ describe('useCalendarState', () => {
     // Weekends are not blocked in the UI here, but the service rejects them.
     await act(() => result.current.clickDay('2026-02-07'));
     expect(result.current.entries['2026-02-07']).toBeUndefined();
-    expect(result.current.error).toMatch(/blocked/);
+    expect(errorToasts()[0].text).toMatch(/blocked/);
     await act(() => result.current.clickDay('2026-02-09'));
-    expect(result.current.error).toBeUndefined();
+    expect(activeToasts()[0].kind).toBe('success');
     expect(result.current.entries['2026-02-09']?.type).toBe('OffSiteFull');
     expect((await service.getEntries(1, '2026-02-09', '2026-02-09')).length).toBe(1);
   });

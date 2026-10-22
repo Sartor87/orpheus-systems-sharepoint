@@ -5,6 +5,11 @@ import type { TimesheetModel } from '@orpheussystems/shared-ui/timesheet';
 import { DataContext } from '../../DataContext';
 import type { IContractCalendarWebPartProps } from '../../IContractCalendarWebPartProps';
 import { useCalendarState } from '../useCalendarState';
+import { activeToasts, unmountToastHost } from '@orpheussystems/shared-ui/toast';
+
+const errorToasts = (): ReturnType<typeof activeToasts> => activeToasts().filter(t => t.kind === 'error');
+beforeEach(() => { unmountToastHost(); });
+
 
 const baseProps: IContractCalendarWebPartProps = {
   useLocalData: true, demoUserId: 1, contractsListId: '', entriesListId: '', holidaysListId: '',
@@ -44,7 +49,7 @@ describe('generateTimesheet', () => {
     expect(result.current.readOnly).toBe(true);
     await act(async () => { await result.current.generateTimesheet({ from: '2026-02-02', to: '2026-03-31' }); });
     expect(download).toHaveBeenCalledTimes(1);
-    expect(result.current.error).toBeUndefined();
+    expect(errorToasts()).toHaveLength(0);
   });
 
   it('reports a failure through error', async () => {

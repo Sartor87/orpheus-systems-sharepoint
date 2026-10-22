@@ -14,9 +14,8 @@ import TimesheetDialog from './TimesheetDialog';
 import { useRangeDrag } from './useRangeDrag';
 import type { RangePreview } from './useRangeDrag';
 import { rangeMode } from './rangeSelection';
+import { orpheusBrand } from '@orpheussystems/shared-ui/brand';
 import { showBrandToastOnce } from '@orpheussystems/shared-ui/toast';
-
-const BRAND_TOAST_KEY = 'orpheus.contractCalendar.brandToastShownAt';
 
 /** The part of the preview inside one month, or undefined when they do not meet. */
 function clipToMonth(preview: RangePreview, year: number, month: number): RangePreview | undefined {
@@ -60,7 +59,7 @@ const orpheusDark = createTheme({
 
 const ContractCalendar: React.FC<IContractCalendarProps> = ({ brandToast }) => {
   React.useEffect(() => {
-    if (brandToast) { showBrandToastOnce(BRAND_TOAST_KEY, 7); }
+    if (brandToast) { showBrandToastOnce({ title: `Contract Calendar by ${orpheusBrand.name}` }); }
   }, [brandToast]);
   const state = useCalendarState();
   const { selected, readOnly } = state;

@@ -23,7 +23,8 @@ import { DataContext } from '../DataContext';
 import { timesheetFileName } from './timesheetFileName';
 import { eligibleDates } from './rangeSelection';
 import { formatShortDate } from './calendarFormat';
-import { showToast } from '@orpheussystems/shared-ui/toast';
+import { dismissToast, showToast } from '@orpheussystems/shared-ui/toast';
+import type { ToastOptions } from '@orpheussystems/shared-ui/toast';
 import type { RangeMode } from './rangeSelection';
 
 /** Outcome of one date write as far as the screen is concerned. */
@@ -66,7 +67,6 @@ export interface CalendarState {
   remaining: Remaining;
   readOnly: boolean;
   pendingOverlap?: PendingOverlap;
-  error?: string;
   /** Last timesheet generation failure; shown inside the timesheet dialog. */
   timesheetError?: string;
   /** True until the user and contracts, then the selected contract's entries, have loaded. */
@@ -92,7 +92,6 @@ export interface CalendarActions {
   /** Weekend (when configured), holiday, or outside the selected contract's period. */
   isDayBlocked(date: DateKey): boolean;
   retryLoad(): void;
-  dismissError(): void;
   /** Fetches the whole period (not just the shown months) and downloads the PDF. Failures surface through `timesheetError`. */
   generateTimesheet(period: { from: DateKey; to: DateKey }): Promise<boolean>;
   clearTimesheetError(): void;
@@ -156,7 +155,6 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
   const [holidays, setHolidays] = React.useState<Holiday[]>([]);
   const [selectionType, setSelectionType] = React.useState<EntryType>('OffSiteFull');
   const [pendingOverlap, setPendingOverlap] = React.useState<PendingOverlap | undefined>();
-  const [error, setError] = React.useState<string | undefined>();
   const [loadingContracts, setLoadingContracts] = React.useState(true);
   const [loadedContractId, setLoadedContractId] = React.useState<number | undefined>();
   const [loadError, setLoadError] = React.useState<string | undefined>();
@@ -176,6 +174,19 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
   // separate batches whose server-side order is not guaranteed if both are in flight.
   const writeChains = React.useRef<Record<DateKey, Promise<unknown>>>({});
   const mounted = React.useRef(true);
+  // Toasts raised by this calendar instance; dismissed on contract switch and unmount.
+  const instanceId = React.useRef(Math.random().toString(36).slice(2, 8)).current;
+  const writeKey = `contract-calendar:${instanceId}:write`;
+  const countedKey = `contract-calendar:${instanceId}:counted`;
+  const ownToasts = React.useRef<string[]>([]);
+  const raise = React.useCallback((o: ToastOptions): string => {
+    const id = showToast(o);
+    if (ownToasts.current.indexOf(id) < 0) { ownToasts.current.push(id); }
+    return id;
+  }, []);
+  React.useEffect(() => () => {
+    ownToasts.current.splice(0).forEach(dismissToast);
+  }, [selectedId]);
   React.useEffect(() => () => { mounted.current = false; }, []);
 
   // Initial load; re-runs when the data service is rebuilt.
@@ -233,7 +244,6 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
         writes.current = {};
         setEntries(map);
         setHolidays(hols);
-        setError(undefined);
         setLoadedContractId(contract.id);
       })
       .catch(e => {
@@ -257,9 +267,17 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
    * Optimistic write. Writes to one date are ordered by a token: only the latest write's outcome is shown,
    * and a failure rolls back to the newest server-confirmed value, never to a click-time snapshot.
    * Local state only tracks the selected contract: writing to a sibling moves the date off it.
-   * In a batch the caller reports errors (one summary for the range), so this write leaves `error` alone.
+   * In a batch the caller reports errors (one summary for the range), so this write stays quiet.
    */
   // Retry buttons in toasts call the newest write functions through these refs (assigned below).
+  /** A Retry only makes sense on the contract that was shown when the failure happened. */
+  const retryOn = (shownId: number | undefined, run: () => Promise<unknown>): void => {
+    if (selectedIdRef.current !== shownId) {
+      raise({ kind: 'info', title: `Switch back to ${shownId === undefined ? 'the contract' : titleOf(shownId)} to retry.` });
+      return;
+    }
+    run().catch(() => undefined);
+  };
   const writeRef = React.useRef<(c: number, d: DateKey, t: EntryType | undefined, cur: CalendarEntry | undefined) => Promise<WriteOutcome>>(
     () => Promise.resolve('stale')
   );
@@ -305,9 +323,8 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
         book.latestState = 'ok';
         setEntries(prev => withEntry(prev, date, shown));
         if (!batch) {
-          setError(undefined);
           if (type && successTitle !== null) {
-            showToast({ kind: 'success', title: successTitle || `Saved ${formatShortDate(date)}`, text: successTitle ? undefined : titleOf(contractId) });
+            raise({ kind: 'success', title: successTitle || `Saved ${formatShortDate(date)}`, text: successTitle ? undefined : titleOf(contractId), dedupeKey: successTitle ? countedKey : writeKey });
           }
         }
         return 'ok';
@@ -322,12 +339,11 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
       book.latestState = 'failed';
       setEntries(prev => withEntry(prev, date, book.confirmed));
       if (!batch) {
-        setError(messageOf(e));
-        showToast({
+        raise({
           kind: 'error',
           title: `Could not save ${formatShortDate(date)}`,
           text: messageOf(e),
-          action: { label: 'Retry', onClick: () => { writeRef.current(contractId, date, type, book.confirmed).catch(() => undefined); } }
+          action: { label: 'Retry', onClick: () => { retryOn(shownId, () => writeRef.current(contractId, date, type, book.confirmed)); } }
         });
       }
       return 'failed';
@@ -348,27 +364,25 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
     const failedItems = items.filter((_, i) => outcomes[i] === 'failed');
     const failed = failedItems.length;
     if (failed > 0) {
-      setError(`${failed} of ${items.length} days could not be saved.`);
-      showToast({
+      raise({
         kind: 'error',
         title: `${failed} of ${items.length} days could not be saved`,
-        action: { label: 'Retry', onClick: () => { writeManyRef.current(failedItems).catch(() => undefined); } }
+        action: { label: 'Retry', onClick: () => { retryOn(shownId, () => writeManyRef.current(failedItems)); } }
       });
       return;
     }
-    if (outcomes.some(o => o === 'ok')) { setError(undefined); }
     const okTyped = items.filter((i, idx) => outcomes[idx] === 'ok' && i.type);
     const isCounted = (i: WriteItem): boolean => !!counted && counted.dates.indexOf(i.date) >= 0;
     const countedItems = okTyped.filter(isCounted);
     const savedItems = okTyped.filter(i => !isCounted(i));
     const days = (n: number): string => `${n} day${n === 1 ? '' : 's'}`;
     if (counted && countedItems.length > 0) {
-      showToast({ kind: 'success', title: `Counted ${days(countedItems.length)} against ${counted.title}` });
+      raise({ kind: 'success', title: `Counted ${days(countedItems.length)} against ${counted.title}`, dedupeKey: countedKey });
     }
     if (savedItems.length === 1) {
-      showToast({ kind: 'success', title: `Saved ${formatShortDate(savedItems[0].date)}`, text: titleOf(savedItems[0].contractId) });
+      raise({ kind: 'success', title: `Saved ${formatShortDate(savedItems[0].date)}`, text: titleOf(savedItems[0].contractId), dedupeKey: writeKey });
     } else if (savedItems.length > 1) {
-      showToast({ kind: 'success', title: `Saved ${days(savedItems.length)} to ${titleOf(savedItems[0].contractId)}` });
+      raise({ kind: 'success', title: `Saved ${days(savedItems.length)} to ${titleOf(savedItems[0].contractId)}`, dedupeKey: writeKey });
     }
   }, [write]);
   writeManyRef.current = items => writeMany(items);
@@ -462,7 +476,6 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
   const loading = loadingContracts || (!!selected && loadedContractId !== selected.id && !loadError);
   const clearTimesheetError = React.useCallback((): void => { setTimesheetError(undefined); }, []);
   const retryLoad = React.useCallback((): void => { setReloadNonce(n => n + 1); }, []);
-  const dismissError = React.useCallback((): void => { setError(undefined); }, []);
 
   const generateTimesheet = React.useCallback(async (period: { from: DateKey; to: DateKey }): Promise<boolean> => {
     const contract = selectedRef.current;
@@ -483,7 +496,7 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
       const pdf = await loadPdfRef.current();
       const fileName = timesheetFileName(contract, period.from, period.to);
       await pdf.downloadTimesheet(model, fileName);
-      showToast({ kind: 'success', title: 'Timesheet downloaded', text: fileName });
+      raise({ kind: 'success', title: 'Timesheet downloaded', text: fileName, dedupeKey: `contract-calendar:${instanceId}:timesheet` });
       return true;
     } catch (e) {
       if (mounted.current) { setTimesheetError(`Could not generate the timesheet: ${messageOf(e)}`); }
@@ -509,7 +522,6 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
     remaining,
     readOnly,
     pendingOverlap,
-    error,
     loading,
     currentUser,
     today,
@@ -520,7 +532,6 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
     resolveOverlap,
     isDayBlocked,
     loadError,
-    retryLoad,
-    dismissError
+    retryLoad
   };
 }

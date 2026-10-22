@@ -2,23 +2,28 @@ import * as React from 'react';
 import * as ReactDom from 'react-dom';
 import { ToastHost } from './ToastHost';
 import { orpheusBrand } from '../brand/brand';
-import { ToastOptions, addToast, getStore, removeToast } from './toastStore';
+import { HOST_ID, ToastOptions, addToast, getStore, removeToast } from './toastStore';
 
-
-
-
-const HOST_ID = 'orpheus-toast-host';
+/** One site-wide key: all components on a page, and all pages of a site, share a single 7-day brand toast. */
+export const BRAND_TOAST_STORAGE_KEY = 'orpheus.site.brandToastShownAt';
+export const BRAND_TOAST_DEDUPE_KEY = 'orpheus.brand';
 
 function ensureHost(): void {
   const store = getStore();
-  if (store.host && document.body.contains(store.host)) { return; }
   const existing = document.getElementById(HOST_ID);
-  if (existing) { store.host = existing; return; }
-  const el = document.createElement('div');
-  el.id = HOST_ID;
-  document.body.appendChild(el);
+  // A host that some bundle has mounted and that is listening is reused as is.
+  if (existing && store.listeners.length > 0) { store.host = existing; return; }
+  const el = existing || document.createElement('div');
+  if (!existing) {
+    el.id = HOST_ID;
+    document.body.appendChild(el);
+  }
   store.host = el;
   ReactDom.render(React.createElement(ToastHost), el);
+  store.unmount = () => {
+    ReactDom.unmountComponentAtNode(el);
+    el.remove();
+  };
 }
 
 /** Shows a toast (mounting the shared host on first use) and returns its id. */
@@ -31,48 +36,62 @@ export function dismissToast(id: string): void {
   removeToast(id);
 }
 
-/** Removes the host and every toast; for tests and component dispose. */
+/**
+ * Removes the shared host and every toast on the page, whichever bundle mounted it.
+ * For tests only: components must NOT call this on dispose, because it also removes other components' toasts.
+ */
 export function unmountToastHost(): void {
   const store = getStore();
-  if (store.host) {
-    ReactDom.unmountComponentAtNode(store.host);
+  if (store.unmount) {
+    store.unmount();
+  } else if (store.host) {
     store.host.remove();
-    store.host = undefined;
   }
+  store.unmount = undefined;
+  store.host = undefined;
   store.toasts = [];
   store.listeners = [];
+  store.brandShown = {};
 }
 
-
 const DAY_MS = 24 * 60 * 60 * 1000;
-let brandShownThisPageLoad = false;
 
-/** Test seam: forget the per-page-load fallback used when storage is unavailable. */
-export function resetBrandToastForTests(): void { brandShownThisPageLoad = false; }
+export interface BrandToastOptions {
+  /** Defaults to BRAND_TOAST_STORAGE_KEY, shared by every Orpheus component. */
+  storageKey?: string;
+  title: string;
+  intervalDays?: number;
+}
 
 /**
- * The Orpheus Systems toast, at most once per browser per `intervalDays` (default 7). The time is kept in
- * localStorage under `storageKey`; without storage it shows once per page load. Returns whether it was shown.
+ * The Orpheus Systems toast, at most once per browser per interval (default 7 days) and once per page, however
+ * many components ask. Without usable storage it shows once per page. Returns whether it was shown.
  */
-export function showBrandToastOnce(storageKey: string, intervalDays: number = 7, productName: string = 'Contract Calendar'): boolean {
+export function showBrandToastOnce(options: BrandToastOptions): boolean {
+  const store = getStore();
+  const key = options.storageKey || BRAND_TOAST_STORAGE_KEY;
+  const intervalMs = (options.intervalDays === undefined ? 7 : options.intervalDays) * DAY_MS;
+  if (store.brandShown[key]) { return false; }
   const now = Date.now();
   let stored: number | undefined;
-  let storageOk = true;
   try {
-    const raw = window.localStorage.getItem(storageKey);
+    const raw = window.localStorage.getItem(key);
     const n = raw === null ? NaN : Number(raw);
     stored = isNaN(n) ? undefined : n;
   } catch {
-    storageOk = false;
+    stored = undefined;
   }
-  if (storageOk && stored !== undefined && now - stored >= 0 && now - stored < intervalDays * DAY_MS) { return false; }
-  if (!storageOk && brandShownThisPageLoad) { return false; }
-  brandShownThisPageLoad = true;
-  try { window.localStorage.setItem(storageKey, String(now)); } catch { /* storage unavailable */ }
+  if (stored !== undefined && now - stored >= 0 && now - stored < intervalMs) {
+    store.brandShown[key] = true;
+    return false;
+  }
+  store.brandShown[key] = true;
+  try { window.localStorage.setItem(key, String(now)); } catch { /* storage unavailable */ }
   showToast({
     kind: 'brand',
-    title: `${productName} by ${orpheusBrand.name}`,
-    link: { href: orpheusBrand.url, label: orpheusBrand.url.replace(/^https?:\/\//, '').replace(/\/$/, '') }
+    title: options.title,
+    link: { href: orpheusBrand.url, label: orpheusBrand.url.replace(/^https?:\/\//, '').replace(/\/$/, '') },
+    dedupeKey: BRAND_TOAST_DEDUPE_KEY
   });
   return true;
 }

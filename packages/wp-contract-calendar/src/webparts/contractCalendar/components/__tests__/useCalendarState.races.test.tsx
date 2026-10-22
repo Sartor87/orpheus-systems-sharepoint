@@ -5,6 +5,11 @@ import { DataContext } from '../../DataContext';
 import type { IContractCalendarWebPartProps } from '../../IContractCalendarWebPartProps';
 import { useCalendarState } from '../useCalendarState';
 import { ControlledService } from './controlledService';
+import { activeToasts, dismissToast, unmountToastHost } from '@orpheussystems/shared-ui/toast';
+
+const errorToasts = (): ReturnType<typeof activeToasts> => activeToasts().filter(t => t.kind === 'error');
+beforeEach(() => { unmountToastHost(); });
+
 
 const baseProps: IContractCalendarWebPartProps = {
   useLocalData: true,
@@ -85,7 +90,7 @@ describe('useCalendarState write ordering', () => {
 
     await settle(() => service.held[0].fail());                  // stale A fails while B waits
     expect(result.current.entries[DAY]?.type).toBe('OnSiteFull');
-    expect(result.current.error).toBeUndefined();
+    expect(errorToasts()).toHaveLength(0);
     await settle(() => service.held[1].succeed());
     expect(result.current.entries[DAY]?.type).toBe('OnSiteFull');
   });
@@ -103,7 +108,7 @@ describe('useCalendarState write ordering', () => {
     await settle(() => service.held[1].fail());                  // delete rejected
     expect(result.current.entries[DAY]?.type).toBe('OffSiteFull');
     expect(result.current.entries[DAY]?.id).toBeDefined();       // the saved entry, not an optimistic copy
-    expect(result.current.error).toBe('Delete failed');
+    expect(errorToasts().map(t => t.text)).toEqual(['Delete failed']);
   });
 
   it('shows the optimistic entry, then rolls it back with an error', async () => {
@@ -119,11 +124,11 @@ describe('useCalendarState write ordering', () => {
     await settle(() => service.held[0].fail('Date is blocked'));
     expect(result.current.entries[DAY]).toBeUndefined();
     expect(result.current.totals.offSiteFull).toBe(before - 1);
-    expect(result.current.error).toBe('Date is blocked');
+    expect(errorToasts().map(t => t.text)).toEqual(['Date is blocked']);
 
     service.setHoldWrites(false);
     await act(() => result.current.clickDay(DAY));
-    expect(result.current.error).toBeUndefined();
+    expect(activeToasts()[0].kind).toBe('success');
   });
 
   it('rolls back a failed move to the sibling contract', async () => {
@@ -140,7 +145,7 @@ describe('useCalendarState write ordering', () => {
 
     await settle(() => service.held[0].fail('Move failed'));
     expect(result.current.entries['2027-02-05']?.type).toBe('OnSiteFull');
-    expect(result.current.error).toBe('Move failed');
+    expect(errorToasts().map(t => t.text)).toEqual(['Move failed']);
     expect((await service.inner.getEntries(2, '2027-02-05', '2027-02-05'))).toEqual([]);
   });
 
@@ -150,9 +155,9 @@ describe('useCalendarState write ordering', () => {
     service.setHoldWrites(true);
     act(() => start(result.current.clickDay(DAY)));
     await settle(() => service.held[0].fail());
-    expect(result.current.error).toBeDefined();
-    act(() => result.current.dismissError());
-    expect(result.current.error).toBeUndefined();
+    expect(errorToasts()).toHaveLength(1);
+    act(() => dismissToast(errorToasts()[0].id));
+    expect(errorToasts()).toHaveLength(0);
   });
 });
 
@@ -180,13 +185,13 @@ describe('useCalendarState load failures and service rebuilds', () => {
     expect(result.current.entries[DAY]?.type).toBe('OffSiteFull');
   });
 
-  it('locks the grid during a rebuild refetch, fetches once, and clears a previous error', async () => {
+  it('locks the grid during a rebuild refetch, fetches once,', async () => {
     const first = new ControlledService(1);
     const { result, rerender, waitFor } = await loaded(first);
     first.setHoldWrites(true);
     act(() => start(result.current.clickDay(DAY)));
     await settle(() => first.held[0].fail());
-    expect(result.current.error).toBeDefined();
+    expect(errorToasts()).toHaveLength(1);
 
     const second = new ControlledService(1);
     second.holdEntries();
@@ -200,7 +205,6 @@ describe('useCalendarState load failures and service rebuilds', () => {
     second.releaseEntries();
     await waitFor(() => !result.current.loading);
     expect(result.current.entries['2026-02-06']?.type).toBe('OnSiteFull');
-    expect(result.current.error).toBeUndefined();
     expect(second.calls.getEntries).toBe(1);
   });
 });
