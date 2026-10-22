@@ -4,3 +4,7 @@ export * from './rules';
 export type { IDataService } from './data/IDataService';
 export { LocalDataService } from './data/LocalDataService';
 export type { LocalDataServiceOptions } from './data/LocalDataService';
+export { SharePointDataService, deriveRoles } from './data/SharePointDataService';
+export type { SharePointListConfig } from './data/SharePointDataService';
+export * from './data/spMappers';
+export * from './data/spQueries';
