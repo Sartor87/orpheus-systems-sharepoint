@@ -1,77 +1,42 @@
 # ext-app-customizer
 
-## Summary
+Orpheus Systems application customizer for SharePoint Online (SPFx 1.23.2, React 17).
 
-Short summary on functionality and used technologies.
+- **Header** (Top placeholder, 48 px): the Orpheus mark and wordmark linking to the Orpheus Systems website, and a
+  role-aware menu on the right. Below 640 px the menu collapses into a button with a dropdown. The current page's
+  item is marked `aria-current="page"`.
+- **Footer** (Bottom placeholder): the Orpheus kicker, a contact link and the component version.
+- **Brand toast**: once per page and at most once per 7 days per browser, shared with every other Orpheus
+  component on the site.
 
-[picture of the solution in action, if possible]
+The header renders immediately with the items that need no role, then loads the current user's roles from the
+Contracts list (Contractor, ContractManager, Admin) and re-renders. If the lookup fails (list missing, no access to
+groups) the header keeps the brand and the role-less items.
 
-## Used SharePoint Framework Version
+## Properties
 
-![version](https://img.shields.io/badge/version-1.23.2-green.svg)
+| Property           | Default                           | Description                                                    |
+| ------------------ | --------------------------------- | -------------------------------------------------------------- |
+| `contractsListUrl` | `Lists/Contracts`                 | Web-relative URL of the Contracts list (used to derive roles). |
+| `calendarPageUrl`  | `SitePages/ContractCalendar.aspx` | Web-relative URL of the contract calendar page.                |
+| `menu`             | My calendar · Contracts · Holidays | Items `{ label, url, roles? }`; no `roles` = everyone.        |
+| `showFooter`       | `true`                            | Set to `false` to render the header only.                      |
 
-## Applies to
+Menu URLs may use the tokens `{calendarPageUrl}` and `{contractsListUrl}`; relative URLs resolve against the web.
 
-- [SharePoint Framework](https://aka.ms/spfx)
-- [Microsoft 365 tenant](https://docs.microsoft.com/sharepoint/dev/spfx/set-up-your-developer-tenant)
+## Develop
 
-> Get your own free development tenant by subscribing to [Microsoft 365 developer program](http://aka.ms/o365devprogram)
+From the repository root (container setup: `docs/dev-environment.md`):
 
-## Prerequisites
+```powershell
+podman compose run --rm shell bash -c "npm test -w @orpheussystems/ext-app-customizer"
+podman compose run --rm shell bash -c "npm run package -w @orpheussystems/ext-app-customizer"
+.\scripts\podman.ps1 serve ext-app-customizer
+```
 
-> Any special pre-requisites?
+`config/serve.json` uses `{tenantDomain}` and `{site}` placeholders. Binding the customizer to a site is done by
+provisioning; for a quick check, open a page with the debug query string printed by `serve`.
 
-## Solution
+## License
 
-| Solution    | Author(s)                                               |
-| ----------- | ------------------------------------------------------- |
-| folder name | Author details (name, company, twitter alias with link) |
-
-## Version history
-
-| Version | Date             | Comments        |
-| ------- | ---------------- | --------------- |
-| 1.1     | March 10, 2021   | Update comment  |
-| 1.0     | January 29, 2021 | Initial release |
-
-## Disclaimer
-
-**THIS CODE IS PROVIDED _AS IS_ WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.**
-
----
-
-## Minimal Path to Awesome
-
-- Clone this repository
-- Ensure that you are at the solution folder
-- in the command-line run:
-  - `npm install -g @rushstack/heft`
-  - `npm install`
-  - `heft start`
-
-> Include any additional steps as needed.
-
-Other build commands can be listed using `heft --help`.
-
-## Features
-
-Description of the extension that expands upon high-level summary above.
-
-This extension illustrates the following concepts:
-
-- topic 1
-- topic 2
-- topic 3
-
-> Notice that better pictures and documentation will increase the sample usage and the value you are providing for others. Thanks for your submissions advance.
-
-> Share your web part with others through Microsoft 365 Patterns and Practices program to get visibility and exposure. More details on the community, open-source projects and other activities from http://aka.ms/m365pnp.
-
-## References
-
-- [Getting started with SharePoint Framework](https://docs.microsoft.com/sharepoint/dev/spfx/set-up-your-developer-tenant)
-- [Building for Microsoft teams](https://docs.microsoft.com/sharepoint/dev/spfx/build-for-teams-overview)
-- [Use Microsoft Graph in your solution](https://docs.microsoft.com/sharepoint/dev/spfx/web-parts/get-started/using-microsoft-graph-apis)
-- [Publish SharePoint Framework applications to the Marketplace](https://docs.microsoft.com/sharepoint/dev/spfx/publish-to-marketplace-overview)
-- [Microsoft 365 Patterns and Practices](https://aka.ms/m365pnp) - Guidance, tooling, samples and open-source controls for your Microsoft 365 development
-- [Heft Documentation](https://heft.rushstack.io/)
+Apache-2.0

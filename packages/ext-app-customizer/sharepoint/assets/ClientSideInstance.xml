@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Elements xmlns="http://schemas.microsoft.com/sharepoint/">
     <ClientSideComponentInstance
-        Title="OrpheusChrome"
+        Title="Orpheus Systems header and footer"
         Location="ClientSideExtension.ApplicationCustomizer"
         ComponentId="30930118-2d09-49f4-bdc4-fb2c9b4af49e"
-        Properties="{&quot;testMessage&quot;:&quot;Test message&quot;}">
+        Properties="{&quot;contractsListUrl&quot;:&quot;Lists/Contracts&quot;,&quot;calendarPageUrl&quot;:&quot;SitePages/ContractCalendar.aspx&quot;,&quot;showFooter&quot;:true}">
     </ClientSideComponentInstance>
 </Elements>

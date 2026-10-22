@@ -1,0 +1,263 @@
+// Colours come from orpheusTokens through the CSS custom properties set in chromeVars.ts.
+
+$compact-max: 639.98px;
+
+@mixin focus-ring {
+  outline: 2px solid var(--orpheus-amber);
+  outline-offset: 2px;
+}
+
+.header {
+  position: relative;
+  z-index: 10;
+  box-sizing: border-box;
+  height: 48px;
+  background: var(--orpheus-bg);
+  color: var(--orpheus-text);
+  border-bottom: 1px solid var(--orpheus-border);
+  font-family: var(--orpheus-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.inner {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  height: 100%;
+  padding: 0 24px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  color: var(--orpheus-text-muted);
+  border-radius: 4px;
+
+  &:hover,
+  &:focus {
+    text-decoration: none;
+    color: var(--orpheus-text);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+.brandName {
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.brandStrong {
+  font-weight: 600;
+  color: var(--orpheus-text);
+}
+
+.nav {
+  display: block;
+}
+
+.navList {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navLink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--orpheus-text-muted);
+  text-decoration: none;
+  border-radius: 4px;
+  transition: color 120ms ease, background-color 120ms ease;
+
+  &:hover,
+  &:focus {
+    color: var(--orpheus-text);
+    background: var(--orpheus-hover);
+    text-decoration: none;
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+
+  // Amber rule along the bottom edge of the 48px bar.
+  &[aria-current='page'] {
+    color: var(--orpheus-text);
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: -8px;
+      height: 2px;
+      border-radius: 1px;
+      background: var(--orpheus-amber);
+    }
+  }
+}
+
+.compact {
+  display: none;
+  position: relative;
+}
+
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--orpheus-text);
+  background: transparent;
+  border: 1px solid var(--orpheus-border);
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:hover,
+  &[aria-expanded='true'] {
+    border-color: var(--orpheus-amber);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1000;
+  box-sizing: border-box;
+  min-width: 208px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--orpheus-bg-elevated);
+  border: 1px solid var(--orpheus-border);
+  border-radius: 6px;
+  box-shadow: 0 12px 32px var(--orpheus-shadow);
+}
+
+.menuLink {
+  display: block;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--orpheus-text);
+  text-decoration: none;
+  border-radius: 4px;
+
+  &:hover,
+  &:focus {
+    outline: none;
+    color: var(--orpheus-text);
+    background: var(--orpheus-amber-soft);
+    text-decoration: none;
+  }
+
+  &[aria-current='page'] {
+    color: var(--orpheus-amber);
+    box-shadow: inset 2px 0 0 var(--orpheus-amber);
+  }
+}
+
+.footer {
+  box-sizing: border-box;
+  background: var(--orpheus-bg-elevated);
+  color: var(--orpheus-text-muted);
+  border-top: 1px solid var(--orpheus-border);
+  font-family: var(--orpheus-font);
+  font-size: 12px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.footerInner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  padding: 14px 24px;
+}
+
+.footerLead {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kicker {
+  color: var(--orpheus-amber);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  font-variant: small-caps;
+  text-transform: uppercase;
+}
+
+.footerMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footerLink {
+  color: var(--orpheus-text);
+  text-decoration: none;
+  border-radius: 2px;
+
+  &:hover,
+  &:focus {
+    color: var(--orpheus-amber);
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+.footerSep {
+  color: var(--orpheus-border);
+}
+
+.version {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: $compact-max) {
+  .inner,
+  .footerInner {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  .compact {
+    display: block;
+  }
+}
