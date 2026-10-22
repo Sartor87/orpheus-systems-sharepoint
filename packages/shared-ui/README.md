@@ -4,7 +4,7 @@ Shared UI helpers for the Orpheus Systems SPFx solutions. Import the sub-paths (
 
 ## Toasts
 
-SharePoint-style notifications that any web part or extension on the page can raise. All of them share one stack (kept on `window.__orpheusToasts`), mounted on first use, so no React wiring is needed. React and react-dom are peer dependencies; the toast has no other UI dependency, and its styles are scoped under `#orpheus-toast-host-v1`.
+SharePoint-style notifications that any web part or extension on the page can raise. All of them share one stack (kept on `window.__orpheusToasts_v1`), mounted on first use, so no React wiring is needed. React and react-dom are peer dependencies; the toast has no other UI dependency, and its styles are scoped under `#orpheus-toast-host-v1`.
 
 ```ts
 import { showToast } from '@orpheussystems/shared-ui/toast';

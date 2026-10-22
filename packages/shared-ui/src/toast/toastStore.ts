@@ -30,7 +30,7 @@ export const DEFAULT_TOAST_DURATION_MS = 15000;
 export interface ToastStore {
   v: 1;
   toasts: ToastEntry[];
-  counter: number;
+  nextId: number;
   listeners: Array<() => void>;
   host?: HTMLElement;
   /** Set by the bundle that mounted the host; tears the host down with that bundle's own ReactDOM. */
@@ -46,13 +46,18 @@ declare global {
 export const STORE_KEY = '__orpheusToasts_v1';
 export const HOST_ID = 'orpheus-toast-host-v1';
 
-/** Never replaces an existing store: a second bundle joins the first one's stack. */
+/**
+ * Never replaces an existing store: a second bundle joins the first one's stack. Fields a store created by
+ * another version of this code may lack are filled in.
+ */
 export function getStore(): ToastStore {
   const w = window;
-  if (!w.__orpheusToasts_v1) {
-    w.__orpheusToasts_v1 = { v: 1, toasts: [], counter: 0, listeners: [], brandShown: {} };
-  }
-  return w.__orpheusToasts_v1;
+  const s = (w.__orpheusToasts_v1 || (w.__orpheusToasts_v1 = { v: 1 } as ToastStore));
+  if (!Array.isArray(s.toasts)) { s.toasts = []; }
+  if (!Array.isArray(s.listeners)) { s.listeners = []; }
+  if (!s.brandShown || typeof s.brandShown !== 'object') { s.brandShown = {}; }
+  if (typeof s.nextId !== 'number') { s.nextId = 1; }
+  return s;
 }
 
 function emit(store: ToastStore): void {
@@ -75,7 +80,7 @@ export function addToast(options: ToastOptions): string {
       return dup.id;
     }
   }
-  const id = `orpheus-toast-${++store.counter}`;
+  const id = `orpheus-toast-${store.nextId++}`;
   // Newest first; the oldest beyond the limit drops off.
   store.toasts = [{ ...options, id, rev: 0 }, ...store.toasts].slice(0, MAX_TOASTS);
   emit(store);

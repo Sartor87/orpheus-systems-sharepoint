@@ -256,3 +256,111 @@ describe('two bundles on one page', () => {
     expect(document.getElementById('orpheus-toast-host-v2')).toBe(el2);
   });
 });
+
+type Win = { __orpheusToasts_v1?: Record<string, unknown> & { unmount?: () => void; toasts: unknown[]; brandShown: Record<string, true> } };
+const win = (): Win => window as unknown as Win;
+
+function isolatedWithDom(): { mod: ToastModule; dom: typeof import('react-dom') } {
+  let mod: ToastModule | undefined;
+  let dom: typeof import('react-dom') | undefined;
+  jest.isolateModules(() => {
+    mod = require('../toast');
+    dom = require('react-dom');
+  });
+  return { mod: mod as ToastModule, dom: dom as typeof import('react-dom') };
+}
+
+describe('cross-bundle host adoption', () => {
+  it('B does not render into A\'s container before A\'s effects flush, and no toast is lost', () => {
+    const { mod: b, dom: bDom } = isolatedWithDom();
+    const renderB = jest.spyOn(bDom, 'render');
+    // No act between the calls: A's passive effects (the subscription) have not run when B shows its toast.
+    showToast({ kind: 'info', title: 'from A' });
+    b.showToast({ kind: 'info', title: 'from B' });
+    expect(renderB).not.toHaveBeenCalled();
+    expect(document.querySelectorAll('#orpheus-toast-host-v1')).toHaveLength(1);
+    act(() => { /* flush effects */ });
+    const text = toastEls().map(e => e.textContent).join('|');
+    expect(text).toContain('from A');
+    expect(text).toContain('from B');
+    renderB.mockRestore();
+  });
+
+  it('unmount via B calls A\'s stored unmount and never B\'s own unmountComponentAtNode', () => {
+    show({ title: 'from A' });
+    const { mod: b, dom: bDom } = isolatedWithDom();
+    const unmountB = jest.spyOn(bDom, 'unmountComponentAtNode');
+    const store = win().__orpheusToasts_v1 as { unmount?: () => void };
+    const original = store.unmount as () => void;
+    const spy = jest.fn(original);
+    store.unmount = spy;
+    act(() => { b.unmountToastHost(); });
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(unmountB).not.toHaveBeenCalled();
+    expect(document.getElementById('orpheus-toast-host-v1')).toBeNull();
+    unmountB.mockRestore();
+  });
+});
+
+describe('store seeding and backfill', () => {
+  it('keeps a store that exists before the first call (same object, toasts kept)', () => {
+    const seeded = {
+      v: 1, nextId: 10, listeners: [], brandShown: {},
+      toasts: [{ id: 'orpheus-toast-9', rev: 0, kind: 'info', title: 'seeded', durationMs: 0 }]
+    };
+    (window as unknown as { __orpheusToasts_v1: unknown }).__orpheusToasts_v1 = seeded;
+    show({ title: 'new' });
+    expect(win().__orpheusToasts_v1).toBe(seeded);
+    expect(activeToasts().map(t => t.title)).toEqual(['new', 'seeded']);
+    expect(toastEls()).toHaveLength(2);
+  });
+
+  it('backfills missing fields on an existing v1 store', () => {
+    (window as unknown as { __orpheusToasts_v1: unknown }).__orpheusToasts_v1 = { v: 1 };
+    show({ title: 'ok' });
+    const s = win().__orpheusToasts_v1 as Record<string, unknown>;
+    expect(Array.isArray(s.toasts)).toBe(true);
+    expect(Array.isArray(s.listeners)).toBe(true);
+    expect(typeof s.brandShown).toBe('object');
+    expect(typeof s.nextId).toBe('number');
+    expect(toastEls()).toHaveLength(1);
+  });
+});
+
+describe('brand toast sharing', () => {
+  it('passes dedupeKey orpheus.brand', () => {
+    act(() => { showBrandToastOnce({ title: BRAND_TITLE }); });
+    expect(activeToasts()[0].dedupeKey).toBe('orpheus.brand');
+  });
+
+  it('is stopped by the shared per-page flag, not by storage or module state', () => {
+    const b = isolated();
+    act(() => { showBrandToastOnce({ title: BRAND_TITLE }); });
+    window.localStorage.clear(); // only the shared flag can stop B now
+    let shown = true;
+    act(() => { shown = b.showBrandToastOnce({ title: BRAND_TITLE }); });
+    expect(shown).toBe(false);
+    expect(win().__orpheusToasts_v1?.brandShown[BRAND_TOAST_STORAGE_KEY]).toBe(true);
+    expect(toastEls().filter(e => (e.textContent || '').includes(BRAND_TITLE))).toHaveLength(1);
+  });
+});
+
+describe('stylesheet', () => {
+  const css = (): string => (document.getElementById('orpheus-toast-styles-v1') as HTMLElement).textContent || '';
+
+  it('stacks above SharePoint chrome', () => {
+    show();
+    const z = Number((/z-index:(\d+)/.exec(css()) || [])[1]);
+    expect(z).toBeGreaterThanOrEqual(1000010);
+  });
+
+  it('uses a dark, high-contrast focus outline on every control', () => {
+    show();
+    const c = css();
+    expect(c).toContain('.orpheus-toast-link:focus-visible');
+    expect(c).toContain('.orpheus-toast-action:focus-visible');
+    expect(c).toContain('.orpheus-toast-close:focus-visible');
+    expect(c).toContain('outline:2px solid #1F2329');
+    expect(c).not.toMatch(/focus-visible[^}]*E0A83A/);
+  });
+});

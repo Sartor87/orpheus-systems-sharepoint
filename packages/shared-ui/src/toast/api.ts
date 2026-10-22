@@ -11,15 +11,17 @@ export const BRAND_TOAST_DEDUPE_KEY = 'orpheus.brand';
 function ensureHost(): void {
   const store = getStore();
   const existing = document.getElementById(HOST_ID);
-  // A host that some bundle has mounted and that is listening is reused as is.
-  if (existing && store.listeners.length > 0) { store.host = existing; return; }
+  // A mounted host is live from the moment ReactDOM.render returned (below), before its effects have run,
+  // so another bundle must not render into that container with its own ReactDOM.
+  if (existing && store.unmount && store.host === existing) { return; }
   const el = existing || document.createElement('div');
   if (!existing) {
     el.id = HOST_ID;
     document.body.appendChild(el);
   }
-  store.host = el;
+  // The host reads store.toasts when it mounts and subscribes afterwards, so toasts added in between are kept.
   ReactDom.render(React.createElement(ToastHost), el);
+  store.host = el;
   store.unmount = () => {
     ReactDom.unmountComponentAtNode(el);
     el.remove();

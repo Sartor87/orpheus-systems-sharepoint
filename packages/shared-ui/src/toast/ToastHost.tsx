@@ -16,7 +16,7 @@ export const TOAST_STYLE_ID = 'orpheus-toast-styles-v1';
 
 const S = `#${HOST_ID}`;
 const CSS = `
-${S} .orpheus-toast-stack{position:fixed;top:64px;right:16px;z-index:1000001;display:flex;flex-direction:column;gap:8px;width:min(360px,calc(100vw - 32px));pointer-events:none}
+${S} .orpheus-toast-stack{position:fixed;top:64px;right:16px;z-index:1000010;display:flex;flex-direction:column;gap:8px;width:min(360px,calc(100vw - 32px));pointer-events:none}
 ${S} .orpheus-toast{box-sizing:border-box;pointer-events:auto;display:flex;align-items:flex-start;gap:10px;padding:12px 8px 12px 12px;background:#fff;color:#201f1e;border-left:4px solid ${orpheusTokens.amber};border-radius:2px;box-shadow:0 6.4px 14.4px rgba(0,0,0,.132),0 1.2px 3.6px rgba(0,0,0,.108);font-family:"Segoe UI",Arial,sans-serif;font-size:14px;line-height:20px}
 @media (prefers-reduced-motion:no-preference){${S} .orpheus-toast{animation:orpheus-toast-in-v1 .2s ease-out}}
 @keyframes orpheus-toast-in-v1{from{transform:translateX(24px);opacity:0}to{transform:translateX(0);opacity:1}}
@@ -29,7 +29,7 @@ ${S} .orpheus-toast-link{color:#0F6CBD;text-decoration:none}
 ${S} .orpheus-toast-link:hover{text-decoration:underline}
 ${S} .orpheus-toast-action{margin-top:6px;padding:2px 12px;min-height:28px;background:transparent;color:#201f1e;border:1px solid #8a8886;border-radius:2px;font:inherit;font-weight:600;cursor:pointer}
 ${S} .orpheus-toast-action:hover{background:#f3f2f1}
-${S} .orpheus-toast-action:focus-visible,${S} .orpheus-toast-close:focus-visible{outline:2px solid ${orpheusTokens.amber};outline-offset:2px}
+${S} .orpheus-toast-action:focus-visible,${S} .orpheus-toast-close:focus-visible,${S} .orpheus-toast-link:focus-visible{outline:2px solid #1F2329;outline-offset:2px}
 ${S} .orpheus-toast-close{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;background:transparent;color:#605e5c;border:0;border-radius:2px;cursor:pointer}
 ${S} .orpheus-toast-close:hover{background:#f3f2f1}
 `;
