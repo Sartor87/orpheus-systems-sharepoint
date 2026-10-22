@@ -144,16 +144,15 @@ $compact-max: 639.98px;
   }
 }
 
+// Rendered in a <body> portal; position, offsets and z-index are set inline from the toggle button.
 .menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 1000;
   box-sizing: border-box;
   min-width: 208px;
   margin: 0;
   padding: 6px;
   list-style: none;
+  font-family: var(--orpheus-font);
+  -webkit-font-smoothing: antialiased;
   background: var(--orpheus-bg-elevated);
   border: 1px solid var(--orpheus-border);
   border-radius: 6px;

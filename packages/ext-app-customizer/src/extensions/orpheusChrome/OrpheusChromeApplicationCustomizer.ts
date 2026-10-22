@@ -67,6 +67,8 @@ export default class OrpheusChromeApplicationCustomizer extends BaseApplicationC
   private _render = (): void => {
     if (this._disposed) { return; }
     const names = this.context.placeholderProvider.placeholderNames;
+    this._top = this._releaseIfDetached(this._top);
+    this._bottom = this._releaseIfDetached(this._bottom);
 
     if (names.indexOf(PlaceholderName.Top) !== -1) {
       if (!this._top) {
@@ -97,6 +99,13 @@ export default class OrpheusChromeApplicationCustomizer extends BaseApplicationC
     this._unmount(content);
     if (content === this._top) { this._top = undefined; }
     if (content === this._bottom) { this._bottom = undefined; }
+  }
+
+  /** A placeholder whose element left the page (recreated by SharePoint without a dispose) is released for re-creation. */
+  private _releaseIfDetached(content: PlaceholderContent | undefined): PlaceholderContent | undefined {
+    if (!content || !content.domElement || content.domElement.isConnected) { return content; }
+    this._unmount(content);
+    return undefined;
   }
 
   private _mount(content: PlaceholderContent, element: React.ReactElement): void {
