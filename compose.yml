@@ -16,6 +16,7 @@ x-spfx: &spfx
     - nm-ext-app-customizer:/usr/app/spfx/packages/ext-app-customizer/node_modules
     - nm-ext-field-customizer:/usr/app/spfx/packages/ext-field-customizer/node_modules
     - nm-ext-form-customizer:/usr/app/spfx/packages/ext-form-customizer/node_modules
+    - nm-mcp-contract-calendar:/usr/app/spfx/packages/mcp-contract-calendar/node_modules
   environment:
     - "HOME=/home/spfx"
     - "npm_config_cache=/home/spfx/.npm"
@@ -35,6 +36,7 @@ services:
       /usr/app/spfx/packages/ext-app-customizer/node_modules
       /usr/app/spfx/packages/ext-field-customizer/node_modules
       /usr/app/spfx/packages/ext-form-customizer/node_modules
+      /usr/app/spfx/packages/mcp-contract-calendar/node_modules
   shell:
     <<: *spfx
     command: bash
@@ -55,6 +57,14 @@ services:
     ports:
       - "4321:4321"
       - "35729:35729"
+  mcp:
+    <<: *spfx
+    command: npm run start -w @orpheussystems/mcp-contract-calendar
+    env_file:
+      - path: packages/mcp-contract-calendar/.env
+        required: false
+    ports:
+      - "8787:8787"
   package:
     <<: *spfx
     command: npm run package
@@ -69,3 +79,4 @@ volumes:
   nm-ext-app-customizer:
   nm-ext-field-customizer:
   nm-ext-form-customizer:
+  nm-mcp-contract-calendar:

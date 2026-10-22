@@ -11,3 +11,8 @@ sharepoint/solution
 .superpowers/
 *.tsbuildinfo
 docs/superpowers/
+packages/*/.env
+packages/*/env/.env.*
+!packages/*/env/.env.*.sample
+!packages/*/.env.sample
+audit-*.jsonl
