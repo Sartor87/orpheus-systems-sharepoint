@@ -1,9 +1,9 @@
-import { computeRemaining, computeTotals, contractsCoveringDate, isBlocked, isWeekend } from '@orpheussystems/shared-core';
+import { contractsCoveringDate, isBlocked, isWeekend } from '@orpheussystems/shared-core';
 import type { DateKey, EntryType, Holiday, Remaining, Totals } from '@orpheussystems/shared-core';
 import { canBook } from '../domain/viewer';
 import type { ToolContext, VendorContract } from '../domain/types';
 import { ToolError, parseRange } from './dateRange';
-import { findVisibleContract } from './getCalendar';
+import { contractTotals, isMineActive, requireOwnActiveContract } from './contractAccess';
 
 export type SkipReason = 'weekend' | 'holiday' | 'outside_contract';
 
@@ -33,14 +33,11 @@ export async function bookDays(
   const first = days[0];
   const last = days[days.length - 1];
 
-  const isMineActive = (c: VendorContract) => c.contractor.id === viewer.user.id && c.status === 'Active';
   let pool: VendorContract[];
   if (args.contractId !== undefined) {
-    const c = await findVisibleContract(ctx, args.contractId, { includeClosed: true });
-    if (!isMineActive(c)) throw new ToolError('forbidden', 'You can only book on your own active contracts.');
-    pool = [c];
+    pool = [await requireOwnActiveContract(ctx, args.contractId, 'You can only book on your own active contracts.')];
   } else {
-    pool = (await ctx.directory.listVisible(viewer, {})).filter(isMineActive);
+    pool = (await ctx.directory.listVisible(viewer, {})).filter(c => isMineActive(viewer, c));
   }
 
   const holidays = new Map<string, Holiday[]>();
@@ -97,8 +94,7 @@ export async function bookDays(
 
   const totals: Array<{ contractId: number; contractTitle: string; totals: Totals; remaining: Remaining }> = [];
   for (const c of touched.values()) {
-    const t = computeTotals(await data.getEntries(c.id, c.startDate, c.latestExecutionDate));
-    totals.push({ contractId: c.id, contractTitle: c.title, totals: t, remaining: computeRemaining(c, t) });
+    totals.push({ contractId: c.id, contractTitle: c.title, ...(await contractTotals(data, c)) });
   }
   return { status: 'done', booked, skipped, failed, totals };
 }
