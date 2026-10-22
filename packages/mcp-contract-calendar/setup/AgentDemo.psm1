@@ -15,6 +15,53 @@ function Get-VendorFieldState {
     return 'Conflict'
 }
 
+function Get-VendorPreflightState {
+    <#
+        Classifies the three read-only Vendor lookups made before any write:
+          SiteField      web field found by internal name or title 'Vendor' ($null if not found)
+          SiteFieldById  web field found by the Vendor Id ($null if not found)
+          ListField      Contracts list field found by internal name or title 'Vendor' ($null if not found)
+        Returns State Missing | Present | Conflict and a Reason for a conflict.
+    #>
+    param($SiteField, $SiteFieldById, $ListField)
+    $norm = { param($f) ([string] $f.Id).Trim('{', '}').ToLowerInvariant() }
+    if ($null -ne $SiteFieldById -and [string] $SiteFieldById.InternalName -cne 'Vendor') {
+        return [pscustomobject]@{ State = 'Conflict'; Reason = "The Vendor Id $script:VendorFieldId already exists as site column '$($SiteFieldById.InternalName)'." }
+    }
+    $site = Get-VendorFieldState -Field $SiteField
+    if ($site -eq 'Conflict') {
+        return [pscustomobject]@{ State = 'Conflict'; Reason = "A site column named 'Vendor' already exists with Id $($SiteField.Id) and type $($SiteField.TypeAsString); expected Id $script:VendorFieldId and type Text." }
+    }
+    if ($null -ne $ListField -and (& $norm $ListField) -ne $script:VendorFieldId) {
+        return [pscustomobject]@{ State = 'Conflict'; Reason = "The Contracts list already has a field named 'Vendor' with Id $($ListField.Id); expected Id $script:VendorFieldId." }
+    }
+    return [pscustomobject]@{ State = $site; Reason = $null }
+}
+
+function Test-SpNotFound {
+    <# True only for a not-found response. Auth, permission and other errors are not "missing". #>
+    param($Exception)
+    $messages = [System.Collections.Generic.List[string]]::new()
+    for ($e = $Exception; $null -ne $e; $e = $e.InnerException) {
+        $code = $e.PSObject.Properties['StatusCode']
+        if ($code -and $null -ne $code.Value) { return [int] $code.Value -eq 404 }
+        $messages.Add([string] $e.Message)
+    }
+    $text = $messages -join ' | '
+    if ($text -match 'Access denied|Unauthori[sz]ed|Forbidden|AADSTS|40[13]') { return $false }
+    return $text -match '404|does not exist|Invalid field name'
+}
+
+function Get-SpFieldOrNull {
+    <# GET a field via REST. Not found returns $null; any other error is rethrown. #>
+    param([Parameter(Mandatory)] [string] $Url)
+    try { return Invoke-SpRest -Url $Url }
+    catch {
+        if (Test-SpNotFound -Exception $_.Exception) { return $null }
+        throw
+    }
+}
+
 function Get-VendorFieldXml {
     '<Field ID="{582b1c53-77a2-4a1b-918f-14e0b9eaff06}" Name="Vendor" StaticName="Vendor" DisplayName="Vendor (service provider)" Type="Text" MaxLength="255" Group="Orpheus Systems" />'
 }
@@ -117,4 +164,4 @@ function Get-ListItemsRest {
     return $items.ToArray()
 }
 
-Export-ModuleMember -Function Get-VendorFieldState, Get-VendorFieldXml, Test-DemoTitle, Get-DemoContractPlan, Get-DemoEntryPlan, ConvertTo-DateKey, ConvertFrom-SpJson, Invoke-SpRest, Get-ListItemsRest
+Export-ModuleMember -Function Get-VendorFieldState, Get-VendorPreflightState, Test-SpNotFound, Get-SpFieldOrNull, Get-VendorFieldXml, Test-DemoTitle, Get-DemoContractPlan, Get-DemoEntryPlan, ConvertTo-DateKey, ConvertFrom-SpJson, Invoke-SpRest, Get-ListItemsRest

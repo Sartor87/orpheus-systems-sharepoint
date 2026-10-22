@@ -172,3 +172,85 @@ Describe 'Get-ListItemsRest' {
         Should -Invoke -ModuleName AgentDemo Invoke-SpRest -ParameterFilter { $Url -like '*$filter=startswith%28Title%2C%27002%27%29*' }
     }
 }
+
+Describe 'Test-SpNotFound' {
+    It 'is true for a 404 status code on the exception' {
+        $e = [System.Net.Http.HttpRequestException]::new('Response status code does not indicate success.', $null, [System.Net.HttpStatusCode]::NotFound)
+        Test-SpNotFound -Exception $e | Should -BeTrue
+    }
+    It 'is true for a 404 on an inner exception' {
+        $inner = [System.Net.Http.HttpRequestException]::new('x', $null, [System.Net.HttpStatusCode]::NotFound)
+        Test-SpNotFound -Exception ([System.Exception]::new('wrapped', $inner)) | Should -BeTrue
+    }
+    It 'is true for the SharePoint "does not exist" column message' {
+        Test-SpNotFound -Exception ([System.Exception]::new("Column 'Vendor' does not exist. It may have been deleted by another user.")) | Should -BeTrue
+    }
+    It 'is true for "Invalid field name"' {
+        Test-SpNotFound -Exception ([System.Exception]::new('Invalid field name. {582b1c53-77a2-4a1b-918f-14e0b9eaff06}')) | Should -BeTrue
+    }
+    It 'is false for 401 and 403 even when the text mentions a field' {
+        $e401 = [System.Net.Http.HttpRequestException]::new("Column 'Vendor' does not exist", $null, [System.Net.HttpStatusCode]::Unauthorized)
+        Test-SpNotFound -Exception $e401 | Should -BeFalse
+        $e403 = [System.Net.Http.HttpRequestException]::new('Forbidden', $null, [System.Net.HttpStatusCode]::Forbidden)
+        Test-SpNotFound -Exception $e403 | Should -BeFalse
+    }
+    It 'is false for an access denied or token error' {
+        Test-SpNotFound -Exception ([System.Exception]::new('Access denied. You do not have permission to perform this action.')) | Should -BeFalse
+        Test-SpNotFound -Exception ([System.Exception]::new('AADSTS50076: interaction required')) | Should -BeFalse
+    }
+    It 'is false for $null' { Test-SpNotFound -Exception $null | Should -BeFalse }
+}
+
+Describe 'Get-SpFieldOrNull' {
+    It 'returns the field when found' {
+        Mock -ModuleName AgentDemo Invoke-SpRest { [pscustomobject]@{ Id = '582b1c53-77a2-4a1b-918f-14e0b9eaff06'; InternalName = 'Vendor' } }
+        (Get-SpFieldOrNull -Url '/x').InternalName | Should -Be 'Vendor'
+    }
+    It 'returns $null on not found' {
+        Mock -ModuleName AgentDemo Invoke-SpRest { throw [System.Net.Http.HttpRequestException]::new('nf', $null, [System.Net.HttpStatusCode]::NotFound) }
+        Get-SpFieldOrNull -Url '/x' | Should -BeNullOrEmpty
+    }
+    It 'rethrows an auth error instead of treating it as Missing' {
+        Mock -ModuleName AgentDemo Invoke-SpRest { throw [System.Net.Http.HttpRequestException]::new('denied', $null, [System.Net.HttpStatusCode]::Unauthorized) }
+        { Get-SpFieldOrNull -Url '/x' } | Should -Throw '*denied*'
+    }
+}
+
+Describe 'Get-VendorPreflightState' {
+    BeforeAll {
+        $script:Site = [pscustomobject]@{ Id = $VendorId; InternalName = 'Vendor'; TypeAsString = 'Text' }
+        $script:Other = '11111111-1111-1111-1111-111111111111'
+    }
+    It 'is Missing when nothing exists' {
+        (Get-VendorPreflightState -SiteField $null -SiteFieldById $null -ListField $null).State | Should -Be 'Missing'
+    }
+    It 'is Present when the site column exists and the list field has the same Id' {
+        $list = [pscustomobject]@{ Id = "{$($VendorId.ToUpperInvariant())}"; InternalName = 'Vendor'; TypeAsString = 'Text' }
+        (Get-VendorPreflightState -SiteField $Site -SiteFieldById $Site -ListField $list).State | Should -Be 'Present'
+    }
+    It 'is Present when the site column exists and the list has no Vendor field yet' {
+        (Get-VendorPreflightState -SiteField $Site -SiteFieldById $Site -ListField $null).State | Should -Be 'Present'
+    }
+    It 'is Conflict when the site column named Vendor has another Id' {
+        $f = [pscustomobject]@{ Id = $Other; InternalName = 'Vendor'; TypeAsString = 'Text' }
+        $r = Get-VendorPreflightState -SiteField $f -SiteFieldById $null -ListField $null
+        $r.State | Should -Be 'Conflict'
+        $r.Reason | Should -Match 'site column'
+    }
+    It 'is Conflict when the Vendor Id exists under another internal name' {
+        $f = [pscustomobject]@{ Id = $VendorId; InternalName = 'VendorName'; TypeAsString = 'Text' }
+        $r = Get-VendorPreflightState -SiteField $null -SiteFieldById $f -ListField $null
+        $r.State | Should -Be 'Conflict'
+        $r.Reason | Should -Match 'VendorName'
+    }
+    It 'is Conflict when the Contracts list has a Vendor field with another Id' {
+        $list = [pscustomobject]@{ Id = $Other; InternalName = 'Vendor'; TypeAsString = 'Text' }
+        $r = Get-VendorPreflightState -SiteField $null -SiteFieldById $null -ListField $list
+        $r.State | Should -Be 'Conflict'
+        $r.Reason | Should -Match 'Contracts list'
+    }
+    It 'is Conflict for a list field with another Id even when the site column is Present' {
+        $list = [pscustomobject]@{ Id = $Other; InternalName = 'Vendor'; TypeAsString = 'Text' }
+        (Get-VendorPreflightState -SiteField $Site -SiteFieldById $Site -ListField $list).State | Should -Be 'Conflict'
+    }
+}

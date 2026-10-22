@@ -8,8 +8,10 @@
 .DESCRIPTION
     Idempotent; running it again leaves a prepared site unchanged. In order it:
       1. Adds the shared site column "Vendor" (ID {582b1c53-77a2-4a1b-918f-14e0b9eaff06}, Text, 255,
-         group "Orpheus Systems") unless it exists. A column named Vendor with another ID or type stops
-         the run (exit 1) before anything is changed.
+         group "Orpheus Systems") unless it exists. The run stops (exit 1) before anything is changed
+         if a site column named Vendor has another ID or type, the Vendor ID exists under another
+         internal name, or the Contracts list has a Vendor field with another ID. Only a not-found
+         response counts as missing; an authentication or permission error stops the run.
       2. Adds a FieldRef for Vendor to the content type "Orpheus Contract" (-UpdateChildren) if missing.
       3. Creates the HR site group (Read permission) if missing and adds the HR member (-EmiliaUpn).
       4. Ensures the five demo users on the site.
@@ -134,13 +136,19 @@ try {
     $ctId = Get-ContractTypeId
     $refs = @((Invoke-SpRest -Url "/_api/web/contenttypes('$ctId')/fields?`$select=InternalName").value | ForEach-Object { $_.InternalName })
 
-    # 1. Vendor column. A conflict stops the run before any change.
-    $field = Get-PnPField -Identity Vendor -ErrorAction SilentlyContinue
-    $state = Get-VendorFieldState -Field $field
-    if ($state -eq 'Conflict') {
-        Write-Host "A column named 'Vendor' already exists with Id $($field.Id) and type $($field.TypeAsString); expected Id 582b1c53-77a2-4a1b-918f-14e0b9eaff06 and type Text. Nothing was changed." -ForegroundColor Red
+    # Vendor lookups: only a not-found response counts as missing; auth and other errors stop the run.
+    $fieldSelect = "`$select=Id,InternalName,TypeAsString"
+    $preflight = Get-VendorPreflightState `
+        -SiteField (Get-SpFieldOrNull -Url "/_api/web/fields/getbyinternalnameortitle('Vendor')?$fieldSelect") `
+        -SiteFieldById (Get-SpFieldOrNull -Url "/_api/web/fields/getbyid('582b1c53-77a2-4a1b-918f-14e0b9eaff06')?$fieldSelect") `
+        -ListField (Get-SpFieldOrNull -Url "/_api/web/lists/getbytitle('Contracts')/fields/getbyinternalnameortitle('Vendor')?$fieldSelect")
+    if ($preflight.State -eq 'Conflict') {
+        Write-Host "$($preflight.Reason) Nothing was changed." -ForegroundColor Red
         exit 1
     }
+
+    # 1. Vendor column.
+    $state = $preflight.State
     if ($state -eq 'Missing') {
         $null = Add-PnPFieldFromXml (Get-VendorFieldXml)
         $script:Summary['Vendor column'] = 'created'
