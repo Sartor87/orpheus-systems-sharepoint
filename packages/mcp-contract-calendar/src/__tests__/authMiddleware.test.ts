@@ -47,7 +47,7 @@ describe('authMiddleware', () => {
     );
     const r = await request(app).post('/mcp').set('Authorization', 'Bearer good').set('Accept', ACCEPT).send(init);
     expect(r.status).toBe(200);
-    expect(verify).toHaveBeenCalledWith('good', { tenantId: 't-1', audience: 'api://x' });
+    expect(verify).toHaveBeenCalledWith('good', { tenantId: 't-1', audience: 'api://x', clientId: 'c-1' });
     expect(seen).toEqual([claims]);
   });
 

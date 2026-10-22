@@ -13,6 +13,8 @@ export interface TokenClaims {
 export interface VerifyOptions {
   tenantId: string;
   audience: string;
+  /** Entra puts the client id in aud for v2 tokens and the App ID URI for v1; both are accepted. */
+  clientId: string;
   /** Test seam; defaults to the tenant's remote JWKS. */
   jwks?: JWTVerifyGetKey;
 }
@@ -33,7 +35,7 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v !== '' ? 
 export async function verifyAccessToken(token: string, opts: VerifyOptions): Promise<TokenClaims> {
   const { payload } = await jwtVerify(token, opts.jwks ?? defaultJwks(opts.tenantId), {
     issuer: [`https://login.microsoftonline.com/${opts.tenantId}/v2.0`, `https://sts.windows.net/${opts.tenantId}/`],
-    audience: opts.audience,
+    audience: [opts.audience, opts.clientId],
     algorithms: ['RS256']
   });
   const oid = str(payload.oid);
