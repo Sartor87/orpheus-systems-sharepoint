@@ -100,8 +100,8 @@ flowchart TB
   SharePoint and Entra records; longer needs Audit Premium
   ([search the audit log](https://learn.microsoft.com/purview/audit-search)). Contractors on a
   non-E5 licence get 180 days. Our table is set separately.
-- Booked days in `detail` carry `contractId` and date, not the SharePoint item ids written. A join
-  to layer 2 is by contract, date and user, not by item id. Adding the item ids is a planned fix.
+- The join to layer 2 relies on the SharePoint item ids in `detail` (`booked[].entryId`,
+  `removed[].entryId`). A failed write has no item id; it is matched by contract, date and user.
 - A failed audit write is reported on stderr and does not fail the tool call; the tool result wins.
 
 **Risks:**

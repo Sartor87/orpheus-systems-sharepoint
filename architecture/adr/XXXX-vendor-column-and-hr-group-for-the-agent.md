@@ -36,9 +36,10 @@ field or the merge produces two.
 | Placement | Site column, plus a FieldRef on the `Orpheus Contract` content type with `-UpdateChildren` |
 
 The fixed ID is what makes the two scripts compatible: whichever runs first creates the column,
-the other finds a field named `Vendor` with that ID and reports "unchanged". A `Vendor` field with
-another ID or another type stops the agent's script before any write (exit 1) and lists the
-conflict.
+the other finds a field named `Vendor` with that ID and reports "unchanged". A `Vendor` site column
+with another ID or another type, the Vendor ID under another internal name, or a list-level `Vendor`
+field on Contracts with another ID stops the agent's script before any write (exit 1) and names the
+conflict. Only a not-found response counts as missing.
 
 **HR role.** A SharePoint site group, default name `Orpheus HR` (configurable, `HR_GROUP`), with
 the **Read** permission level. The server treats membership as the HR role: it reads

@@ -36,7 +36,15 @@ nothing. The server pre-filters in OData and re-checks every item in memory. Onl
 write; anyone else gets `forbidden`.
 
 Tool errors come back as MCP tool results with `isError` and a code: `not_found`, `forbidden`,
-`invalid_input`, or `internal` for anything unexpected (no internal detail is returned).
+`invalid_input`, or `internal` for anything unexpected. An `internal` error returns only a generic
+message; its name and a redacted message go to stderr as one `{"event":"error",...}` line with the
+correlation id. Per-day write failures are different: `book_days` and `remove_days` return them in
+`failed[].error` with the backend's error message (for example a SharePoint error text), so a
+backend message can reach the agent.
+
+Each tool carries MCP annotations: `readOnlyHint: true` on the read tools, `destructiveHint: false`
+on `book_days`, `destructiveHint: true` on `remove_days`. Copilot reads them to decide when to
+confirm.
 
 ## Run modes
 
@@ -139,7 +147,14 @@ For the demo, keep the file inside the mounted repository so it survives the con
 example `AUDIT_LOG_PATH=/usr/app/spfx/packages/mcp-contract-calendar/audit-demo.jsonl`
 (`audit-*.jsonl` is gitignored).
 
-Known gap: booked days carry `contractId` and date, not the SharePoint item ids written. Planned fix.
+Write results carry the SharePoint item ids, so the audit `detail` has them too: each `booked[]`
+item has `entryId` (the id `upsertEntry` returned) and each `removed[]` item is
+`{ date, entryId }` (the id read before the delete). `entryId` is `null` only if the data service
+returned no id.
+
+Unexpected failures (a tool error that is not a `ToolError`, or a 500 on `/mcp`) write one stderr
+line `{"event":"error","correlationId","where","name","message"}`. The message is redacted
+(`Bearer ...` and JWT-shaped strings removed); the error object, stack and headers are never written.
 
 With `LOG_REQUEST_HEADERS=true` the first request is logged once as `{"event":"first_request",...}`
 with the values of `authorization`, `cookie`, `set-cookie`, `proxy-authorization` and `x-ms-token*`
@@ -149,8 +164,10 @@ replaced by `[redacted]`. This answers whether Copilot forwards a correlation id
 
 `setup/Setup-AgentDemo.ps1` (PowerShell 7.4, PnP.PowerShell 3) prepares a site provisioned with
 `infra/provisioning`: the `Vendor` column, the HR group, and the 002xxx demo contracts and entries
-from `setup/demo-data.json`. It is idempotent and pre-flights before any write; a `Vendor` field
-with another ID or type stops it with exit code 1. It reads and writes only 002xxx items. `-WhatIf`
+from `setup/demo-data.json`. It is idempotent and pre-flights before any write. It stops with exit code 1 if a site column
+named `Vendor` has another ID or type, the Vendor ID exists under another internal name, or the
+Contracts list has a `Vendor` field with another ID. Only a not-found response counts as missing;
+an authentication or permission error stops the run. It reads and writes only 002xxx items. `-WhatIf`
 prints the plan without connecting. UPNs are parameters and never committed. The call is in the
 demo procedure.
 

@@ -122,7 +122,7 @@ has to be rebuilt from our own log alone.
 |---------|-------------|------------------|------------|
 | R-AGT-4 | Production contractors are guest users; guest access to declarative agents and Copilot Chat is not confirmed | H | Verify before promising the channel to contractors (spec section 9, open item 1) |
 | R-AGT-5 | Manifest schema versions (DA 1.8, app manifest 1.30, plugin 2.4, `m365agents.yml` 1.9) were written from documentation, not from a scaffolded project | M | Compare with a freshly scaffolded "Start with an MCP server" project at first provision |
-| R-AGT-6 | With dynamic discovery the plugin manifest no longer carries per-function confirmation hints for write tools | M | Agent instructions require one confirmation before `book_days`; consider MCP tool annotations (`destructiveHint`) when the platform honours them |
+| R-AGT-6 | With dynamic discovery the plugin manifest no longer carries per-function confirmation hints for write tools | M | Agent instructions require one confirmation before `book_days` and `remove_days`; the server sets MCP tool annotations (`readOnlyHint` on reads, `destructiveHint: false` on `book_days`, `destructiveHint: true` on `remove_days`), which Copilot reads to decide confirmations |
 
 ---
 
