@@ -9,7 +9,7 @@
   "scripts": {
     "build": "heft --unmanaged build --clean",
     "serve": "heft --unmanaged start --clean --nobrowser",
-    "package": "heft --unmanaged test --clean --production && heft --unmanaged package-solution --production",
+    "package": "heft --unmanaged build --clean --production && heft --unmanaged package-solution --production",
     "clean": "heft --unmanaged clean",
     "test": "jest",
     "eject-webpack": "heft --unmanaged eject-webpack"
