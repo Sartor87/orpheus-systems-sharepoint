@@ -1,6 +1,9 @@
 import * as React from 'react';
 import { Dropdown, IDropdownOption, PrimaryButton } from '@fluentui/react';
 import type { Contract, UserInfo } from '@orpheussystems/shared-core';
+import { orpheusBrand } from '@orpheussystems/shared-ui/brand';
+import { orpheusTokens } from '@orpheussystems/shared-ui/tokens';
+import OrpheusMark from './OrpheusMark';
 import styles from './ContractCalendar.module.scss';
 import { formatShortDate } from './calendarFormat';
 import { amberButtonStyles } from './TimesheetDialog';
@@ -36,8 +39,19 @@ const ContractHeader: React.FC<IContractHeaderProps> = ({ contracts, selected, c
 
   return (
     <div className={styles.headerTop}>
+      <a
+        className={styles.orpheusBrand}
+        href={orpheusBrand.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Orpheus Systems website (opens in a new tab)"
+      >
+        <OrpheusMark size={20} color={orpheusTokens.amber} />
+        <span className={styles.orpheusName}>
+          <span className={styles.orpheusStrong}>{orpheusBrand.nameStrong}</span> {orpheusBrand.nameRest}
+        </span>
+      </a>
       <div className={styles.brand}>
-        <span className={styles.brandMark} aria-hidden="true" />
         <div>
           <h2 className={styles.wordmark}>Contract <span className={styles.wordmarkAccent}>calendar</span></h2>
           <div className={styles.subtitle}>

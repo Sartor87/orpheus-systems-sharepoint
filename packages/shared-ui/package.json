@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
-  "files": ["lib", "tokens.js", "tokens.d.ts", "pdf.js", "pdf.d.ts", "timesheet.js", "timesheet.d.ts"],
+  "files": ["lib", "tokens.js", "tokens.d.ts", "brand.js", "brand.d.ts", "pdf.js", "pdf.d.ts", "timesheet.js", "timesheet.d.ts"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rimraf lib",

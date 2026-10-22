@@ -60,15 +60,39 @@ $surfaceBorder: #E3E6EA;
   min-width: 0;
 }
 
-.brandMark {
-  flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 2px solid var(--orpheus-amber);
-  background:
-    linear-gradient(135deg, transparent 0 46%, var(--orpheus-amber) 46% 54%, transparent 54%),
-    var(--orpheus-bg-elevated);
+.orpheusBrand {
+  grid-column: 1 / -1;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1;
+  text-decoration: none;
+  color: #C4C9CE;
+  border-radius: 4px;
+
+  &:hover,
+  &:focus,
+  &:visited {
+    text-decoration: none;
+    color: #C4C9CE;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--orpheus-amber);
+    outline-offset: 3px;
+  }
+}
+
+.orpheusName {
+  font-weight: 400;
+  color: #C4C9CE;
+}
+
+.orpheusStrong {
+  font-weight: 600;
+  color: var(--orpheus-text);
 }
 
 .wordmark {
