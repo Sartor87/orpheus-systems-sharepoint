@@ -16,7 +16,8 @@
     "pdf.js",
     "pdf.d.ts",
     "timesheet.js",
-    "timesheet.d.ts"
+    "timesheet.d.ts",
+    "templates"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
