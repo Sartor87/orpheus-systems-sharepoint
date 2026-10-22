@@ -92,6 +92,14 @@ The browser probes the legacy `http://localhost:4321/temp/manifests.js` and logs
 
 Builds the shared packages, then runs `heft build --production` and `heft package-solution --production` in every package that has a `package` script. Output, one per package: `packages/<package>/sharepoint/solution/<package>.sppkg` — `wp-contract-calendar`, `ext-app-customizer`, `ext-field-customizer`, `ext-form-customizer`. Packaging all four needs more than the default 2 GB Podman VM; give it at least 6 GB (`podman machine stop; podman machine set --memory 6144; podman machine start`).
 
+The extension packages deploy code only (`skipFeatureDeployment: true`, no features). Adding the app does not register the application customizer on any site. Until the provisioning script does it, register it on the Orpheus site by hand, for example with PnP PowerShell:
+
+```powershell
+Add-PnPCustomAction -Name 'OrpheusChrome' -Title 'Orpheus chrome' -Location 'ClientSideExtension.ApplicationCustomizer' `
+  -ClientSideComponentId '30930118-2d09-49f4-bdc4-fb2c9b4af49e' `
+  -ClientSideComponentProperties '{"contractsListUrl":"Lists/Contracts","calendarPageUrl":"SitePages/ContractCalendar.aspx","showFooter":true}'
+```
+
 ## Linux note
 
 On SELinux hosts, append `:Z` to the bind mount in `compose.yml` (`.:/usr/app/spfx:Z`).
