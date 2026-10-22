@@ -4,7 +4,7 @@
 
 | WP | Name | Content | Depends on | Produces |
 |----|------|---------|------------|----------|
-| WP-0 | Repository clean-room | Remove the prior-employer utilities package, path alias, URL and any other fingerprint listed in design §8; repo-local git author; MIT `LICENSE`; `package.json` author / repository / homepage; fresh orphan branch | — | Clean tree and history (ADR-007) |
+| WP-0 | Repository clean-room | Remove the prior-employer utilities package, path alias, URL and any other fingerprint listed in design §8; repo-local git author; Apache-2.0 `LICENSE` and `NOTICE`; `package.json` author / repository / homepage; fresh orphan branch | — | Clean tree and history (ADR-007) |
 | WP-1 | Toolchain | `podman-compose.yml` (shell, install, build, serve, package), `.devcontainer`, `tsconfig.base.json`, root `package.json` workspaces and scripts, dev certificate note | WP-0 | Clean-clone build (ADR-001, ADR-002) |
 | WP-2 | `shared-core` | Models, `IDataService`, `LocalDataService` with fixtures, `SharePointDataService` (PnPjs v4), period / overlap / totals logic, one-entry-per-date rule | WP-1 | Library (ADR-003, ADR-008) |
 | WP-3 | `shared-ui` | Theme tokens, header/footer components, pdfmake timesheet builder | WP-2 | Library (ADR-004) |

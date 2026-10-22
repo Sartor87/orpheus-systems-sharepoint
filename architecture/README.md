@@ -44,6 +44,7 @@ See [adr/0000-index.md](adr/0000-index.md) for the index.
 | [ADR-006](adr/0006-idempotent-pnp-powershell-provisioning.md) | Idempotent PnP PowerShell provisioning instead of Feature Framework |
 | [ADR-007](adr/0007-fresh-orphan-branch-for-public-repo.md) | Fresh orphan branch for the public repository |
 | [ADR-008](adr/0008-one-calendar-entry-per-contractor-per-date.md) | One calendar entry per contractor per date across contracts |
+| [ADR-009](adr/0009-apache-2-0-with-notice.md) | Apache-2.0 license with NOTICE attribution |
 
 ## Conventions
 

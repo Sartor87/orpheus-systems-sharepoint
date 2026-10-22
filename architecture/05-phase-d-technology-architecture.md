@@ -20,7 +20,7 @@ step with `podman-compose.yml`, `.devcontainer/` and `.github/workflows/ci.yml`.
 | CI | GitHub Actions | Runs the container build; uploads `.sppkg` artefacts | — |
 | Editor | VS Code dev container | `.devcontainer/devcontainer.json` reuses the same image | ADR-002 |
 | Source control | Git, public GitHub `orpheussystems/sharepoint` | Fresh orphan branch | ADR-007 |
-| Licence | MIT © 2026 Orpheus Systems | | — |
+| Licence | Apache-2.0 with NOTICE, © 2026 Orpheus Systems | | — |
 
 ## 2. Developer environment and Podman workflow (design §5)
 

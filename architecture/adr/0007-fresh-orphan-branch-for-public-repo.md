@@ -26,7 +26,7 @@ orphan branch**. The three existing commits are not carried over, so the grep
 criterion applies to history as well as to the working tree. New commits use
 the repo-local author `Kiril Iliev <kiril.iliev@orpheussystems.com>`. The
 clean-room pass removes every prior-employer fingerprint before the first
-public commit; `LICENSE` is MIT © 2026 Orpheus Systems and `package.json`
+public commit; `LICENSE` was initially MIT © 2026 Orpheus Systems (superseded by ADR-009: Apache-2.0 with NOTICE) and `package.json`
 `author`, `repository`, `homepage` are set accordingly.
 
 ---

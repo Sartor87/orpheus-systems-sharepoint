@@ -4,7 +4,7 @@
   "private": true,
   "description": "Orpheus Systems SharePoint Framework monorepo",
   "author": "Orpheus Systems",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": "github:orpheussystems/sharepoint",
   "homepage": "https://orpheussystems.com/",
   "workspaces": [

@@ -42,7 +42,7 @@ silent).
 | NFR-03 | No previous-employer or real-client identifiers in tree, history, docs, screenshots; design §8 hygiene grep clean | §2, §8 | A, G | ADR-007 | Confirmed |
 | NFR-04 | Configurable labels with neutral defaults for any organisation name | §2 anti-goals | C-app | — | Confirmed |
 | NFR-05 | Realistic fixture data | §2 anti-goals | C-data | — | Confirmed |
-| NFR-06 | MIT licence © 2026 Orpheus Systems; `package.json` author/repository/homepage | §8 | A | — | Confirmed |
+| NFR-06 | Apache-2.0 licence with NOTICE, © 2026 Orpheus Systems (ADR-009); `package.json` author/repository/homepage | §8 | A | — | Confirmed |
 | NFR-07 | README: what it is, screenshots, Podman quick start, package table, data model, provisioning, deployment, roadmap | §8 | E, F | — | Confirmed |
 | NFR-08 | CI builds in the container and uploads `.sppkg` artefacts | §8 | D | — | Confirmed |
 | NFR-09 | Scripts work from PowerShell and from bash inside the container | §3 | D | — | Confirmed |

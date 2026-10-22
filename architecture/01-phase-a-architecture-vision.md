@@ -19,7 +19,7 @@ under Orpheus Systems that:
 
 | # | Goal |
 |---|------|
-| G1 | Clean public repo: no previous-employer references, Orpheus authorship and contact, MIT licence, README a stranger can follow. |
+| G1 | Clean public repo: no previous-employer references, Orpheus authorship and contact, Apache-2.0 licence with NOTICE, README a stranger can follow. |
 | G2 | npm-workspaces monorepo on SPFx 1.23.2; every package builds, bundles and packages into `.sppkg` inside `m365pnp/spfx:1.23.2` via Podman; no Node on the host. |
 | G3 | Five deployable SPFx artefacts: application customizer, calendar web part, field customizer, form customizer, plus the shared packages they use. |
 | G4 | The calendar web part works fully in the local workbench with fixtures, and against real SharePoint lists in production. |
