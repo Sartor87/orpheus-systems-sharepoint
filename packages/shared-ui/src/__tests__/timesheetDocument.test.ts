@@ -1,5 +1,5 @@
 import { buildTimesheetModel } from '../pdf/timesheetModel';
-import { buildTimesheetDocDefinition } from '../pdf/timesheetDocument';
+import { buildTimesheetDocDefinition, buildGrid, buildTotalsTable } from '../pdf/timesheetDocument';
 import { contract, e } from './fixtures';
 
 test('doc definition has signature row with configurable labels and two-decimal hours', () => {
@@ -29,5 +29,37 @@ describe('Orpheus attribution', () => {
       subject: 'On-site / off-site timesheet',
       keywords: 'timesheet, contract, Orpheus Systems'
     });
+  });
+});
+
+describe('exported timesheet blocks', () => {
+  const period2 = { from: '2026-02-01' as const, to: '2026-03-31' as const };
+  const lbl = { approvingOrg: 'A', serviceProvider: 'S' };
+
+  it('buildTotalsTable lists one row per month and a bold grand total', () => {
+    const model = buildTimesheetModel(contract({}), [e('OnSiteFull', '2026-02-02'), e('OffSiteFull', '2026-03-03')], [], period2, lbl);
+    const t = (buildTotalsTable(model) as any).table;
+    const texts = t.body.map((r: any[]) => r.map(c => c.text));
+    expect(texts[0]).toEqual(['Month', 'on-site', 'off-site', 'total']);
+    expect(texts[1]).toEqual(['February 2026', '1.00', '0.00', '1.00']);
+    expect(texts[2]).toEqual(['March 2026', '0.00', '1.00', '1.00']);
+    expect(texts[3]).toEqual(['Total', '1.00', '1.00', '2.00']);
+    expect(t.body[3].every((c: any) => c.bold)).toBe(true);
+  });
+
+  it('buildGrid without totals has Month + 31 day columns per body row', () => {
+    const model = buildTimesheetModel(contract({}), [], [], period2, lbl);
+    const t = (buildGrid(model, { withTotals: false }) as any).table;
+    expect(t.headerRows).toBe(1);
+    expect(t.body).toHaveLength(3);
+    t.body.forEach((r: any[]) => expect(r).toHaveLength(32));
+  });
+
+  it('buildGrid with totals covers all 14 months in one table plus a Total row', () => {
+    const model = buildTimesheetModel(contract({}), [], [], { from: '2026-02-01', to: '2027-03-31' }, lbl);
+    const t = (buildGrid(model, { withTotals: true }) as any).table;
+    expect(t.headerRows).toBe(1);
+    expect(t.body).toHaveLength(1 + 14 + 1);
+    expect(t.body[15][0].text).toBe('Total');
   });
 });
