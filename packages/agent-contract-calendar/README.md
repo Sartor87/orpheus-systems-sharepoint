@@ -33,6 +33,23 @@ Declarative Microsoft 365 Copilot agent ("Contract Calendar") whose single actio
 
 `ai-plugin.json` uses the Agents Toolkit default, dynamic tool discovery: `functions` is empty and `run_for_functions` is `["*"]`, so Copilot reads the tool list and schemas from the MCP server at runtime. Nothing here needs updating when a tool changes. `agentPackage.test.ts` in `mcp-contract-calendar` checks that any tool name mentioned in the plugin exists in the server's `TOOL_NAMES`.
 
+Dynamic discovery has one cost: the plugin manifest no longer lists the write tools, so there is no
+per-function place for a confirmation hint. The confirmation step lives in `instruction.txt`
+(restate dates, type and contract, confirm once, then one `book_days` call), and the server refuses
+writes by anyone but the contract's contractor. MCP tool annotations (`destructiveHint`) are the
+candidate fix once Copilot honours them.
+
+## Demo
+
+- `demo/demo-procedure.md`: prerequisites, start order, the three demo users, the verification log
+  for the live run.
+- `demo/prompt-set.md`: prompts with the expected tool call, arguments and outcome.
+- `docs/architecture-amendments.md`: changes to existing architecture documents for the owner to
+  apply at merge.
+
+Decisions behind the package are in `architecture/adr/XXXX-declarative-agent-entra-sso-obo.md` and
+`architecture/adr/XXXX-dev-tunnel-for-the-agent-demo.md`.
+
 ## Sources used
 
 - Build a plugin from an MCP server: https://learn.microsoft.com/microsoft-365/copilot/extensibility/build-mcp-plugins
