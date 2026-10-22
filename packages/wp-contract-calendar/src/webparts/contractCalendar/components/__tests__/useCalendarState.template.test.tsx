@@ -55,7 +55,7 @@ function mocks(): Mocks {
 
 type Hook = ReturnType<typeof renderHook<{}, ReturnType<typeof useCalendarState>>>;
 
-async function loaded(m: Mocks, timesheetTemplateUrl: string | undefined, via: 'option' | 'context' = 'option'): Promise<Hook> {
+async function loaded(m: Mocks, timesheetTemplateUrl: string | undefined, via: 'option' | 'context' | 'none' = 'option'): Promise<Hook> {
   const service = new LocalDataService({ demoUserId: 1 });
   const templateSource = m.source as TimesheetTemplateSource;
   const value = { service, props: { ...baseProps, timesheetTemplateUrl }, ...(via === 'context' ? { templateSource } : {}) };
@@ -147,6 +147,19 @@ describe('generateTimesheet with a template', () => {
     await act(async () => { await result.current.generateTimesheet(PERIOD); });
     expect(result.current.timesheetError).toContain('"/sites/a/t.html"');
     expect(result.current.timesheetError).toContain('Could not generate the timesheet: ');
+    expect(m.pdf.downloadTimesheet).not.toHaveBeenCalled();
+    expect(m.pdf.downloadTimesheetFromTemplate).not.toHaveBeenCalled();
+    expect(result.current.generating).toBe(false);
+  });
+
+  it('reports an error and downloads nothing when the url is set but no template source exists', async () => {
+    const m = mocks();
+    const { result } = await loaded(m, 'Shared Documents/t.html', 'none');
+    let ok = true;
+    await act(async () => { ok = await result.current.generateTimesheet(PERIOD); });
+    expect(ok).toBe(false);
+    expect(result.current.timesheetError).toContain('Could not generate the timesheet: ');
+    expect(result.current.timesheetError).toContain('template');
     expect(m.pdf.downloadTimesheet).not.toHaveBeenCalled();
     expect(m.pdf.downloadTimesheetFromTemplate).not.toHaveBeenCalled();
     expect(result.current.generating).toBe(false);

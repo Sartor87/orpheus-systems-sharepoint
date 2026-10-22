@@ -173,7 +173,9 @@ export default class ContractCalendarWebPart extends BaseClientSideWebPart<ICont
       return createLocalTemplateSource(() =>
         import(/* webpackChunkName: 'orpheus-timesheet-pdf' */ '@orpheussystems/shared-ui/pdf').then(m => m.sampleTimesheetTemplate));
     }
-    if (!this.properties.contractsListId) { return undefined; }
+    if (!this.properties.contractsListId) {
+      return invalidTemplateSource(url, 'the Contracts list is not selected in the web part settings');
+    }
     const host = window.location.host;
     const invalid = templateUrlError(url, host);
     if (invalid) { return invalidTemplateSource(url, invalid); }

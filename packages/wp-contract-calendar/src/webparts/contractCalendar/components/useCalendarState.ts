@@ -513,7 +513,10 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
     setGenerating(true);
     try {
       // Template only when a path is configured; otherwise the built-in layout, exactly as before.
-      const source = (props.timesheetTemplateUrl || '').trim() ? templateSourceRef.current : undefined;
+      const templateUrl = (props.timesheetTemplateUrl || '').trim();
+      const source = templateUrl ? templateSourceRef.current : undefined;
+      // A configured template never falls back silently to the built-in layout.
+      if (templateUrl && !source) { throw new Error(`the timesheet template "${templateUrl}" is set but no template source is available`); }
       // Straight from the service, not the cached display data. getHolidays already merges the '*' (all countries) rows.
       // The template and its contract data are fetched on every generation (no cache), in parallel with the entries.
       const [list, hols, template] = await Promise.all([
