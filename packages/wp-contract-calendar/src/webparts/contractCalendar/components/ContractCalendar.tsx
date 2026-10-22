@@ -136,6 +136,8 @@ const ContractCalendar: React.FC<IContractCalendarProps> = () => {
           key={selected.id}
           contract={selected}
           generating={state.generating}
+          error={state.timesheetError}
+          onClearError={state.clearTimesheetError}
           onGenerate={state.generateTimesheet}
           onDismiss={() => setTimesheetOpen(false)}
         />

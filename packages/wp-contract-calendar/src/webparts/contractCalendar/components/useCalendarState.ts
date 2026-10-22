@@ -51,6 +51,8 @@ export interface CalendarState {
   readOnly: boolean;
   pendingOverlap?: PendingOverlap;
   error?: string;
+  /** Last timesheet generation failure; shown inside the timesheet dialog. */
+  timesheetError?: string;
   /** True until the user and contracts, then the selected contract's entries, have loaded. */
   loading: boolean;
   /** Set when the selected contract's entries could not be loaded; the grid stays locked until retryLoad() succeeds. */
@@ -70,8 +72,9 @@ export interface CalendarActions {
   isDayBlocked(date: DateKey): boolean;
   retryLoad(): void;
   dismissError(): void;
-  /** Fetches the whole period (not just the shown months) and downloads the PDF. Errors surface through `error`. */
+  /** Fetches the whole period (not just the shown months) and downloads the PDF. Failures surface through `timesheetError`. */
   generateTimesheet(period: { from: DateKey; to: DateKey }): Promise<boolean>;
+  clearTimesheetError(): void;
 }
 
 const MAX_MONTHS = 12;
@@ -136,6 +139,8 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
   const [loadError, setLoadError] = React.useState<string | undefined>();
   const [reloadNonce, setReloadNonce] = React.useState(0);
   const [generating, setGenerating] = React.useState(false);
+  const [timesheetError, setTimesheetError] = React.useState<string | undefined>();
+  const generatingRef = React.useRef(false);
   const loadPdfRef = React.useRef(options.loadPdf || defaultLoadPdf);
   loadPdfRef.current = options.loadPdf || defaultLoadPdf;
 
@@ -315,12 +320,15 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
     [selected, props.monthsToShow, today]
   );
   const loading = loadingContracts || (!!selected && loadedContractId !== selected.id && !loadError);
+  const clearTimesheetError = React.useCallback((): void => { setTimesheetError(undefined); }, []);
   const retryLoad = React.useCallback((): void => { setReloadNonce(n => n + 1); }, []);
   const dismissError = React.useCallback((): void => { setError(undefined); }, []);
 
   const generateTimesheet = React.useCallback(async (period: { from: DateKey; to: DateKey }): Promise<boolean> => {
     const contract = selectedRef.current;
-    if (!contract) { return false; }
+    if (!contract || generatingRef.current) { return false; }
+    generatingRef.current = true;
+    setTimesheetError(undefined);
     setGenerating(true);
     try {
       // Straight from the service, not the cached display data. getHolidays already merges the '*' (all countries) rows.
@@ -334,18 +342,20 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
       });
       const pdf = await loadPdfRef.current();
       await pdf.downloadTimesheet(model, timesheetFileName(contract, period.from, period.to));
-      if (mounted.current) { setError(undefined); }
       return true;
     } catch (e) {
-      if (mounted.current) { setError(`Could not generate the timesheet: ${messageOf(e)}`); }
+      if (mounted.current) { setTimesheetError(`Could not generate the timesheet: ${messageOf(e)}`); }
       return false;
     } finally {
+      generatingRef.current = false; // eslint-disable-line require-atomic-updates
       if (mounted.current) { setGenerating(false); }
     }
   }, [service, props.approvingOrgLabel, props.serviceProviderLabel]);
 
   return {
     generating,
+    timesheetError,
+    clearTimesheetError,
     generateTimesheet,
     contracts,
     selected,

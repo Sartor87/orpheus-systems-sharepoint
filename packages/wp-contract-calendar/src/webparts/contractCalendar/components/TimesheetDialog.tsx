@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { DatePicker, DayOfWeek, Dialog, DialogFooter, DialogType, PrimaryButton, DefaultButton, Spinner, SpinnerSize } from '@fluentui/react';
+import { DatePicker, DayOfWeek, Dialog, DialogFooter, DialogType, PrimaryButton, DefaultButton, MessageBar, MessageBarType, Spinner, SpinnerSize } from '@fluentui/react';
 import { Contract, DateKey, compareKeys, fromDateKey, toDateKey } from '@orpheussystems/shared-core';
 import { orpheusTokens } from '@orpheussystems/shared-ui/tokens';
 import styles from './ContractCalendar.module.scss';
@@ -7,6 +7,8 @@ import styles from './ContractCalendar.module.scss';
 export interface ITimesheetDialogProps {
   contract: Contract;
   generating: boolean;
+  error?: string;
+  onClearError(): void;
   /** Resolves true when the PDF was generated (the dialog then closes). */
   onGenerate(period: { from: DateKey; to: DateKey }): Promise<boolean>;
   onDismiss(): void;
@@ -21,7 +23,7 @@ export const amberButtonStyles = {
   rootDisabled: { background: '#4A4F58', borderColor: '#4A4F58', color: '#B5BABF' }
 };
 
-const TimesheetDialog: React.FC<ITimesheetDialogProps> = ({ contract, generating, onGenerate, onDismiss }) => {
+const TimesheetDialog: React.FC<ITimesheetDialogProps> = ({ contract, generating, error, onClearError, onGenerate, onDismiss }) => {
   const min = fromDateKey(contract.startDate);
   const max = fromDateKey(contract.latestExecutionDate);
   const [from, setFrom] = React.useState<DateKey>(contract.startDate);
@@ -54,7 +56,7 @@ const TimesheetDialog: React.FC<ITimesheetDialogProps> = ({ contract, generating
           maxDate={max}
           value={fromDateKey(from)}
           formatDate={formatDate}
-          onSelectDate={d => d && setFrom(clamp(d))}
+          onSelectDate={d => { if (d) { setFrom(clamp(d)); onClearError(); } }}
           disabled={generating}
           isRequired
         />
@@ -65,12 +67,13 @@ const TimesheetDialog: React.FC<ITimesheetDialogProps> = ({ contract, generating
           maxDate={max}
           value={fromDateKey(to)}
           formatDate={formatDate}
-          onSelectDate={d => d && setTo(clamp(d))}
+          onSelectDate={d => { if (d) { setTo(clamp(d)); onClearError(); } }}
           disabled={generating}
           isRequired
         />
       </div>
       {invalid && <div role="alert" className={styles.timesheetInvalid}>The start date must not be after the end date.</div>}
+      {error && <MessageBar messageBarType={MessageBarType.error} isMultiline>{error}</MessageBar>}
       {generating && <Spinner size={SpinnerSize.medium} label="Generating PDF…" />}
       <DialogFooter>
         <PrimaryButton text="Generate" styles={amberButtonStyles} onClick={generate} disabled={invalid || generating} />

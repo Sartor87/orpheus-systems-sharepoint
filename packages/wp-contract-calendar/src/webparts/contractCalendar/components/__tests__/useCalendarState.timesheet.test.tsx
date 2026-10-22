@@ -51,6 +51,44 @@ describe('generateTimesheet', () => {
     const download = jest.fn().mockRejectedValue(new Error('boom'));
     const { result } = await loaded(1, download);
     await act(async () => { await result.current.generateTimesheet({ from: '2026-02-02', to: '2026-03-31' }); });
-    expect(result.current.error).toContain('boom');
+    expect(result.current.timesheetError).toContain('boom');
+    expect(result.current.generating).toBe(false);
+  });
+
+  it('queries the service for exactly the requested period and applies label overrides', async () => {
+    const download = jest.fn().mockResolvedValue(undefined);
+    const service = new LocalDataService({ demoUserId: 1 });
+    const getEntries = jest.spyOn(service, 'getEntries');
+    const getHolidays = jest.spyOn(service, 'getHolidays');
+    const value = { service, props: { ...baseProps, approvingOrgLabel: 'Ministry', serviceProviderLabel: 'Vendor' } };
+    const wrapper: React.FC = ({ children }) => <DataContext.Provider value={value}>{children}</DataContext.Provider>;
+    const loadPdf = (): Promise<{ downloadTimesheet: jest.Mock }> => Promise.resolve({ downloadTimesheet: download });
+    const { result, waitFor } = renderHook(() => useCalendarState({ loadPdf }), { wrapper });
+    await waitFor(() => !result.current.loading && !!result.current.selected);
+    const c = result.current.selected!;
+    getEntries.mockClear();
+    getHolidays.mockClear();
+    await act(async () => { await result.current.generateTimesheet({ from: '2026-03-02', to: '2026-04-30' }); });
+    expect(getEntries).toHaveBeenCalledWith(c.id, '2026-03-02', '2026-04-30');
+    expect(getHolidays).toHaveBeenCalledWith(c.country, '2026-03-02', '2026-04-30');
+    const [model] = download.mock.calls[0] as [TimesheetModel];
+    expect(model.labels).toEqual({ approvingOrg: 'Ministry', serviceProvider: 'Vendor' });
+    expect(model.period).toEqual({ from: '2026-03-02', to: '2026-04-30' });
+  });
+
+  it('ignores a second call while one is in flight', async () => {
+    let release: () => void = () => undefined;
+    const download = jest.fn().mockImplementation(() => new Promise<void>(resolve => { release = resolve; }));
+    const { result } = await loaded(1, download);
+    let first: Promise<boolean> = Promise.resolve(false);
+    let second: Promise<boolean> = Promise.resolve(true);
+    await act(async () => {
+      first = result.current.generateTimesheet({ from: '2026-02-02', to: '2026-03-31' });
+      second = result.current.generateTimesheet({ from: '2026-02-02', to: '2026-03-31' });
+      await Promise.resolve();
+    });
+    expect(await second).toBe(false);
+    await act(async () => { release(); await first; });
+    expect(download).toHaveBeenCalledTimes(1);
   });
 });
