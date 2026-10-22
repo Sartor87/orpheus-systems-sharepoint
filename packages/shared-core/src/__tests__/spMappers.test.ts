@@ -1,4 +1,4 @@
-import { mapContract, mapEntry, mapHoliday, toEntryItem, SPContractItem } from '../data/spMappers';
+import { isoToDateKey, mapContract, mapEntry, mapHoliday, toEntryItem, SPContractItem } from '../data/spMappers';
 
 const contractItem: SPContractItem = {
   Id: 3,
@@ -16,6 +16,19 @@ const contractItem: SPContractItem = {
   Country: 'BG',
   Status: 'Active'
 };
+
+describe('isoToDateKey', () => {
+  it.each([
+    ['2026-02-06T00:00:00Z', '2026-02-06'],
+    ['2026-02-05T22:00:00Z', '2026-02-06'],
+    ['2026-07-05T21:00:00Z', '2026-07-06'],
+    ['2026-02-06T05:00:00Z', '2026-02-06'],
+    ['2026-02-06', '2026-02-06'],
+    ['2026-12-31T22:00:00Z', '2027-01-01']
+  ])('%s -> %s', (iso, key) => {
+    expect(isoToDateKey(iso)).toBe(key);
+  });
+});
 
 describe('spMappers', () => {
   it('mapContract maps people, dates and numbers', () => {

@@ -47,9 +47,15 @@ export const ENTRY_SELECT = ['Id', 'Contract/Id', 'EntryDate', 'EntryType', 'Not
 export const ENTRY_EXPAND = ['Contract'];
 export const HOLIDAY_SELECT = ['Id', 'Title', 'HolidayDate', 'Country', 'Source'];
 
-/** Date-only columns are stored at midnight UTC; take the date part verbatim, never go through Date. */
+/**
+ * Date-only columns come back as a UTC instant of the site's local midnight (e.g. 2026-02-05T22:00:00Z for
+ * 6 Feb on a UTC+2 site) or as plain UTC midnight. Round to the nearest UTC midnight (add 12 h, take the UTC date).
+ * Correct for any site offset within +/-12 h.
+ */
 export function isoToDateKey(iso: string): DateKey {
-  return iso.substring(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) { return iso; }
+  const ms = Date.parse(/(Z|[+-]\d{2}:?\d{2})$/.test(iso) ? iso : iso + 'Z');
+  return new Date(ms + 12 * 3600 * 1000).toISOString().substring(0, 10);
 }
 
 function mapUser(u: SPUserField | null): UserRef {
@@ -116,6 +122,9 @@ export function toContractItem(c: Partial<Contract>): Record<string, unknown> {
 }
 
 export function toEntryItem(e: CalendarEntry, contractCode: string): Record<string, unknown> {
+  // Dates are written as plain yyyy-MM-dd. SharePoint stores them as site-local midnight and may return them
+  // as T00:00:00Z or as the local-midnight instant (e.g. 22:00Z the day before), so reads go through
+  // isoToDateKey, which normalises both forms.
   return {
     Title: `${contractCode} ${e.date}`,
     ContractId: e.contractId,

@@ -1,9 +1,16 @@
 import { addDays } from '../dates';
 import { DateKey, UserInfo } from '../models';
 
-/** Date-only SharePoint columns are compared at midnight UTC. */
-export function spDate(k: DateKey): string {
-  return `datetime'${k}T00:00:00Z'`;
+/**
+ * Day window of a DateKey D is [(D-1)T12:00Z, DT12:00Z). It contains every representation SharePoint may return
+ * for D (UTC midnight or local midnight of any site offset within +/-12 h).
+ */
+export function spDayStart(k: DateKey): string {
+  return `datetime'${addDays(k, -1)}T12:00:00Z'`;
+}
+
+export function spDayEnd(k: DateKey): string {
+  return `datetime'${k}T12:00:00Z'`;
 }
 
 function quote(s: string): string {
@@ -20,16 +27,16 @@ export function contractsFilter(user: UserInfo, includeClosed: boolean): string 
 }
 
 export function entriesFilter(contractId: number, from: DateKey, to: DateKey): string {
-  return `ContractId eq ${contractId} and EntryDate ge ${spDate(from)} and EntryDate le ${spDate(to)}`;
+  return `ContractId eq ${contractId} and EntryDate ge ${spDayStart(from)} and EntryDate lt ${spDayEnd(to)}`;
 }
 
 export function holidaysFilter(country: string, from: DateKey, to: DateKey): string {
-  return `(Country eq ${quote(country)} or Country eq '*') and HolidayDate ge ${spDate(from)} and HolidayDate le ${spDate(to)}`;
+  return `(Country eq ${quote(country)} or Country eq '*') and HolidayDate ge ${spDayStart(from)} and HolidayDate lt ${spDayEnd(to)}`;
 }
 
 export function entriesOnDateFilter(contractIds: number[], date: DateKey): string {
   const ids = contractIds.map(id => `ContractId eq ${id}`).join(' or ');
-  return `(${ids}) and EntryDate ge ${spDate(date)} and EntryDate lt ${spDate(addDays(date, 1))}`;
+  return `(${ids}) and EntryDate ge ${spDayStart(date)} and EntryDate lt ${spDayEnd(date)}`;
 }
 
 export function contractsOfContractorFilter(contractorId: number): string {

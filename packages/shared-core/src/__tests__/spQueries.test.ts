@@ -1,11 +1,12 @@
-import { contractsFilter, contractsOfContractorFilter, entriesFilter, entriesOnDateFilter, holidaysFilter, spDate } from '../data/spQueries';
+import { contractsFilter, contractsOfContractorFilter, entriesFilter, entriesOnDateFilter, holidaysFilter, spDayEnd, spDayStart } from '../data/spQueries';
 import { UserInfo } from '../models';
 
 const user: UserInfo = { id: 7, loginName: 'jane', displayName: 'Jane Doe', email: 'jane@example.com', roles: ['Contractor'] };
 
 describe('spQueries', () => {
-  it('formats dates as datetime literals', () => {
-    expect(spDate('2026-11-01')).toBe("datetime'2026-11-01T00:00:00Z'");
+  it('spDayStart/spDayEnd give the noon-to-noon day window', () => {
+    expect(spDayStart('2026-11-01')).toBe("datetime'2026-10-31T12:00:00Z'");
+    expect(spDayEnd('2026-11-01')).toBe("datetime'2026-11-01T12:00:00Z'");
   });
 
   it('contractsFilter excludes closed contracts', () => {
@@ -21,14 +22,14 @@ describe('spQueries', () => {
     expect(contractsFilter({ ...user, roles: ['Admin'] }, true)).toBe('');
   });
 
-  it('entriesFilter uses inclusive bounds', () => {
+  it('entriesFilter covers whole day windows', () => {
     expect(entriesFilter(5, '2026-11-01', '2026-11-30')).toBe(
-      "ContractId eq 5 and EntryDate ge datetime'2026-11-01T00:00:00Z' and EntryDate le datetime'2026-11-30T00:00:00Z'");
+      "ContractId eq 5 and EntryDate ge datetime'2026-10-31T12:00:00Z' and EntryDate lt datetime'2026-11-30T12:00:00Z'");
   });
 
   it('holidaysFilter matches the country or *', () => {
     expect(holidaysFilter('BG', '2026-01-01', '2026-12-31')).toBe(
-      "(Country eq 'BG' or Country eq '*') and HolidayDate ge datetime'2026-01-01T00:00:00Z' and HolidayDate le datetime'2026-12-31T00:00:00Z'");
+      "(Country eq 'BG' or Country eq '*') and HolidayDate ge datetime'2025-12-31T12:00:00Z' and HolidayDate lt datetime'2026-12-31T12:00:00Z'");
   });
 
   it('holidaysFilter escapes single quotes in the country', () => {
@@ -36,7 +37,7 @@ describe('spQueries', () => {
   });
 
   it('entriesOnDateFilter spans sibling contracts', () => {
-    expect(entriesOnDateFilter([1, 2], '2026-03-04')).toBe("(ContractId eq 1 or ContractId eq 2) and EntryDate ge datetime'2026-03-04T00:00:00Z' and EntryDate lt datetime'2026-03-05T00:00:00Z'");
+    expect(entriesOnDateFilter([1, 2], '2026-03-04')).toBe("(ContractId eq 1 or ContractId eq 2) and EntryDate ge datetime'2026-03-03T12:00:00Z' and EntryDate lt datetime'2026-03-04T12:00:00Z'");
   });
 
   it('contractsOfContractorFilter', () => {
