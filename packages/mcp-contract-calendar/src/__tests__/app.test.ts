@@ -47,6 +47,39 @@ describe('app', () => {
     expect(r.status).toBe(401);
   });
 
+  it('refuses to build an entra app without authMiddleware', () => {
+    const entra = { ...cfg, authMode: 'entra' as const };
+    expect(() => createApp(entra, localContextFactory(cfg), new MemoryAuditSink())).toThrow(/authMiddleware/);
+    expect(() =>
+      createApp(entra, localContextFactory(cfg), new MemoryAuditSink(), { authMiddleware: (_q, _s, next) => next() })
+    ).not.toThrow();
+  });
+
+  it('redacts credentials in the first-request header log', async () => {
+    const lines: string[] = [];
+    const spy = jest.spyOn(process.stdout, 'write').mockImplementation(((s: string) => {
+      lines.push(String(s));
+      return true;
+    }) as never);
+    try {
+      const app = createApp({ ...cfg, logRequestHeaders: true }, localContextFactory(cfg), new MemoryAuditSink());
+      await request(app)
+        .post('/mcp')
+        .set('Accept', ACCEPT)
+        .set('Authorization', 'Bearer SECRET-TOKEN')
+        .set('Cookie', 'sid=SECRET-COOKIE')
+        .set('X-MS-TOKEN-AAD-ID-TOKEN', 'SECRET-EASYAUTH')
+        .set('User-Agent', 'ua-test')
+        .send(init);
+    } finally {
+      spy.mockRestore();
+    }
+    const logged = lines.find(l => l.includes('first_request')) ?? '';
+    expect(logged).toContain('ua-test');
+    expect(logged).toContain('authorization');
+    expect(logged).not.toMatch(/SECRET/);
+  });
+
   describe('end to end over HTTP', () => {
     let server: Server;
     let client: Client;

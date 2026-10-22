@@ -7,6 +7,10 @@ import { createApp } from './http/app';
 
 function main(): void {
   const cfg = loadConfig(process.env);
+  if (cfg.authMode === 'entra') {
+    // Token validation middleware arrives in Task 10; never serve unauthenticated.
+    throw new Error('AUTH_MODE=entra is not wired yet (Task 10). Use AUTH_MODE=none with DATA_MODE=local.');
+  }
   const sink = new JsonLinesAuditSink(
     cfg.auditLogPath ? createWriteStream(cfg.auditLogPath, { flags: 'a' }) : process.stdout
   );

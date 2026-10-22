@@ -11,6 +11,18 @@ export interface AppOptions {
   authMiddleware?: RequestHandler;
 }
 
+const SENSITIVE = new Set(['authorization', 'cookie', 'set-cookie', 'proxy-authorization']);
+
+/** Header names are kept, values of credentials are replaced. */
+export function redactHeaders(h: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(h)) {
+    const n = k.toLowerCase();
+    out[k] = SENSITIVE.has(n) || n.startsWith('x-ms-token') ? '[redacted]' : v;
+  }
+  return out;
+}
+
 const methodNotAllowed = (_req: express.Request, res: Response): void => {
   res
     .status(405)
@@ -24,6 +36,9 @@ export function createApp(
   sink: AuditSink,
   opts: AppOptions = {}
 ): express.Express {
+  if (cfg.authMode === 'entra' && !opts.authMiddleware) {
+    throw new Error('AUTH_MODE=entra requires an authMiddleware; refusing to serve /mcp unauthenticated.');
+  }
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '1mb' }));
@@ -37,7 +52,7 @@ export function createApp(
           event: 'first_request',
           ip: req.ip,
           userAgent: req.get('user-agent') ?? null,
-          headers: req.headers
+          headers: redactHeaders(req.headers)
         }) + '\n'
       );
     }
