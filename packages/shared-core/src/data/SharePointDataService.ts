@@ -26,16 +26,20 @@ export interface SharePointListConfig {
 const FAR_PAST: DateKey = '1900-01-01';
 const FAR_FUTURE: DateKey = '2999-12-31';
 
-/** Derives the roles of a user. Call once at start-up and pass the result in as `currentUser.roles`. */
+/**
+ * Derives the roles of the current user (`userId` must be the current user's id: the Admin check reads the
+ * current user's own groups, which is always allowed, unlike listing the owners group members).
+ * Call once at start-up and pass the result in as `currentUser.roles`.
+ */
 export async function deriveRoles(sp: SPFI, lists: SharePointListConfig, userId: number): Promise<Role[]> {
-  const contracts = sp.web.lists.getById(lists.contractsListId).items;
   const roles: Role[] = [];
-  const asContractor = await contracts.filter(`ContractorId eq ${userId}`).select('Id').top(1)();
+  const asContractor = await sp.web.lists.getById(lists.contractsListId).items.filter(`ContractorId eq ${userId}`).select('Id').top(1)();
   if (asContractor.length > 0) { roles.push('Contractor'); }
-  const asManager = await contracts.filter(`ContractManagerId eq ${userId}`).select('Id').top(1)();
+  const asManager = await sp.web.lists.getById(lists.contractsListId).items.filter(`ContractManagerId eq ${userId}`).select('Id').top(1)();
   if (asManager.length > 0) { roles.push('ContractManager'); }
-  const owners = await sp.web.associatedOwnerGroup.users.select('Id')();
-  if (owners.some((u: { Id: number }) => u.Id === userId)) { roles.push('Admin'); }
+  const ownerGroup = await sp.web.associatedOwnerGroup.select('Id')();
+  const myGroups = await sp.web.currentUser.groups.select('Id')();
+  if (myGroups.some((g: { Id: number }) => g.Id === ownerGroup.Id)) { roles.push('Admin'); }
   return roles;
 }
 
@@ -97,10 +101,13 @@ export class SharePointDataService implements IDataService {
 
     const [batched, execute] = this.sp.batched();
     const entries = batched.web.lists.getById(this.lists.entriesListId);
-    for (const old of existing) { entries.items.getById(old.id as number).delete(); }
+    const pending: Array<Promise<unknown>> = existing.map(old => entries.items.getById(old.id as number).delete());
     const added = entries.items.add(toEntryItem(entry, contract.contractCode));
-    this.queueTotalsUpdates(batched, finalEntries);
+    pending.push(added);
+    pending.push(...this.queueTotalsUpdates(batched, finalEntries));
     await execute();
+    // execute() does not reject for individual sub-request failures; their own promises do.
+    await Promise.all(pending);
     const result = await added;
     return { ...entry, id: result.Id };
   }
@@ -113,17 +120,21 @@ export class SharePointDataService implements IDataService {
 
     const [batched, execute] = this.sp.batched();
     const entries = batched.web.lists.getById(this.lists.entriesListId);
-    for (const old of existing) { entries.items.getById(old.id as number).delete(); }
-    this.queueTotalsUpdates(batched, finalEntries);
+    const pending: Array<Promise<unknown>> = existing.map(old => entries.items.getById(old.id as number).delete());
+    pending.push(...this.queueTotalsUpdates(batched, finalEntries));
     await execute();
+    // execute() does not reject for individual sub-request failures; their own promises do.
+    await Promise.all(pending);
   }
 
-  private queueTotalsUpdates(batched: SPFI, finalEntries: Map<number, CalendarEntry[]>): void {
+  private queueTotalsUpdates(batched: SPFI, finalEntries: Map<number, CalendarEntry[]>): Array<Promise<unknown>> {
     const contracts = batched.web.lists.getById(this.lists.contractsListId);
+    const promises: Array<Promise<unknown>> = [];
     finalEntries.forEach((list, contractId) => {
       const totals = computeTotals(list);
-      contracts.items.getById(contractId).update({ OnSiteUsedDays: totals.onSiteDays, OffSiteUsedDays: totals.offSiteDays });
+      promises.push(contracts.items.getById(contractId).update({ OnSiteUsedDays: totals.onSiteDays, OffSiteUsedDays: totals.offSiteDays }));
     });
+    return promises;
   }
 
   private contractsList() { return this.sp.web.lists.getById(this.lists.contractsListId); }

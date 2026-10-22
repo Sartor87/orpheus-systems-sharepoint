@@ -1,3 +1,4 @@
+import { addDays } from '../dates';
 import { DateKey, UserInfo } from '../models';
 
 /** Date-only SharePoint columns are compared at midnight UTC. */
@@ -28,7 +29,7 @@ export function holidaysFilter(country: string, from: DateKey, to: DateKey): str
 
 export function entriesOnDateFilter(contractIds: number[], date: DateKey): string {
   const ids = contractIds.map(id => `ContractId eq ${id}`).join(' or ');
-  return `(${ids}) and EntryDate eq ${spDate(date)}`;
+  return `(${ids}) and EntryDate ge ${spDate(date)} and EntryDate lt ${spDate(addDays(date, 1))}`;
 }
 
 export function contractsOfContractorFilter(contractorId: number): string {

@@ -36,7 +36,7 @@ describe('spQueries', () => {
   });
 
   it('entriesOnDateFilter spans sibling contracts', () => {
-    expect(entriesOnDateFilter([1, 2], '2026-03-04')).toBe("(ContractId eq 1 or ContractId eq 2) and EntryDate eq datetime'2026-03-04T00:00:00Z'");
+    expect(entriesOnDateFilter([1, 2], '2026-03-04')).toBe("(ContractId eq 1 or ContractId eq 2) and EntryDate ge datetime'2026-03-04T00:00:00Z' and EntryDate lt datetime'2026-03-05T00:00:00Z'");
   });
 
   it('contractsOfContractorFilter', () => {
