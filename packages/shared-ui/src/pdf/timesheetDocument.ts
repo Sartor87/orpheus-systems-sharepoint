@@ -1,5 +1,6 @@
 import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { orpheusTokens } from '../theme/tokens';
+import { orpheusBrand } from '../brand/brand';
 import type { TimesheetCell, TimesheetModel } from './timesheetModel';
 
 function field(label: string, value: string | number): Content {
@@ -60,6 +61,15 @@ export function buildTimesheetDocDefinition(model: TimesheetModel): TDocumentDef
     margin: [0, 30, 0, 0]
   };
 
+  const attribution: Content = {
+    text: `Generated with ${orpheusBrand.name} Contract Calendar · ${orpheusBrand.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}`,
+    link: orpheusBrand.url,
+    alignment: 'center',
+    fontSize: 6,
+    color: orpheusTokens.pdfLabel,
+    margin: [0, 14, 0, 0]
+  };
+
   const content: Content[] = [];
   model.pages.forEach((page, idx) => {
     const isLast = idx === model.pages.length - 1;
@@ -86,7 +96,7 @@ export function buildTimesheetDocDefinition(model: TimesheetModel): TDocumentDef
       ...headerBlocks,
       { table: { headerRows: 1, widths: [62, ...days.map(() => '*'), 28, 28, 28], body }, layout: { paddingLeft: () => 1, paddingRight: () => 1, paddingTop: () => 1, paddingBottom: () => 1 }, margin: [0, 6, 0, 0] }
     ];
-    if (isLast) { pageContent.push(footer); }
+    if (isLast) { pageContent.push(footer, attribution); }
     content.push({ stack: pageContent, ...(isLast ? {} : { pageBreak: 'after' as const }) });
   });
 
@@ -94,6 +104,14 @@ export function buildTimesheetDocDefinition(model: TimesheetModel): TDocumentDef
     pageSize: 'A4',
     pageOrientation: 'landscape',
     pageMargins: [20, 20, 20, 20],
+    info: {
+      title: `Timesheet ${h.specificContract} ${model.period.from}–${model.period.to}`,
+      author: orpheusBrand.name,
+      creator: `${orpheusBrand.name} Contract Calendar`,
+      producer: `${orpheusBrand.name} Contract Calendar (pdfmake)`,
+      subject: 'On-site / off-site timesheet',
+      keywords: `timesheet, contract, ${orpheusBrand.name}`
+    },
     defaultStyle: { fontSize: 7 },
     content
   };
