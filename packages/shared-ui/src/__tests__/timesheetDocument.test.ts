@@ -63,3 +63,17 @@ describe('exported timesheet blocks', () => {
     expect(t.body[15][0].text).toBe('Total');
   });
 });
+
+describe('multi-page built-in timesheet', () => {
+  it('builds fresh header blocks for every page (pdfmake mutates shared nodes)', () => {
+    const model = buildTimesheetModel(contract({}), [], [], { from: '2026-02-01', to: '2027-03-31' }, { approvingOrg: 'A', serviceProvider: 'S' });
+    const dd = buildTimesheetDocDefinition(model);
+    const stacks = (dd.content as { stack: unknown[] }[]).map(c => c.stack);
+    expect(stacks.length).toBeGreaterThan(1);
+    stacks.forEach(s => expect(s.slice(0, 2)).toEqual(stacks[0].slice(0, 2)));
+    for (let i = 0; i < 2; i++) {
+      expect(stacks[1][i]).not.toBe(stacks[0][i]);
+      expect(stacks[0][i]).toHaveProperty('columns');
+    }
+  });
+});
