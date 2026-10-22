@@ -6,6 +6,7 @@ import { IDataService, LocalDataService } from '@orpheussystems/shared-core';
 import { DataContext } from '../../DataContext';
 import type { IContractCalendarWebPartProps } from '../../IContractCalendarWebPartProps';
 import ContractCalendar from '../ContractCalendar';
+import { ControlledService } from './controlledService';
 
 const props: IContractCalendarWebPartProps = {
   useLocalData: true,
@@ -27,8 +28,7 @@ async function flush(): Promise<void> {
 
 const hosts: HTMLDivElement[] = [];
 
-async function mount(demoUserId: number): Promise<{ host: HTMLDivElement; service: IDataService }> {
-  const service = new LocalDataService({ demoUserId });
+async function mount(demoUserId: number, service: IDataService = new LocalDataService({ demoUserId })): Promise<{ host: HTMLDivElement; service: IDataService }> {
   const host = document.createElement('div');
   document.body.appendChild(host);
   hosts.push(host);
@@ -94,5 +94,20 @@ describe('ContractCalendar', () => {
     const { host } = await mount(3);
     expect(day(host, 'Tuesday 3 November 2026').getAttribute('aria-disabled')).toBe('true');
     expect(host.textContent).toContain('View only');
+  });
+
+  it('hides the grid after a failed load and recovers through Retry', async () => {
+    const service = new ControlledService(1);
+    service.setFailEntries(true);
+    const { host } = await mount(1, service);
+    expect(host.textContent).toContain('Could not load the calendar: Entries list unavailable');
+    expect(host.querySelectorAll('section[aria-label] button').length).toBe(0);
+
+    service.setFailEntries(false);
+    const retry = Array.from(host.querySelectorAll('button')).filter(b => b.textContent === 'Retry')[0];
+    await act(async () => { retry.click(); });
+    await flush();
+    expect(host.textContent).not.toContain('Could not load the calendar');
+    expect(day(host, 'Tuesday 3 November 2026').getAttribute('aria-disabled')).toBeNull();
   });
 });

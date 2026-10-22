@@ -37,6 +37,8 @@ export interface CalendarState {
   error?: string;
   /** True until the user and contracts, then the selected contract's entries, have loaded. */
   loading: boolean;
+  /** Set when the selected contract's entries could not be loaded; the grid stays locked until retryLoad() succeeds. */
+  loadError?: string;
   currentUser?: UserInfo;
   today: DateKey;
 }
@@ -49,6 +51,8 @@ export interface CalendarActions {
   resolveOverlap(contractId: number | null): Promise<void>; // eslint-disable-line @rushstack/no-new-null
   /** Weekend (when configured), holiday, or outside the selected contract's period. */
   isDayBlocked(date: DateKey): boolean;
+  retryLoad(): void;
+  dismissError(): void;
 }
 
 const MAX_MONTHS = 12;
@@ -78,6 +82,14 @@ export function pickDefaultContract(contracts: Contract[], today: DateKey, initi
     || contracts[0];
 }
 
+/** Write bookkeeping for one date: which write is the latest, and the last value the server confirmed. */
+interface DateWrites {
+  latest: number;
+  latestState: 'pending' | 'ok' | 'failed';
+  confirmed: CalendarEntry | undefined;
+  confirmedToken: number;
+}
+
 function messageOf(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
@@ -102,10 +114,14 @@ export function useCalendarState(): CalendarState & CalendarActions {
   const [error, setError] = React.useState<string | undefined>();
   const [loadingContracts, setLoadingContracts] = React.useState(true);
   const [loadedContractId, setLoadedContractId] = React.useState<number | undefined>();
+  const [loadError, setLoadError] = React.useState<string | undefined>();
+  const [reloadNonce, setReloadNonce] = React.useState(0);
 
   // Async callbacks compare against the latest selection, not the one captured at click time.
   const selectedIdRef = React.useRef<number | undefined>(selectedId);
   selectedIdRef.current = selectedId;
+  const writes = React.useRef<Record<DateKey, DateWrites>>({});
+  const writeCounter = React.useRef(0);
   const mounted = React.useRef(true);
   React.useEffect(() => () => { mounted.current = false; }, []);
 
@@ -113,6 +129,7 @@ export function useCalendarState(): CalendarState & CalendarActions {
   React.useEffect(() => {
     let cancelled = false;
     setLoadingContracts(true);
+    setLoadError(undefined);
     Promise.all([service.getCurrentUser(), service.getMyContracts()])
       .then(([user, mine]) => {
         if (cancelled) { return; }
@@ -125,40 +142,51 @@ export function useCalendarState(): CalendarState & CalendarActions {
       })
       .catch(e => {
         if (cancelled) { return; }
-        setError(messageOf(e));
+        setLoadError(messageOf(e));
         setLoadingContracts(false);
       });
     return () => { cancelled = true; };
     // initialContractId only matters for the first pick, so it is not a dependency.
-  }, [service]);
+  }, [service, reloadNonce]);
 
   const selected = React.useMemo(() => contracts.find(c => c.id === selectedId), [contracts, selectedId]);
 
+  const selectedRef = React.useRef<Contract | undefined>(selected);
+  selectedRef.current = selected;
+
   // Entries and holidays for the whole contract period (stats cover the full contract, not just the shown months).
+  // Keyed on the contract id, not the object: a contracts reload yields new objects for the same selection.
+  // Until a load succeeds the grid is locked (loadedContractId unset), so nobody edits data that was never seen.
   React.useEffect(() => {
-    if (!selected) { return; }
+    setLoadedContractId(undefined);
+    setPendingOverlap(undefined);
+    writes.current = {}; // outcomes of writes started before this load are ignored
+    const contract = selectedRef.current;
+    if (!contract) { return; }
     let cancelled = false;
+    setLoadError(undefined);
     Promise.all([
-      service.getEntries(selected.id, selected.startDate, selected.latestExecutionDate),
-      service.getHolidays(selected.country, selected.startDate, selected.latestExecutionDate)
+      service.getEntries(contract.id, contract.startDate, contract.latestExecutionDate),
+      service.getHolidays(contract.country, contract.startDate, contract.latestExecutionDate)
     ])
       .then(([list, hols]) => {
         if (cancelled) { return; }
         const map: Record<DateKey, CalendarEntry> = {};
         for (const e of list) { map[e.date] = e; }
+        writes.current = {};
         setEntries(map);
         setHolidays(hols);
-        setLoadedContractId(selected.id);
+        setError(undefined);
+        setLoadedContractId(contract.id);
       })
       .catch(e => {
         if (cancelled) { return; }
         setEntries({});
         setHolidays([]);
-        setError(messageOf(e));
-        setLoadedContractId(selected.id);
+        setLoadError(messageOf(e));
       });
     return () => { cancelled = true; };
-  }, [service, selected]);
+  }, [service, selectedId, reloadNonce]);
 
   const readOnly = !selected || !currentUser || selected.contractor.id !== currentUser.id;
 
@@ -168,27 +196,53 @@ export function useCalendarState(): CalendarState & CalendarActions {
     return isBlocked(date, holidays, selected.country, !!props.blockWeekends);
   }, [selected, holidays, props.blockWeekends]);
 
-  /** Optimistic write with per-date rollback; local state only tracks the selected contract. */
-  const write = React.useCallback(async (contractId: number, date: DateKey, type: EntryType | undefined, previous: CalendarEntry | undefined): Promise<void> => {
+  /**
+   * Optimistic write. Writes to one date are ordered by a token: only the latest write's outcome is shown,
+   * and a failure rolls back to the newest server-confirmed value, never to a click-time snapshot.
+   * Local state only tracks the selected contract: writing to a sibling moves the date off it.
+   */
+  const write = React.useCallback(async (contractId: number, date: DateKey, type: EntryType | undefined, current: CalendarEntry | undefined): Promise<void> => {
     const shownId = selectedIdRef.current;
-    const optimistic: CalendarEntry | undefined = type && contractId === shownId ? { contractId, date, type } : undefined;
-    // Writing to a sibling contract moves the date off the shown one.
-    setEntries(prev => withEntry(prev, date, optimistic));
+    let rec = writes.current[date];
+    if (!rec) {
+      // First write since the load: what is on screen is what the server has.
+      rec = { latest: 0, latestState: 'ok', confirmed: current, confirmedToken: 0 };
+      writes.current[date] = rec;
+    }
+    const book = rec;
+    const token = ++writeCounter.current;
+    // Object.assign keeps TypeScript from narrowing latestState to 'pending' across the awaits below.
+    Object.assign(book, { latest: token, latestState: 'pending' });
+    // Ignore outcomes after unmount, a reload (bookkeeping replaced) or a contract switch.
+    const live = (): boolean => mounted.current && writes.current[date] === book && shownId === selectedIdRef.current;
+
+    setEntries(prev => withEntry(prev, date, type && contractId === shownId ? { contractId, date, type } : undefined));
     try {
+      let shown: CalendarEntry | undefined;
       if (type) {
         const saved = await service.upsertEntry({ contractId, date, type });
-        if (mounted.current && contractId === selectedIdRef.current) {
-          setEntries(prev => withEntry(prev, date, saved));
-        }
+        shown = contractId === shownId ? saved : undefined;
       } else {
         await service.deleteEntry(contractId, date);
+        shown = undefined;
       }
-      if (mounted.current) { setError(undefined); }
+      if (!live()) { return; }
+      if (token > book.confirmedToken) {
+        book.confirmed = shown;
+        book.confirmedToken = token;
+      }
+      if (token === book.latest) {
+        book.latestState = 'ok';
+        setEntries(prev => withEntry(prev, date, shown));
+        setError(undefined);
+      } else if (book.latestState === 'failed') {
+        // The latest write already failed and rolled back; this older success is now the truth.
+        setEntries(prev => withEntry(prev, date, book.confirmed));
+      }
     } catch (e) {
-      if (!mounted.current) { return; }
-      if (shownId === selectedIdRef.current) {
-        setEntries(prev => withEntry(prev, date, previous));
-      }
+      if (!live() || token !== book.latest) { return; }
+      book.latestState = 'failed';
+      setEntries(prev => withEntry(prev, date, book.confirmed));
       setError(messageOf(e));
     }
   }, [service]);
@@ -230,7 +284,9 @@ export function useCalendarState(): CalendarState & CalendarActions {
     () => selected ? computeMonths(selected, props.monthsToShow || 0, today) : [],
     [selected, props.monthsToShow, today]
   );
-  const loading = loadingContracts || (!!selected && loadedContractId !== selected.id);
+  const loading = loadingContracts || (!!selected && loadedContractId !== selected.id && !loadError);
+  const retryLoad = React.useCallback((): void => { setReloadNonce(n => n + 1); }, []);
+  const dismissError = React.useCallback((): void => { setError(undefined); }, []);
 
   return {
     contracts,
@@ -251,6 +307,9 @@ export function useCalendarState(): CalendarState & CalendarActions {
     setSelectionType,
     clickDay,
     resolveOverlap,
-    isDayBlocked
+    isDayBlocked,
+    loadError,
+    retryLoad,
+    dismissError
   };
 }

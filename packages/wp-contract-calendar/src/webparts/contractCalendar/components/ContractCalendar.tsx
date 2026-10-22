@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { createTheme, MessageBar, MessageBarType, Spinner, SpinnerSize, ThemeProvider } from '@fluentui/react';
+import { createTheme, MessageBar, MessageBarButton, MessageBarType, Spinner, SpinnerSize, ThemeProvider } from '@fluentui/react';
 import { orpheusTokens } from '@orpheussystems/shared-ui/tokens';
 import styles from './ContractCalendar.module.scss';
 import type { IContractCalendarProps } from './IContractCalendarProps';
@@ -75,12 +75,28 @@ const ContractCalendar: React.FC<IContractCalendarProps> = () => {
         )}
       </ThemeProvider>
 
+      {state.loadError && (
+        <MessageBar
+          messageBarType={MessageBarType.error}
+          isMultiline={false}
+          className={styles.message}
+          actions={<MessageBarButton onClick={state.retryLoad}>Retry</MessageBarButton>}
+        >
+          Could not load the calendar: {state.loadError}
+        </MessageBar>
+      )}
       {state.error && (
-        <MessageBar messageBarType={MessageBarType.error} isMultiline={false} className={styles.message}>
+        <MessageBar
+          messageBarType={MessageBarType.error}
+          isMultiline={false}
+          className={styles.message}
+          onDismiss={state.dismissError}
+          dismissButtonAriaLabel="Dismiss"
+        >
           {state.error}
         </MessageBar>
       )}
-      {readOnly && selected && !state.loading && (
+      {readOnly && selected && !state.loading && !state.loadError && (
         <MessageBar messageBarType={MessageBarType.info} className={styles.message}>
           You are viewing {selected.contractor.displayName}&apos;s calendar. Only the contractor can mark days.
         </MessageBar>
@@ -88,11 +104,11 @@ const ContractCalendar: React.FC<IContractCalendarProps> = () => {
 
       {state.loading && <Spinner size={SpinnerSize.large} label="Loading calendar…" className={styles.loading} />}
 
-      {!state.loading && !selected && !state.error && (
+      {!state.loading && !selected && !state.loadError && (
         <MessageBar className={styles.message}>No active contracts to show.</MessageBar>
       )}
 
-      {!state.loading && selected && (
+      {!state.loading && selected && !state.loadError && (
         <div className={styles.months}>
           {state.months.map(m => (
             <MonthGrid
