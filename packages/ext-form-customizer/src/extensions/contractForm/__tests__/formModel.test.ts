@@ -139,3 +139,22 @@ describe('draftFromContract', () => {
     });
   });
 });
+
+describe('robustness', () => {
+  it('does not throw on an invalid code pattern and falls back to the default', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    expect(() => validateContract(valid, '^(')).not.toThrow();
+    expect(validateContract(valid, '^(').contractCode).toBeUndefined();
+    expect(validateContract({ ...valid, contractCode: '1185_Jane' }, '^(').contractCode)
+      .toBe('Use the pattern 1185-Name or 1185-First-Last.');
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
+  it('findOverlaps returns nothing without a contractor, and ignores other contractors', () => {
+    const other = contract({ id: 8, startDate: '2026-01-01', latestExecutionDate: '2027-12-31',
+      contractor: { id: 99, loginName: 'x', displayName: 'X', email: 'x@example.com' } });
+    expect(findOverlaps({ ...valid, contractorId: undefined }, [contract({ id: 9 })])).toEqual([]);
+    expect(findOverlaps(valid, [other])).toEqual([]);
+  });
+});

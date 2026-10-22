@@ -79,11 +79,11 @@ export function validateContract(d: ContractDraft, codePattern: string): FieldEr
 /** Active/Draft contracts of the same contractor whose period intersects the draft's (inclusive). */
 export function findOverlaps(d: ContractDraft, othersOfContractor: Contract[], selfId?: number): Contract[] {
   const { startDate, latestExecutionDate } = d;
-  if (!startDate || !latestExecutionDate) { return []; }
+  if (!startDate || !latestExecutionDate || d.contractorId === undefined) { return []; }
   return othersOfContractor.filter(c =>
     c.id !== selfId &&
     c.status !== 'Closed' &&
-    (d.contractorId === undefined || c.contractor.id === d.contractorId) &&
+    c.contractor.id === d.contractorId &&
     compareKeys(c.startDate, latestExecutionDate) <= 0 &&
     compareKeys(c.latestExecutionDate, startDate) >= 0
   );
@@ -118,8 +118,20 @@ export function draftFromContract(c: Contract): ContractDraft {
   };
 }
 
+const DEFAULT_CODE_PATTERN = '^\\d{4}-[A-Za-z]+(-[A-Za-z]+)*$';
+let warnedInvalidPattern = false;
+
 function codeRegExp(pattern: string): RegExp {
-  // The pattern is configurable (admin-supplied), so it cannot be a string constant.
-  // eslint-disable-next-line @rushstack/security/no-unsafe-regexp
-  return new RegExp(pattern);
+  try {
+    // The pattern is configurable (admin-supplied), so it cannot be a string constant.
+    // eslint-disable-next-line @rushstack/security/no-unsafe-regexp
+    return new RegExp(pattern);
+  } catch {
+    if (!warnedInvalidPattern) {
+      warnedInvalidPattern = true;
+      console.warn(`Invalid contract code pattern "${pattern}"; using the default pattern.`);
+    }
+    // eslint-disable-next-line @rushstack/security/no-unsafe-regexp
+    return new RegExp(DEFAULT_CODE_PATTERN);
+  }
 }
