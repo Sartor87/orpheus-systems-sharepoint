@@ -9,6 +9,7 @@ import { CalendarEntry, Contract, DateKey, Holiday, Role, UserInfo } from '../mo
 import { compareKeys, isWithin } from '../dates';
 import { computeTotals, isBlocked } from '../rules';
 import { IDataService } from './IDataService';
+import { deriveRolesForContracts } from './listLookup';
 import {
   CONTRACT_EXPAND, CONTRACT_SELECT, ENTRY_EXPAND, ENTRY_SELECT, HOLIDAY_SELECT,
   mapContract, mapEntry, mapHoliday, SPContractItem, SPEntryItem, SPHolidayItem, toEntryItem
@@ -32,15 +33,7 @@ const FAR_FUTURE: DateKey = '2999-12-31';
  * Call once at start-up and pass the result in as `currentUser.roles`.
  */
 export async function deriveRoles(sp: SPFI, lists: SharePointListConfig, userId: number): Promise<Role[]> {
-  const roles: Role[] = [];
-  const asContractor = await sp.web.lists.getById(lists.contractsListId).items.filter(`ContractorId eq ${userId}`).select('Id').top(1)();
-  if (asContractor.length > 0) { roles.push('Contractor'); }
-  const asManager = await sp.web.lists.getById(lists.contractsListId).items.filter(`ContractManagerId eq ${userId}`).select('Id').top(1)();
-  if (asManager.length > 0) { roles.push('ContractManager'); }
-  const ownerGroup = await sp.web.associatedOwnerGroup.select('Id')();
-  const myGroups = await sp.web.currentUser.groups.select('Id')();
-  if (myGroups.some((g: { Id: number }) => g.Id === ownerGroup.Id)) { roles.push('Admin'); }
-  return roles;
+  return deriveRolesForContracts(sp, lists.contractsListId, userId);
 }
 
 export class SharePointDataService implements IDataService {

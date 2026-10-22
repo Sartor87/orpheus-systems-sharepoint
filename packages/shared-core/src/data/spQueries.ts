@@ -42,3 +42,6 @@ export function entriesOnDateFilter(contractIds: number[], date: DateKey): strin
 export function contractsOfContractorFilter(contractorId: number): string {
   return `ContractorId eq ${contractorId}`;
 }
+
+/** Same filter, named for consumers that build their own queries (extensions). */
+export const contractsOfContractorQuery = contractsOfContractorFilter;
