@@ -4,6 +4,10 @@ x-spfx: &spfx
   volumes:
     - .:/usr/app/spfx
     - npm-cache:/home/spfx/.npm
+    - nm-root:/usr/app/spfx/node_modules
+    - nm-shared-core:/usr/app/spfx/packages/shared-core/node_modules
+    - nm-shared-ui:/usr/app/spfx/packages/shared-ui/node_modules
+    - nm-wp-contract-calendar:/usr/app/spfx/packages/wp-contract-calendar/node_modules
   environment:
     - "npm_config_cache=/home/spfx/.npm"
 
@@ -34,3 +38,7 @@ services:
 
 volumes:
   npm-cache:
+  nm-root:
+  nm-shared-core:
+  nm-shared-ui:
+  nm-wp-contract-calendar:

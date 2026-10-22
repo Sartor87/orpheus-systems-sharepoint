@@ -41,3 +41,11 @@ Then install `~/.rushstack/rushstack-cert.pem` (copy it out of the container) in
 ## Linux note
 
 On SELinux hosts, append `:Z` to the bind mount in `compose.yml` (`.:/usr/app/spfx:Z`).
+
+## node_modules live in named volumes
+
+`node_modules` directories are mounted from named volumes (`nm-root`, `nm-shared-core`, `nm-shared-ui`, `nm-wp-contract-calendar`), not from the bind-mounted repo. Why: `npm install` fails with `EPERM` on `chmod` when it writes bin links onto the Windows bind mount.
+
+- The host never sees `node_modules`; editor tooling on the host has no installed types. Use the container or the devcontainer.
+- A new package under `packages/` needs its own `nm-<name>` volume line in both `compose.yml` (the `x-spfx` volumes and the top-level `volumes:`) and `.devcontainer/devcontainer.json` (`mounts`).
+- Reset: `podman volume rm <name>` (for example `podman volume rm monorepo_nm-root`; check names with `podman volume ls`), then run `npm install` again.
