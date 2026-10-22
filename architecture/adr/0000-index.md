@@ -15,6 +15,7 @@ were taken in the design document of 2026-10-22 and are recorded here as
 | [ADR-007](0007-fresh-orphan-branch-for-public-repo.md) | Fresh orphan branch for the public repository | Accepted | 2026-10-22 | Preliminary / A |
 | [ADR-008](0008-one-calendar-entry-per-contractor-per-date.md) | One calendar entry per contractor per date across contracts | Accepted | 2026-10-22 | C (data) |
 | [ADR-009](0009-apache-2-0-with-notice.md) | Apache-2.0 license with NOTICE attribution | Accepted | 2026-10-22 | Preliminary |
+| [ADR-010](0010-html-template-timesheet.md) | HTML template timesheet | Accepted | 2026-10-22 | Preliminary |
 
 Lifecycle: `Proposed → Accepted → (Deprecated | Superseded by NNNN)`. See
 Phase H for the change process. Candidate future ADRs (not yet written):

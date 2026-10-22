@@ -1,10 +1,10 @@
-# X. HTML template for the timesheet PDF
+# 10. HTML template for the timesheet PDF
 
 ## Date: 2026-10-22
 
 ## Status
 
-Proposed
+Accepted
 
 ---
 
