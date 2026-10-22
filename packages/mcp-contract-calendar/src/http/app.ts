@@ -5,6 +5,7 @@ import type { ServerConfig } from '../config';
 import type { AuditSink } from '../audit/audit';
 import type { AuthedRequest, ContextFactory } from '../context/contextFactory';
 import { createMcpServer } from '../mcp/createMcpServer';
+import { AuthRequiredError } from '../auth/errors';
 
 export interface AppOptions {
   /** Token validation (Task 10). Runs before /mcp; must set req.claims or end the response. */
@@ -77,7 +78,11 @@ export function createApp(
       });
       await server.connect(transport);
       await transport.handleRequest(req, res, req.body);
-    } catch {
+    } catch (err) {
+      if (err instanceof AuthRequiredError && !res.headersSent) {
+        res.status(401).set('WWW-Authenticate', 'Bearer').json({ error: 'unauthorized' });
+        return;
+      }
       if (!res.headersSent) {
         res.status(500).json({ jsonrpc: '2.0', error: { code: -32603, message: 'Internal server error.' }, id: null });
       }
