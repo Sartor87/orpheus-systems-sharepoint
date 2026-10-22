@@ -1,14 +1,14 @@
-# ADR-008: One calendar entry per contractor per date across contracts
+# 8. One calendar entry per contractor per date across contracts
 
-**Date:** 2026-10-22
-**Status:** `Accepted`
-**TOGAF Phase:** C — Data Architecture
-**Decision Maker(s):** Kiril Iliev (owner)
-**Stakeholders:** Contractors; contract managers; builder
+## Date: 2026-10-22
+
+## Status
+
+Accepted
 
 ---
 
-## Context
+## Problem
 
 Contract periods may overlap ("bridge" contracts, e.g. `1185` until 31 Jan,
 `1186` from 15 Jan), but as far as counting goes exactly one contract is
@@ -63,3 +63,6 @@ contract **moves** the entry to it; it never duplicates it. `EntryDate` and
 - Related ADRs: ADR-003, ADR-005
 - Related requirements: FR-02
 - Related documents: design §6.1, §6.2, §6.4; Phase B BR-1/BR-2; Phase C (data)
+- TOGAF phase: C — Data Architecture
+- Decision maker(s): Kiril Iliev (owner)
+- Stakeholders: Contractors; contract managers; builder

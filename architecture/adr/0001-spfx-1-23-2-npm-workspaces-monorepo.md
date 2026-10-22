@@ -1,14 +1,14 @@
-# ADR-001: SPFx 1.23.2 on an npm-workspaces monorepo
+# 1. SPFx 1.23.2 on an npm-workspaces monorepo
 
-**Date:** 2026-10-22
-**Status:** `Accepted`
-**TOGAF Phase:** D — Technology Architecture
-**Decision Maker(s):** Kiril Iliev (owner)
-**Stakeholders:** Builder; public repository visitors
+## Date: 2026-10-22
+
+## Status
+
+Accepted
 
 ---
 
-## Context
+## Problem
 
 The repository must become a public SPFx monorepo holding four extensions, a
 web part and two shared libraries, and every package must build, bundle and
@@ -70,3 +70,6 @@ scripts: `build`, `serve:<pkg>`, `package` (all `.sppkg` with `--ship`),
 - Related ADRs: ADR-002 (container), ADR-003 (shared-core seam)
 - Related requirements: NFR-02
 - Related documents: design §3, §4; Phase D
+- TOGAF phase: D — Technology Architecture
+- Decision maker(s): Kiril Iliev (owner)
+- Stakeholders: Builder; public repository visitors

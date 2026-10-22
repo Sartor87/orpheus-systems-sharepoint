@@ -1,14 +1,14 @@
-# ADR-007: Fresh orphan branch for the public repository
+# 7. Fresh orphan branch for the public repository
 
-**Date:** 2026-10-22
-**Status:** `Accepted`
-**TOGAF Phase:** Preliminary / A — Architecture Vision
-**Decision Maker(s):** Kiril Iliev (owner)
-**Stakeholders:** Public repository visitors; Orpheus Systems
+## Date: 2026-10-22
+
+## Status
+
+Accepted
 
 ---
 
-## Context
+## Problem
 
 The repository carries naming from a previous employer (a utilities package,
 a path alias and a URL, listed in design §8) in its working tree and in its
@@ -61,3 +61,6 @@ public commit; `LICENSE` is MIT © 2026 Orpheus Systems and `package.json`
 - Related ADRs: —
 - Related requirements: NFR-03, NFR-06
 - Related documents: design §1, §8; Phase G gate G-2
+- TOGAF phase: Preliminary / A — Architecture Vision
+- Decision maker(s): Kiril Iliev (owner)
+- Stakeholders: Public repository visitors; Orpheus Systems

@@ -1,14 +1,14 @@
-# ADR-006: Idempotent PnP PowerShell provisioning instead of Feature Framework
+# 6. Idempotent PnP PowerShell provisioning instead of Feature Framework
 
-**Date:** 2026-10-22
-**Status:** `Accepted`
-**TOGAF Phase:** D — Technology Architecture
-**Decision Maker(s):** Kiril Iliev (owner)
-**Stakeholders:** Site admins; builder
+## Date: 2026-10-22
+
+## Status
+
+Accepted
 
 ---
 
-## Context
+## Problem
 
 The solutions assume three lists with content types and indexes, a
 `RemainingDays` column bound to the field customizer, the `Orpheus Contract`
@@ -71,3 +71,6 @@ lists.
 - Related ADRs: ADR-002 (no Node on host), ADR-005 (default permissions)
 - Related requirements: FR-05, FR-20
 - Related documents: design §6.9; Phase D §4; Phase F
+- TOGAF phase: D — Technology Architecture
+- Decision maker(s): Kiril Iliev (owner)
+- Stakeholders: Site admins; builder

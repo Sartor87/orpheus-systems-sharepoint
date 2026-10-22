@@ -25,11 +25,11 @@
 
 ## 3. ADR lifecycle
 
-`Proposed → Accepted → (Deprecated | Superseded by ADR-NNN)`
+`Proposed → Accepted → (Deprecated | Superseded by NNNN)`
 
 - An ADR is never edited to say something different; it is superseded.
 - Minor corrections (typos, links) may be edited in place.
-- The index in `adr/README.md` is the single list of current and historical
+- The index in `adr/0000-index.md` is the single list of current and historical
   decisions.
 
 ## 4. Review cadence

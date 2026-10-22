@@ -1,14 +1,14 @@
-# ADR-005: Visibility by filtering in the web part rather than item-level permissions
+# 5. Visibility by filtering in the web part rather than item-level permissions
 
-**Date:** 2026-10-22
-**Status:** `Accepted`
-**TOGAF Phase:** C — Application Architecture (security model)
-**Decision Maker(s):** Kiril Iliev (owner)
-**Stakeholders:** Contractors, contract managers, site admins
+## Date: 2026-10-22
+
+## Status
+
+Accepted
 
 ---
 
-## Context
+## Problem
 
 Contractors should see only their own contracts and managers only the ones
 they manage. SharePoint can enforce this with item-level permissions, but
@@ -69,3 +69,6 @@ as risk R-SEC-1 and roadmap item RM-2.
 - Related ADRs: ADR-003, ADR-006
 - Related requirements: FR-01, FR-03, FR-23
 - Related documents: design §6.2, §7; Phase A risk register; Phase E RM-2
+- TOGAF phase: C — Application Architecture (security model)
+- Decision maker(s): Kiril Iliev (owner)
+- Stakeholders: Contractors, contract managers, site admins

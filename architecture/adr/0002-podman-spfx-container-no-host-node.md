@@ -1,14 +1,14 @@
-# ADR-002: Podman with the `m365pnp/spfx:1.23.2` container; no Node on the host
+# 2. Podman with the `m365pnp/spfx:1.23.2` container; no Node on the host
 
-**Date:** 2026-10-22
-**Status:** `Accepted`
-**TOGAF Phase:** D — Technology Architecture
-**Decision Maker(s):** Kiril Iliev (owner)
-**Stakeholders:** Builder; CI; public repository visitors
+## Date: 2026-10-22
+
+## Status
+
+Accepted
 
 ---
 
-## Context
+## Problem
 
 A build that only works on the author's machine is an explicit anti-goal.
 The host is Windows 11 with Podman 6.1.4 and no Node installed. SPFx 1.23
@@ -67,3 +67,6 @@ the host.
 - Related ADRs: ADR-001
 - Related requirements: NFR-01, NFR-09
 - Related documents: design §3, §5; Phase D
+- TOGAF phase: D — Technology Architecture
+- Decision maker(s): Kiril Iliev (owner)
+- Stakeholders: Builder; CI; public repository visitors

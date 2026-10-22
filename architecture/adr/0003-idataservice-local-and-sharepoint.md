@@ -1,14 +1,14 @@
-# ADR-003: `IDataService` with Local and SharePoint implementations
+# 3. `IDataService` with Local and SharePoint implementations
 
-**Date:** 2026-10-22
-**Status:** `Accepted`
-**TOGAF Phase:** C — Application Architecture
-**Decision Maker(s):** Kiril Iliev (owner)
-**Stakeholders:** Builder; contractors and managers (end users)
+## Date: 2026-10-22
+
+## Status
+
+Accepted
 
 ---
 
-## Context
+## Problem
 
 The calendar web part must work fully in the local workbench with bundled
 fixture data and against real SharePoint lists in production. Both demo roles
@@ -83,3 +83,6 @@ React tree via context. No component talks to SharePoint directly.
 - Related ADRs: ADR-005, ADR-008
 - Related requirements: FR-07, FR-18, FR-22
 - Related documents: design §6.3; Phase C (application)
+- TOGAF phase: C — Application Architecture
+- Decision maker(s): Kiril Iliev (owner)
+- Stakeholders: Builder; contractors and managers (end users)

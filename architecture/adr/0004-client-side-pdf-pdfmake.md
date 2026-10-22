@@ -1,14 +1,14 @@
-# ADR-004: Client-side PDF generation with pdfmake
+# 4. Client-side PDF generation with pdfmake
 
-**Date:** 2026-10-22
-**Status:** `Accepted`
-**TOGAF Phase:** C — Application Architecture
-**Decision Maker(s):** Kiril Iliev (owner)
-**Stakeholders:** Builder; contract managers and contractors; approving organisation (signs the output)
+## Date: 2026-10-22
+
+## Status
+
+Accepted
 
 ---
 
-## Context
+## Problem
 
 The timesheet is a one-page landscape A4 document (one page per 12 months)
 with a header of two label rows, a month × day grid (columns 1–31) whose
@@ -64,3 +64,6 @@ extension point, not built now.
 - Related ADRs: ADR-003 (data for the builder)
 - Related requirements: FR-14, FR-15, NFR-11
 - Related documents: design §6.5, §9, §10; Phase C (application); roadmap RM-3
+- TOGAF phase: C — Application Architecture
+- Decision maker(s): Kiril Iliev (owner)
+- Stakeholders: Builder; contract managers and contractors; approving organisation (signs the output)

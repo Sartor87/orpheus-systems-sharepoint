@@ -32,18 +32,18 @@ fact. Technology and vendor choices live in ADRs, not in the phase documents.
 
 ## Architecture Decision Records
 
-See [adr/README.md](adr/README.md) for the index.
+See [adr/0000-index.md](adr/0000-index.md) for the index.
 
 | ADR | Decision |
 |-----|----------|
-| [ADR-001](adr/ADR-001-spfx-1-23-2-npm-workspaces-monorepo.md) | SPFx 1.23.2 on an npm-workspaces monorepo |
-| [ADR-002](adr/ADR-002-podman-spfx-container-no-host-node.md) | Podman with the `m365pnp/spfx:1.23.2` container; no Node on the host |
-| [ADR-003](adr/ADR-003-idataservice-local-and-sharepoint.md) | `IDataService` with Local and SharePoint implementations |
-| [ADR-004](adr/ADR-004-client-side-pdf-pdfmake.md) | Client-side PDF generation with pdfmake |
-| [ADR-005](adr/ADR-005-web-part-filtering-over-item-level-permissions.md) | Visibility by filtering in the web part rather than item-level permissions |
-| [ADR-006](adr/ADR-006-idempotent-pnp-powershell-provisioning.md) | Idempotent PnP PowerShell provisioning instead of Feature Framework |
-| [ADR-007](adr/ADR-007-fresh-orphan-branch-for-public-repo.md) | Fresh orphan branch for the public repository |
-| [ADR-008](adr/ADR-008-one-calendar-entry-per-contractor-per-date.md) | One calendar entry per contractor per date across contracts |
+| [ADR-001](adr/0001-spfx-1-23-2-npm-workspaces-monorepo.md) | SPFx 1.23.2 on an npm-workspaces monorepo |
+| [ADR-002](adr/0002-podman-spfx-container-no-host-node.md) | Podman with the `m365pnp/spfx:1.23.2` container; no Node on the host |
+| [ADR-003](adr/0003-idataservice-local-and-sharepoint.md) | `IDataService` with Local and SharePoint implementations |
+| [ADR-004](adr/0004-client-side-pdf-pdfmake.md) | Client-side PDF generation with pdfmake |
+| [ADR-005](adr/0005-web-part-filtering-over-item-level-permissions.md) | Visibility by filtering in the web part rather than item-level permissions |
+| [ADR-006](adr/0006-idempotent-pnp-powershell-provisioning.md) | Idempotent PnP PowerShell provisioning instead of Feature Framework |
+| [ADR-007](adr/0007-fresh-orphan-branch-for-public-repo.md) | Fresh orphan branch for the public repository |
+| [ADR-008](adr/0008-one-calendar-entry-per-contractor-per-date.md) | One calendar entry per contractor per date across contracts |
 
 ## Conventions
 
