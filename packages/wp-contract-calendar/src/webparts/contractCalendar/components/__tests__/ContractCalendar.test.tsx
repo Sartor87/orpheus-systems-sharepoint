@@ -110,4 +110,25 @@ describe('ContractCalendar', () => {
     expect(host.textContent).not.toContain('Could not load the calendar');
     expect(day(host, 'Tuesday 3 November 2026').getAttribute('aria-disabled')).toBeNull();
   });
+
+  it('shows the checked selection type and a separate legend and hint', async () => {
+    const { host } = await mount(1);
+    const radios = Array.from(host.querySelectorAll<HTMLInputElement>('fieldset input[type="radio"]'));
+    expect(radios.map(r => r.value)).toEqual(['OffSiteFull', 'OffSiteHalf', 'OnSiteFull', 'OnSiteHalf']);
+    expect(radios.filter(r => r.checked).map(r => r.value)).toEqual(['OffSiteFull']);
+    expect(radios[0].closest('label')?.className).toContain('choiceChecked');
+
+    await act(async () => { radios[3].click(); });
+    expect(radios.filter(r => r.checked).map(r => r.value)).toEqual(['OnSiteHalf']);
+    expect(radios[3].closest('label')?.className).toContain('choiceChecked');
+    expect(radios[0].closest('label')?.className).not.toContain('choiceChecked');
+    // Half-day swatches carry the same "½" marker as half-day cells.
+    expect(radios[3].closest('label')?.textContent).toBe('½On-site · half day');
+
+    const hint = Array.from(host.querySelectorAll('p')).filter(p => p.textContent === 'Click a marked day again with the same type to clear it.');
+    expect(hint).toHaveLength(1);
+    const legend = Array.from(host.querySelectorAll('span')).filter(sp => sp.textContent === 'Weekend / holiday (blocked)');
+    expect(legend).toHaveLength(1);
+    expect(legend[0].parentElement?.contains(hint[0])).toBe(false);
+  });
 });
