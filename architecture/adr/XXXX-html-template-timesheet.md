@@ -23,7 +23,7 @@ We will let a site owner supply the page as an **HTML file stored on the SharePo
 and render it **client-side with html-to-pdfmake** into the same pdfmake pipeline as ADR 0004.
 
 - A web part property (`Timesheet template (optional)`) holds a site-relative or server-relative
-  path. Empty means the built-in layout, whose output is unchanged (guarded by a golden test).
+  path. Empty means the built-in layout, whose doc definition is unchanged (guarded by a golden test).
 - The file is fetched on every generation; no cache.
 - Placeholders `{{contract.*}}`, `{{contractor.*}}`, `{{period.*}}`, `{{totals.*}}`, `{{labels.*}}`,
   `{{generatedOn}}` and `{{custom.<key>}}` insert text. Blocks `{{grid}}`, `{{grid.days}}`,
