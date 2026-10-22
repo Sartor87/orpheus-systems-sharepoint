@@ -108,13 +108,31 @@ function Get-ContractTypeId {
 }
 
 function Get-DemoContracts {
-    return @(Get-ListItemsRest -List 'Contracts' -Select 'Id,Title,Vendor,OnSiteUsedDays,OffSiteUsedDays' | Where-Object { Test-DemoTitle ([string] $_.Title) })
+    # Server-side filter: 001xxx items are never fetched. Test-DemoTitle is a second guard.
+    return @(Get-ListItemsRest -List 'Contracts' -Select 'Id,Title,Vendor,OnSiteUsedDays,OffSiteUsedDays' -Filter "startswith(Title,'002')" | Where-Object { Test-DemoTitle ([string] $_.Title) })
+}
+
+function Get-DemoEntries {
+    # Entries of the managed contracts only, one server-side query per contract id.
+    param([string] $Select, [int[]] $ContractIds)
+    $all = [System.Collections.Generic.List[object]]::new()
+    foreach ($id in $ContractIds) {
+        foreach ($e in @(Get-ListItemsRest -List 'CalendarEntries' -Select $Select -Filter "ContractId eq $id")) { $all.Add($e) }
+    }
+    return $all.ToArray()
 }
 
 $completed = $false
 try {
     Write-Host "Connecting to $SiteUrl ..." -ForegroundColor Cyan
     Connect-PnPOnline -Url $SiteUrl -ClientId $ClientId -Interactive
+
+    # 0. Pre-flight, read only: every prerequisite must exist before anything is written.
+    foreach ($listTitle in 'Contracts', 'CalendarEntries') {
+        $null = Invoke-SpRest -Url "/_api/web/lists/getbytitle('$listTitle')?`$select=Id"
+    }
+    $ctId = Get-ContractTypeId
+    $refs = @((Invoke-SpRest -Url "/_api/web/contenttypes('$ctId')/fields?`$select=InternalName").value | ForEach-Object { $_.InternalName })
 
     # 1. Vendor column. A conflict stops the run before any change.
     $field = Get-PnPField -Identity Vendor -ErrorAction SilentlyContinue
@@ -130,8 +148,6 @@ try {
     else { $script:Summary['Vendor column'] = 'unchanged' }
 
     # 2. FieldRef on the content type.
-    $ctId = Get-ContractTypeId
-    $refs = @((Invoke-SpRest -Url "/_api/web/contenttypes('$ctId')/fields?`$select=InternalName").value | ForEach-Object { $_.InternalName })
     if ($refs -contains 'Vendor') { $script:Summary['Content type FieldRef'] = 'unchanged' }
     else {
         Add-PnPFieldToContentType -Field Vendor -ContentType $ContractTypeName -UpdateChildren
@@ -189,7 +205,7 @@ try {
     # 6. Entries on demo contracts.
     $titleById = @{}
     foreach ($t in $managed.Keys) { $titleById[[int] $managed[$t].Id] = $t }
-    $allEntries = @(Get-ListItemsRest -List 'CalendarEntries' -Select 'Id,ContractId,EntryDate,EntryType')
+    $allEntries = @(Get-DemoEntries -Select 'Id,ContractId,EntryDate,EntryType' -ContractIds @($titleById.Keys))
     $existingPairs = @($allEntries | Where-Object { $titleById.ContainsKey([int] $_.ContractId) } | ForEach-Object {
             @{ ContractTitle = $titleById[[int] $_.ContractId]; Date = ConvertTo-DateKey $_.EntryDate }
         })
@@ -220,7 +236,7 @@ try {
     $script:Summary['Vendor values'] = "set $vendorSet / unchanged $vendorSame"
 
     # 8. Used days of the managed contracts, from all their entries now in the list.
-    $entriesNow = @(Get-ListItemsRest -List 'CalendarEntries' -Select 'Id,ContractId,EntryType')
+    $entriesNow = @(Get-DemoEntries -Select 'Id,ContractId,EntryType' -ContractIds @($titleById.Keys))
     $usedChanged = 0
     foreach ($t in $managed.Keys) {
         $item = $managed[$t]

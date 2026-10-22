@@ -99,16 +99,22 @@ function Invoke-SpRest {
 }
 
 function Get-ListItemsRest {
-    param([string] $List, [string] $Select)
+    # -Filter is an OData $filter evaluated by SharePoint, so callers fetch only the items they manage.
+    # A response without "value" is an error, never "no items".
+    param([string] $List, [string] $Select, [string] $Filter)
     $items = [System.Collections.Generic.List[object]]::new()
     $url = "/_api/web/lists/getbytitle('$List')/items?`$select=$Select&`$top=5000"
+    if ($Filter) { $url += "&`$filter=" + [uri]::EscapeDataString($Filter) }
     while ($url) {
         $page = Invoke-SpRest -Url $url
+        if ($null -eq $page -or -not $page.PSObject.Properties['value']) {
+            throw "Unexpected response reading list '$List': no 'value' property."
+        }
         foreach ($i in @($page.value)) { $items.Add($i) }
         $next = $page.PSObject.Properties['odata.nextLink']
         $url = if ($next) { [string] $next.Value } else { $null }
     }
-    return , $items.ToArray()
+    return $items.ToArray()
 }
 
 Export-ModuleMember -Function Get-VendorFieldState, Get-VendorFieldXml, Test-DemoTitle, Get-DemoContractPlan, Get-DemoEntryPlan, ConvertTo-DateKey, ConvertFrom-SpJson, Invoke-SpRest, Get-ListItemsRest
