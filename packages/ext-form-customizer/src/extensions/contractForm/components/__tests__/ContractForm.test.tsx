@@ -234,6 +234,61 @@ describe('ContractForm — new', () => {
   });
 });
 
+describe('ContractForm — new, save', () => {
+  async function fillValidNewForm(): Promise<void> {
+    type(input('Title'), '001200_2027');
+    type(input('Contract code'), '1200-Bridge');
+    type(input('Contractor'), '11');
+    type(input('Contract manager'), '12');
+    for (const [label, value] of [['Start date', '2027-01-15'], ['Latest execution date', '2027-06-30']]) {
+      type(input(label), value);
+      blur(input(label));
+    }
+    type(input('On-site target days'), '10');
+    type(input('Off-site target days'), '0');
+    await tick();
+  }
+
+  it('saves once on a double click while the overlap check is pending, with the fields locked meanwhile', async () => {
+    let release: (list: Contract[]) => void = () => undefined;
+    othersMock.mockReturnValue(new Promise<Contract[]>(resolve => { release = resolve; }));
+    saveMock.mockResolvedValue(42);
+    await render({ mode: 'new' });
+    await fillValidNewForm();
+    expect(isDisabled(button('Save'))).toBe(false);
+
+    const save = button('Save');
+    await act(async () => {
+      save.click();
+      save.click();
+    });
+    expect(input('Title').disabled).toBe(true);
+    expect(isDisabled(button('Cancel'))).toBe(true);
+    expect(isDisabled(save)).toBe(true);
+    await act(async () => { save.click(); });
+
+    await act(async () => { release([]); });
+    await flush();
+    expect(saveMock).toHaveBeenCalledTimes(1);
+    const [, , draft, itemId] = saveMock.mock.calls[0];
+    expect(itemId).toBeUndefined();
+    expect(draft).toMatchObject({ title: '001200_2027', contractorId: 11, contractManagerId: 12, startDate: '2027-01-15', latestExecutionDate: '2027-06-30' });
+    expect(onSaved).toHaveBeenCalledTimes(1);
+  });
+
+  it('unlocks the form when the check finds an overlap, so Save anyway / editing work again', async () => {
+    othersMock.mockResolvedValue([c7]);
+    await render({ mode: 'new' });
+    await fillValidNewForm();
+    await act(async () => { button('Save').click(); });
+    await flush();
+    expect(notice()).toBeDefined();
+    expect(saveMock).not.toHaveBeenCalled();
+    expect(input('Title').disabled).toBe(false);
+    expect(isDisabled(button('Save'))).toBe(false);
+  });
+});
+
 describe('ContractForm — edit', () => {
   it('loads the item and fills the fields', async () => {
     loadMock.mockResolvedValue(c7);

@@ -174,32 +174,46 @@ const ContractForm: React.FC<IContractFormProps> = props => {
   const onChange = React.useCallback((patch: Partial<FormValues>) => setValues(v => ({ ...v, ...patch })), []);
   const onTouch = React.useCallback((f: FieldKey) => setTouched(t => (t[f] ? t : { ...t, [f]: true })), []);
 
+  /** Synchronous guard: `saving` state only changes on the next render, so a double click could pass it. */
+  const submitting = React.useRef(false);
+
   const save = async (confirmedOverlap: boolean): Promise<void> => {
-    if (saving) { return; }
+    if (submitting.current) { return; }
     if (!valid) { revealErrors(); return; }
-    const snapshot = draft;
-    if (!confirmedOverlap && snapshot.contractorId !== undefined) {
-      const list = await getOthers(snapshot.contractorId);
-      if (!mounted.current) { return; }
-      if (findOverlaps(snapshot, list, itemId).length > 0) {
-        setOthers({ contractorId: snapshot.contractorId, list });
-        setDismissedNotice(undefined);
-        setTimeout(() => { if (noticeRef.current) { noticeRef.current.focus(); } }, 0);
-        return;
-      }
-    }
+    submitting.current = true;
+    // Locks fields and buttons until done, so the saved snapshot is exactly what the user sees.
     setSaving(true);
+    const snapshot = draft;
+    const release = (): void => {
+      submitting.current = false;
+      if (mounted.current) { setSaving(false); }
+    };
     try {
+      if (!confirmedOverlap && snapshot.contractorId !== undefined) {
+        const list = await getOthers(snapshot.contractorId);
+        if (!mounted.current) { return; }
+        if (findOverlaps(snapshot, list, itemId).length > 0) {
+          setOthers({ contractorId: snapshot.contractorId, list });
+          setDismissedNotice(undefined);
+          release();
+          setTimeout(() => { if (noticeRef.current) { noticeRef.current.focus(); } }, 0);
+          return;
+        }
+      }
       await saveContract(sp, listId, snapshot, itemId);
       showToast({ kind: 'success', title: `Contract ${snapshot.title.trim()} saved` });
-      onSaved();
+      onSaved(); // formSaved() leaves the page; the form stays locked meanwhile.
     } catch (e) {
       showToast({ kind: 'error', title: 'The contract was not saved', text: e instanceof Error ? e.message : String(e) });
-      if (mounted.current) { setSaving(false); }
+      release();
     }
   };
 
   const loaded = load.state === 'ready' ? load.contract : undefined;
+  const initialPeople = React.useMemo(() => {
+    const v = loaded && formValuesFromContract(loaded);
+    return { contractor: v && v.contractor && v.contractor.key, contractManager: v && v.contractManager && v.contractManager.key };
+  }, [loaded]);
   const heading = mode === 'new' ? 'New contract'
     : loaded ? `${mode === 'edit' ? 'Edit contract' : 'Contract'} ${loaded.title}`
       : mode === 'edit' ? 'Edit contract' : 'Contract';
@@ -248,6 +262,7 @@ const ContractForm: React.FC<IContractFormProps> = props => {
           values={values}
           errors={shownErrors}
           disabled={saving}
+          initialPeople={initialPeople}
           peoplePickerContext={peoplePickerContext}
           onChange={onChange}
           onTouch={onTouch}

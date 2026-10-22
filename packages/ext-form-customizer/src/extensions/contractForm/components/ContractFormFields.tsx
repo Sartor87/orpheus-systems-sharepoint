@@ -101,6 +101,7 @@ export function draftFromValues(v: FormValues): ContractDraft {
   };
 }
 
+const EMPTY: string[] = [];
 const MODALITIES: Modality[] = ['On-site', 'Off-site', 'Hybrid'];
 const STATUSES: ContractStatus[] = ['Draft', 'Active', 'Closed'];
 const options = (values: string[]): IDropdownOption[] => values.map(v => ({ key: v, text: v }));
@@ -139,6 +140,11 @@ export interface IContractFormFieldsProps {
   /** Only the errors to show (touched fields, or all after a save attempt). */
   errors: FieldErrors;
   disabled: boolean;
+  /**
+   * People to pre-select, from the loaded item only. Kept stable after mount: the picker owns its selection, and a
+   * changing value would make it re-resolve (a stale lookup could then show a different person than the form holds).
+   */
+  initialPeople: { contractor?: string; contractManager?: string };
   peoplePickerContext: IPeoplePickerContext;
   onChange(patch: Partial<FormValues>): void;
   onTouch(field: FieldKey): void;
@@ -146,12 +152,12 @@ export interface IContractFormFieldsProps {
 
 /** The editable fields (New / Edit). */
 export const ContractFormFields: React.FC<IContractFormFieldsProps> = props => {
-  const { idPrefix, values, errors, disabled, peoplePickerContext, onChange, onTouch } = props;
+  const { idPrefix, values, errors, disabled, initialPeople, peoplePickerContext, onChange, onTouch } = props;
   const id = (f: FieldKey): string => `${idPrefix}-${f}`;
 
   /** Wraps a field; leaving it (focusout bubbles in React 17) marks it touched. */
-  const cell = (f: FieldKey, child: React.ReactNode, wide?: boolean): React.ReactNode => (
-    <div key={f} className={wide ? `${styles.cell} ${styles.wide}` : styles.cell} data-field={f} onBlur={() => onTouch(f)}>
+  const cell = (f: FieldKey, child: React.ReactNode): React.ReactNode => (
+    <div key={f} className={styles.cell} data-field={f} onBlur={() => onTouch(f)}>
       {child}
     </div>
   );
@@ -219,7 +225,7 @@ export const ContractFormFields: React.FC<IContractFormFieldsProps> = props => {
         required
         disabled={disabled}
         resolveDelay={300}
-        defaultSelectedUsers={values[key] && values[key]!.key ? [values[key]!.key] : []}
+        defaultSelectedUsers={initialPeople[key] ? [initialPeople[key] as string] : EMPTY}
         errorMessage={errors[f]}
         onChange={items => onChange({ [key]: toPerson(items as PersonItem[]) } as Partial<FormValues>)}
       />
