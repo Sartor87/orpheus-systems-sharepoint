@@ -1,0 +1,23 @@
+{
+  "name": "@orpheussystems/sharepoint",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Orpheus Systems SharePoint Framework monorepo",
+  "author": "Orpheus Systems",
+  "license": "MIT",
+  "repository": "github:orpheussystems/sharepoint",
+  "homepage": "https://orpheussystems.com/",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.14.0 <23"
+  },
+  "scripts": {
+    "build:shared": "npm run build -w @orpheussystems/shared-core -w @orpheussystems/shared-ui",
+    "test:shared": "npm test -w @orpheussystems/shared-core -w @orpheussystems/shared-ui",
+    "build": "npm run build:shared && npm run build --workspaces --if-present",
+    "package": "npm run build:shared && npm run package --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present"
+  }
+}

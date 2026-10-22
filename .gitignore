@@ -1,0 +1,10 @@
+node_modules
+lib
+dist
+temp
+release
+sharepoint/solution
+*.sppkg
+.pnpm-store
+.DS_Store
+*.log

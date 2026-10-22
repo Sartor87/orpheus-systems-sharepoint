@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leave & On-Site Planner (Nov 2026 - Feb 2027)</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        margin: 20px;
+        background: #f5f7fa;
+        color: #333;
+    }
+
+    h1 {
+        margin-bottom: 10px;
+    }
+
+    .controls {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+    }
+
+    .control-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        margin-bottom: 15px;
+    }
+
+    .control-group {
+        min-width: 200px;
+    }
+
+    input[type="number"] {
+        width: 100px;
+        padding: 6px;
+    }
+
+    .selection-types {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 15px;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .badge {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+    }
+
+    .stats {
+        margin-top: 20px;
+        background: #eef5ff;
+        padding: 15px;
+        border-radius: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 30px;
+    }
+
+    .stats-card {
+        font-weight: 600;
+    }
+
+    .calendar-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+        gap: 20px;
+    }
+
+    .month {
+        background: white;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .month h2 {
+        text-align: center;
+        margin-top: 0;
+    }
+
+    .calendar {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 3px;
+    }
+
+    .weekday {
+        text-align: center;
+        font-weight: bold;
+        padding: 8px 0;
+    }
+
+    .day {
+        aspect-ratio: 1;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        background: white;
+        transition: .15s;
+        user-select: none;
+        font-weight: 500;
+    }
+
+    .day:hover:not(.holiday) {
+        transform: scale(1.05);
+    }
+
+    .empty {
+        visibility: hidden;
+    }
+
+    .holiday {
+        background: #ffcccc;
+        color: #900;
+        cursor: not-allowed;
+        font-weight: bold;
+    }
+
+    .leave-full {
+        background: #4caf50;
+        color: white;
+        font-weight: bold;
+    }
+
+    .leave-half {
+        background: #ffc107;
+        color: black;
+        font-weight: bold;
+    }
+
+    .onsite-full {
+        background: #1976d2;
+        color: white;
+        font-weight: bold;
+    }
+
+    .onsite-half {
+        background: #9c27b0;
+        color: white;
+        font-weight: bold;
+    }
+
+    button {
+        padding: 10px 16px;
+        border: none;
+        background: #0078d4;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+
+    button:hover {
+        background: #106ebe;
+    }
+
+    .highlight-good {
+        color: green;
+    }
+
+    .highlight-warning {
+        color: #c26700;
+    }
+</style>
+</head>
+<body>
+
+<h1>Leave & On-Site Planner</h1>
+
+<div class="controls">
+
+    <div class="control-row">
+
+        <div class="control-group">
+            <label>
+                <strong>Off-site Target</strong><br>
+                <input type="number"
+                       id="leaveTarget"
+                       value="10"
+                       min="0"
+                       step="0.5">
+            </label>
+        </div>
+
+        <div class="control-group">
+            <label>
+                <strong>On-Site Target</strong><br>
+                <input type="number"
+                       id="onsiteTarget"
+                       value="15"
+                       min="0"
+                       step="0.5">
+            </label>
+        </div>
+
+    </div>
+
+    <h3>Selection Type</h3>
+
+    <div class="selection-types">
+
+        <label>
+            <input type="radio"
+                   name="selectionType"
+                   value="leave-full"
+                   checked>
+            Off Site - Full Day
+        </label>
+
+        <label>
+            <input type="radio"
+                   name="selectionType"
+                   value="leave-half">
+            Off Site - Half Day
+        </label>
+
+        <label>
+            <input type="radio"
+                   name="selectionType"
+                   value="onsite-full">
+            On Site - Full Day
+        </label>
+
+        <label>
+            <input type="radio"
+                   name="selectionType"
+                   value="onsite-half">
+            On Site - Half Day
+        </label>
+
+    </div>
+
+    <div class="legend">
+
+        <div class="legend-item">
+            <span class="badge" style="background:#ffcccc;"></span>
+            Holiday / Blocked
+        </div>
+
+        <div class="legend-item">
+            <span class="badge" style="background:#4caf50;"></span>
+            Off Site Full
+        </div>
+
+        <div class="legend-item">
+            <span class="badge" style="background:#ffc107;"></span>
+            Off Site Half
+        </div>
+
+        <div class="legend-item">
+            <span class="badge" style="background:#1976d2;"></span>
+            On Site Full
+        </div>
+
+        <div class="legend-item">
+            <span class="badge" style="background:#9c27b0;"></span>
+            On Site Half
+        </div>
+
+    </div>
+
+    <div id="stats" class="stats"></div>
+
+    <button onclick="exportSelections()">
+        Export JSON
+    </button>
+
+</div>
+
+<div id="calendarContainer"
+     class="calendar-container">
+</div>
+
+<script>
+
+const SafeStorage = (() => {
+
+    let available = false;
+
+    try {
+
+        const testKey = "__storage_test__";
+
+        window.localStorage.setItem(
+            testKey,
+            testKey
+        );
+
+        window.localStorage.removeItem(
+            testKey
+        );
+
+        available = true;
+
+    } catch (e) {
+
+        console.warn(
+            "localStorage unavailable:",
+            e.message
+        );
+
+        available = false;
+    }
+
+    const memoryStore = {};
+
+    return {
+
+        isAvailable() {
+            return available;
+        },
+
+        get(key, defaultValue = null) {
+
+            try {
+
+                if (available) {
+
+                    const value =
+                        localStorage.getItem(key);
+
+                    return value === null
+                        ? defaultValue
+                        : JSON.parse(value);
+                }
+
+            } catch (e) {
+
+                console.warn(
+                    "Storage read failed:",
+                    e
+                );
+            }
+
+            return key in memoryStore
+                ? memoryStore[key]
+                : defaultValue;
+        },
+
+        set(key, value) {
+
+            try {
+
+                if (available) {
+
+                    localStorage.setItem(
+                        key,
+                        JSON.stringify(value)
+                    );
+
+                    return true;
+                }
+
+            } catch (e) {
+
+                console.warn(
+                    "Storage write failed:",
+                    e
+                );
+            }
+
+            memoryStore[key] = value;
+
+            return false;
+        },
+
+        remove(key) {
+
+            try {
+
+                if (available) {
+
+                    localStorage.removeItem(key);
+
+                    return;
+                }
+
+            } catch (e) {
+                console.warn(e);
+            }
+
+            delete memoryStore[key];
+        },
+
+        clear() {
+
+            try {
+
+                if (available) {
+
+                    localStorage.clear();
+
+                    return;
+                }
+
+            } catch (e) {
+                console.warn(e);
+            }
+
+            Object.keys(memoryStore)
+                .forEach(k => delete memoryStore[k]);
+        }
+    };
+
+})();
+
+const holidays = new Set([
+    "2026-11-02",
+    "2026-12-08",
+
+    "2026-12-24",
+    "2026-12-25",
+    "2026-12-26",
+    "2026-12-27",
+    "2026-12-28",
+    "2026-12-29",
+    "2026-12-30",
+    "2026-12-31",
+
+    "2027-01-01",
+    "2027-01-02",
+    "2027-01-03",
+
+    "2027-02-10"
+]);
+
+const weekdays = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+const monthNames = [
+    "January","February","March","April",
+    "May","June","July","August",
+    "September","October","November","December"
+];
+
+let selections =
+    SafeStorage.get(
+        "leavePlannerSelections",
+        {}
+    );
+
+function saveSelections() {
+
+    SafeStorage.set(
+        "leavePlannerSelections",
+        selections
+    );
+}
+
+function getSelectionType() {
+    return document.querySelector(
+        'input[name="selectionType"]:checked'
+    ).value;
+}
+
+function pad(n) {
+    return String(n).padStart(2, "0");
+}
+
+function createMonth(year, month) {
+
+    const monthDiv = document.createElement("div");
+    monthDiv.className = "month";
+
+    const title = document.createElement("h2");
+    title.textContent =
+        monthNames[month] + " " + year;
+
+    monthDiv.appendChild(title);
+
+    const calendar = document.createElement("div");
+    calendar.className = "calendar";
+
+    weekdays.forEach(day => {
+        const wd = document.createElement("div");
+        wd.className = "weekday";
+        wd.textContent = day;
+        calendar.appendChild(wd);
+    });
+
+    const firstDay =
+        new Date(year, month, 1);
+
+    let start =
+        firstDay.getDay();
+
+    start = start === 0
+        ? 6
+        : start - 1;
+
+    for (let i = 0; i < start; i++) {
+
+        const empty = document.createElement("div");
+        empty.className = "day empty";
+
+        calendar.appendChild(empty);
+    }
+
+    const daysInMonth =
+        new Date(year, month + 1, 0).getDate();
+
+    for (let day = 1; day <= daysInMonth; day++) {
+
+        const date =
+            year +
+            "-" +
+            pad(month + 1) +
+            "-" +
+            pad(day);
+
+        const dayElement =
+            document.createElement("div");
+
+        dayElement.className = "day";
+        dayElement.textContent = day;
+        dayElement.dataset.date = date;
+
+        if (holidays.has(date)) {
+
+            dayElement.classList.add("holiday");
+
+        } else {
+
+            if (selections[date]) {
+                dayElement.classList.add(
+                    selections[date]
+                );
+            }
+
+            dayElement.addEventListener(
+                "click",
+                () => {
+
+                    const type =
+                        getSelectionType();
+
+                    dayElement.classList.remove(
+                        "leave-full",
+                        "leave-half",
+                        "onsite-full",
+                        "onsite-half"
+                    );
+
+                    if (
+                        selections[date] === type
+                    ) {
+                        delete selections[date];
+                    }
+                    else {
+
+                        selections[date] = type;
+
+                        dayElement.classList.add(
+                            type
+                        );
+                    }
+
+                    saveSelections();
+                    refreshStats();
+                }
+            );
+        }
+
+        calendar.appendChild(dayElement);
+    }
+
+    monthDiv.appendChild(calendar);
+
+    return monthDiv;
+}
+
+function refreshStats() {
+
+    let leaveTotal = 0;
+    let onsiteTotal = 0;
+
+    let leaveFull = 0;
+    let leaveHalf = 0;
+
+    let onsiteFull = 0;
+    let onsiteHalf = 0;
+
+    Object.values(selections)
+        .forEach(value => {
+
+        switch(value) {
+
+            case "leave-full":
+                leaveTotal += 1;
+                leaveFull++;
+                break;
+
+            case "leave-half":
+                leaveTotal += 0.5;
+                leaveHalf++;
+                break;
+
+            case "onsite-full":
+                onsiteTotal += 1;
+                onsiteFull++;
+                break;
+
+            case "onsite-half":
+                onsiteTotal += 0.5;
+                onsiteHalf++;
+                break;
+        }
+
+    });
+
+    const leaveTarget =
+        Number(
+            document.getElementById(
+                "leaveTarget"
+            ).value
+        );
+
+    const onsiteTarget =
+        Number(
+            document.getElementById(
+                "onsiteTarget"
+            ).value
+        );
+
+    document.getElementById("stats").innerHTML = `
+
+        <div class="stats-card">
+            <h3>Off Site</h3>
+            Full Days: ${leaveFull}<br>
+            Half Days: ${leaveHalf}<br>
+            Used: ${leaveTotal} / ${leaveTarget}<br>
+            Remaining:
+            <span class="${
+                leaveTotal <= leaveTarget
+                ? "highlight-good"
+                : "highlight-warning"
+            }">
+                ${(leaveTarget - leaveTotal).toFixed(1)}
+            </span>
+        </div>
+
+        <div class="stats-card">
+            <h3>On Site</h3>
+            Full Days: ${onsiteFull}<br>
+            Half Days: ${onsiteHalf}<br>
+            Used: ${onsiteTotal} / ${onsiteTarget}<br>
+            Remaining:
+            <span class="${
+                onsiteTotal <= onsiteTarget
+                ? "highlight-good"
+                : "highlight-warning"
+            }">
+                ${(onsiteTarget - onsiteTotal).toFixed(1)}
+            </span>
+        </div>
+    `;
+
+    if (!SafeStorage.isAvailable()) {
+
+        const warning =
+            document.createElement("div");
+
+        warning.style.background = "#fff3cd";
+        warning.style.color = "#856404";
+        warning.style.padding = "10px";
+        warning.style.marginBottom = "10px";
+        warning.style.borderRadius = "4px";
+
+        warning.innerText =
+            "Running in SharePoint sandbox mode. " +
+            "Selections will be kept only until the page is refreshed.";
+
+        document.body.prepend(warning);
+    }
+
+}
+
+function exportSelections() {
+
+    const data =
+        Object.entries(selections)
+        .sort((a,b) =>
+            a[0].localeCompare(b[0])
+        )
+        .map(([date,type]) => ({
+            date,
+            type
+        }));
+
+    const blob = new Blob(
+        [
+            JSON.stringify(
+                data,
+                null,
+                2
+            )
+        ],
+        {
+            type: "application/json"
+        }
+    );
+
+    const url =
+        URL.createObjectURL(blob);
+
+    const a =
+        document.createElement("a");
+
+    a.href = url;
+    a.download =
+        "leave-onsite-plan.json";
+
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
+
+const container =
+    document.getElementById(
+        "calendarContainer"
+    );
+
+[
+    [2026,10], // Nov
+    [2026,11], // Dec
+    [2027,0],  // Jan
+    [2027,1]   // Feb
+]
+.forEach(([year,month]) => {
+
+    container.appendChild(
+        createMonth(year, month)
+    );
+
+});
+
+document
+    .getElementById("leaveTarget")
+    .addEventListener(
+        "input",
+        refreshStats
+    );
+
+document
+    .getElementById("onsiteTarget")
+    .addEventListener(
+        "input",
+        refreshStats
+    );
+
+refreshStats();
+
+</script>
+
+</body>
+</html>
