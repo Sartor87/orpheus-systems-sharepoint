@@ -5,6 +5,9 @@ describe('LocalDataService', () => {
     const svc = new LocalDataService({ demoUserId: 1 });
     expect((await svc.getMyContracts()).map(c => c.contractCode)).toEqual(['1185-Jane-Doe', '1186-Jane-Doe']);
   });
+  test('contract titles are specific-contract numbers', async () => {
+    expect((await new LocalDataService({ demoUserId: 1 }).getMyContracts()).map(c => c.title)).toEqual(['001185_2026', '001186_2027']);
+  });
   test('manager sees all contracts they manage', async () => {
     expect((await new LocalDataService({ demoUserId: 3 }).getMyContracts()).length).toBe(3);
   });
