@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "wp-contract-calendar-client-side-solution",
+    "id": "326f6878-25b8-4117-93fb-ba9882352eaf",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "Orpheus Systems",
+      "websiteUrl": "https://orpheussystems.com/",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": ""
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "wp-contract-calendar description"
+      },
+      "longDescription": {
+        "default": "wp-contract-calendar description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "wp-contract-calendar Feature",
+        "description": "The feature that activates elements of the wp-contract-calendar solution.",
+        "id": "1200746d-2d50-40ae-9f33-21f153ccec28",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/wp-contract-calendar.sppkg"
+  }
+}

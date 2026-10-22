@@ -3,7 +3,8 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "lib",
-    "composite": true
+    "composite": true,
+    "module": "commonjs"
   },
   "include": ["src"],
   "exclude": ["src/**/__tests__"],

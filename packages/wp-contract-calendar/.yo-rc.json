@@ -1,0 +1,23 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "whichFolder": "subdir",
+    "solutionName": "wp-contract-calendar",
+    "environment": "spo",
+    "packageManager": "npm",
+    "skipFeatureDeployment": true,
+    "useGulp": false,
+    "componentType": "webpart",
+    "template": "react",
+    "componentName": "ContractCalendar",
+    "componentDescription": "Contract on-site/off-site calendar with timesheet PDF",
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.23.1",
+    "sdksVersions": {},
+    "version": "1.23.2",
+    "libraryName": "wp-contract-calendar",
+    "libraryId": "326f6878-25b8-4117-93fb-ba9882352eaf",
+    "solutionShortDescription": "wp-contract-calendar description",
+    "isDomainIsolated": false
+  }
+}
