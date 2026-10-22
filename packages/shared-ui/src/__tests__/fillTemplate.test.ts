@@ -71,4 +71,30 @@ describe('fillTemplate', () => {
     ]));
     expect(r.errors).toHaveLength(3);
   });
+  it('never prints "null" or "undefined" for a missing value', () => {
+    const v = { 'contract.modality': null, 'contract.lot': undefined } as unknown as Record<string, string>;
+    const r = fill(`${GRID}<p title="{{contract.modality}}">[{{contract.modality}}][{{contract.lot}}]</p>`, v);
+    expect(r.errors).toEqual([]);
+    expect(r.doc.querySelector('p')!.textContent).toBe('[][]');
+    expect(r.doc.querySelector('p')!.getAttribute('title')).toBe('');
+    expect(r.doc.body.innerHTML).not.toMatch(/null|undefined/);
+  });
+  it('does not throw on a malformed attribute name', () => {
+    let r: ReturnType<typeof fill> | undefined;
+    expect(() => { r = fill(`${GRID}<div x"y="{{contract.title}}">z</div>`, { 'contract.title': 'T1' }); }).not.toThrow();
+    expect(r!.errors).toEqual([]);
+    const div = Array.prototype.slice.call(r!.doc.querySelectorAll('div')).filter((d: Element) => d.textContent === 'z')[0] as Element;
+    expect(div.attributes[0].value).toBe('T1');
+  });
+  it('reports a block placeholder outside the body', () => {
+    const r = fill(`<title>{{grid}}</title>${GRID}`);
+    expect(r.errors).toContain('{{grid}} must be inside the body');
+    expect(r.blocks).toEqual(['grid']);
+  });
+  it('does not count a head-only grid as present', () => {
+    const r = fill('<title>{{grid}}</title><p>x</p>');
+    expect(r.errors).toEqual(expect.arrayContaining([
+      '{{grid}} must be inside the body', 'The template must contain {{grid}} or {{grid.days}}'
+    ]));
+  });
 });

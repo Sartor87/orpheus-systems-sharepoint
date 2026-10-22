@@ -48,11 +48,12 @@ export function fillTemplate(html: string, values: Record<string, string>, win: 
   const page = parsePage(doc, errors);
 
   // Replace one placeholder match; returns the replacement text. Single pass, so values are never re-scanned.
-  const replace = (whole: string, name: string, inAttribute: boolean): string => {
-    if (Object.prototype.hasOwnProperty.call(values, name)) { return values[name]; }
+  type Where = 'attribute' | 'body' | 'head';
+  const replace = (whole: string, name: string, where: Where): string => {
+    if (Object.prototype.hasOwnProperty.call(values, name)) { return values[name] ?? ''; }
     if (name.indexOf('custom.') === 0) { return ''; }
-    if (!inAttribute && isBlock(name)) {
-      report(`{{${name}}} must be the only content of its element`);
+    if (where !== 'attribute' && isBlock(name)) {
+      report(where === 'body' ? `{{${name}}} must be the only content of its element` : `{{${name}}} must be inside the body`);
       return whole;
     }
     report(`Unknown placeholder {{${name}}}`);
@@ -65,14 +66,17 @@ export function fillTemplate(html: string, values: Record<string, string>, win: 
   elements.forEach(el => {
     Array.prototype.slice.call(el.attributes).forEach((a: Attr) => {
       if (a.value.indexOf('{{') >= 0) {
-        el.setAttribute(a.name, a.value.replace(PLACEHOLDER, (w: string, n: string) => replace(w, n, true)));
+        // Assign through the Attr: setAttribute throws on odd names the parser accepts (e.g. x"y).
+        a.value = a.value.replace(PLACEHOLDER, (w: string, n: string) => replace(w, n, 'attribute'));
       }
     });
   });
 
-  // Block elements: leaf element whose trimmed text is exactly one block placeholder.
+  // Block elements: leaf element in the body whose trimmed text is exactly one block placeholder.
+  // A block in <head> (e.g. <title>) is reported by the text pass below.
+  const body = doc.body;
   elements.forEach(el => {
-    if (el.children.length > 0) { return; }
+    if (el.children.length > 0 || !body.contains(el)) { return; }
     const m = SOLE_PLACEHOLDER.exec((el.textContent || '').trim());
     if (!m || !isBlock(m[1])) { return; }
     if (blocks.indexOf(m[1]) < 0) { blocks.push(m[1]); }
@@ -87,13 +91,15 @@ export function fillTemplate(html: string, values: Record<string, string>, win: 
     if (t.data.indexOf('{{') < 0) { return; }
     const stripped = t.data.replace(PLACEHOLDER, '');
     if (stripped.indexOf('{{') >= 0) { report('Malformed placeholder: "{{" without a matching "}}" in the same text'); }
-    t.data = t.data.replace(PLACEHOLDER, (w: string, n: string) => replace(w, n, false));
+    const where: Where = body.contains(t) ? 'body' : 'head';
+    t.data = t.data.replace(PLACEHOLDER, (w: string, n: string) => replace(w, n, where));
   });
 
   if (blocks.indexOf('grid') < 0 && blocks.indexOf('grid.days') < 0) {
     report('The template must contain {{grid}} or {{grid.days}}');
   }
 
-  const images = Array.prototype.slice.call(doc.querySelectorAll('img')) as HTMLImageElement[];
+  // Only the body is converted, so only body images are resolved.
+  const images = Array.prototype.slice.call(body.querySelectorAll('img')) as HTMLImageElement[];
   return { doc, blocks, page, images, errors };
 }
