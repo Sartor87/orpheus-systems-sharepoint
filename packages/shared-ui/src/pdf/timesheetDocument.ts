@@ -84,7 +84,7 @@ export function buildTimesheetDocDefinition(model: TimesheetModel): TDocumentDef
     }
     const pageContent: Content[] = [
       ...headerBlocks,
-      { table: { headerRows: 1, widths: [50, ...days.map(() => '*'), 28, 28, 28], body }, margin: [0, 6, 0, 0] }
+      { table: { headerRows: 1, widths: [62, ...days.map(() => '*'), 28, 28, 28], body }, layout: { paddingLeft: () => 1, paddingRight: () => 1, paddingTop: () => 1, paddingBottom: () => 1 }, margin: [0, 6, 0, 0] }
     ];
     if (isLast) { pageContent.push(footer); }
     content.push({ stack: pageContent, ...(isLast ? {} : { pageBreak: 'after' as const }) });
