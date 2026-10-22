@@ -82,6 +82,19 @@ describe('formService', () => {
     expect(c.contractor.id).toBe(11);
   });
 
+  it('loads an item with a null or empty date (not required in the list) with empty dates instead of throwing', async () => {
+    const { sp } = fakeSpChain({ ...spItem, StartDate: null, LatestExecutionDate: '' });
+    const c = await loadContract(sp, 'list-guid', 7);
+    expect(c.startDate).toBe('');
+    expect(c.latestExecutionDate).toBe('');
+  });
+
+  it('loads the other contracts of a contractor even when one has a null date', async () => {
+    const { sp } = fakeSpChain([spItem, { ...spItem, Id: 9, StartDate: null }]);
+    const others = await loadOthersOfContractor(sp, 'list-guid', 11);
+    expect(others.map(o => [o.id, o.startDate])).toEqual([[7, '2026-02-06'], [9, '']]);
+  });
+
   it('loads the other contracts of a contractor with the contractor filter', async () => {
     const { sp, calls } = fakeSpChain([spItem]);
     const others = await loadOthersOfContractor(sp, 'list-guid', 11);

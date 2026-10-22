@@ -28,6 +28,10 @@ describe('isoToDateKey', () => {
   ])('%s -> %s', (iso, key) => {
     expect(isoToDateKey(iso)).toBe(key);
   });
+
+  it.each([null, undefined, '', '   ', 'not a date'])('%p -> empty key', iso => {
+    expect(isoToDateKey(iso)).toBe('');
+  });
 });
 
 describe('spMappers', () => {
@@ -51,6 +55,12 @@ describe('spMappers', () => {
     const c = mapContract({ ...contractItem, OnSiteTargetDays: null, Contractor: null });
     expect(c.onSiteTargetDays).toBe(0);
     expect(c.contractor.id).toBe(0);
+  });
+
+  it('mapContract maps null or empty dates to empty keys instead of throwing', () => {
+    const c = mapContract({ ...contractItem, StartDate: null, LatestExecutionDate: '' });
+    expect(c.startDate).toBe('');
+    expect(c.latestExecutionDate).toBe('');
   });
 
   it('mapEntry maps lookup, date and optional note', () => {

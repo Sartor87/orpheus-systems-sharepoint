@@ -7,7 +7,7 @@ import '@pnp/sp/site-groups';
 import '@pnp/sp/batching';
 import { CalendarEntry, Contract, DateKey, Holiday, Role, UserInfo } from '../models';
 import { compareKeys, isWithin } from '../dates';
-import { computeTotals, isBlocked } from '../rules';
+import { computeTotals, hasContractPeriod, isBlocked } from '../rules';
 import { IDataService } from './IDataService';
 import { deriveRolesForContracts } from './listLookup';
 import {
@@ -50,7 +50,7 @@ export class SharePointDataService implements IDataService {
     let query = this.contractsList().items.select(...CONTRACT_SELECT).expand(...CONTRACT_EXPAND).orderBy('StartDate', true).top(5000);
     if (filter) { query = query.filter(filter); }
     const items = (await query()) as SPContractItem[];
-    return items.map(mapContract);
+    return items.map(mapContract).filter(hasContractPeriod);
   }
 
   public async getEntries(contractId: number, from: DateKey, to: DateKey): Promise<CalendarEntry[]> {

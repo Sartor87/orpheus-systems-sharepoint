@@ -322,6 +322,20 @@ describe('ContractForm — edit', () => {
     expect(Array.from(host.querySelectorAll('[role="alert"]')).map(a => a.textContent)).toContain('Required.');
   });
 
+  it('opens an item with blank dates with empty date fields, and Save asks for them instead of saving', async () => {
+    loadMock.mockResolvedValue({ ...c7, startDate: '', latestExecutionDate: '' });
+    await render({ mode: 'edit', itemId: 7 });
+    expect(host.textContent).not.toContain('could not be loaded');
+    expect(input('Start date').value).toBe('');
+    expect(input('Latest execution date').value).toBe('');
+    expect(isDisabled(button('Save'))).toBe(true);
+    act(() => { button('Save').click(); });
+    await tick();
+    expect(saveMock).not.toHaveBeenCalled();
+    expect(errorFor(input('Start date'))).toBe('Required.');
+    expect(errorFor(input('Latest execution date'))).toBe('Required.');
+  });
+
   it('saves, shows a success toast and calls formSaved', async () => {
     loadMock.mockResolvedValue(c7);
     saveMock.mockResolvedValue(7);

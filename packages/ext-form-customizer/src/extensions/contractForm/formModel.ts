@@ -1,4 +1,4 @@
-import { compareKeys } from '@orpheussystems/shared-core';
+import { compareKeys, hasContractPeriod } from '@orpheussystems/shared-core';
 import type { Contract, ContractStatus, DateKey, Modality } from '@orpheussystems/shared-core';
 
 export interface ContractDraft {
@@ -76,7 +76,7 @@ export function validateContract(d: ContractDraft, codePattern: string): FieldEr
   return errors;
 }
 
-/** Active/Draft contracts of the same contractor whose period intersects the draft's (inclusive). */
+/** Active/Draft contracts of the same contractor whose period intersects the draft's (inclusive). A contract with a blank date has no period and never overlaps. */
 export function findOverlaps(d: ContractDraft, othersOfContractor: Contract[], selfId?: number): Contract[] {
   const { startDate, latestExecutionDate } = d;
   if (!startDate || !latestExecutionDate || d.contractorId === undefined) { return []; }
@@ -84,6 +84,7 @@ export function findOverlaps(d: ContractDraft, othersOfContractor: Contract[], s
     c.id !== selfId &&
     c.status !== 'Closed' &&
     c.contractor.id === d.contractorId &&
+    hasContractPeriod(c) &&
     compareKeys(c.startDate, latestExecutionDate) <= 0 &&
     compareKeys(c.latestExecutionDate, startDate) >= 0
   );
@@ -108,8 +109,9 @@ export function draftFromContract(c: Contract): ContractDraft {
     modality: c.modality,
     contractorId: c.contractor.id,
     contractManagerId: c.contractManager.id,
-    startDate: c.startDate,
-    latestExecutionDate: c.latestExecutionDate,
+    // A blank date ('' from the mapper) stays unset, so validation asks for it.
+    startDate: c.startDate || undefined,
+    latestExecutionDate: c.latestExecutionDate || undefined,
     onSiteTargetDays: c.onSiteTargetDays,
     offSiteTargetDays: c.offSiteTargetDays,
     hoursPerDay: c.hoursPerDay,

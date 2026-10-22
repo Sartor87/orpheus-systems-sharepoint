@@ -10,8 +10,9 @@ export interface SPContractItem {
   Modality: string;
   Contractor: SPUserField | null;
   ContractManager: SPUserField | null;
-  StartDate: string;
-  LatestExecutionDate: string;
+  /** Not required in the list: null when blank. */
+  StartDate: string | null;
+  LatestExecutionDate: string | null;
   OnSiteTargetDays: number | null;
   OffSiteTargetDays: number | null;
   HoursPerDay: number | null;
@@ -51,10 +52,14 @@ export const HOLIDAY_SELECT = ['Id', 'Title', 'HolidayDate', 'Country', 'Source'
  * Date-only columns come back as a UTC instant of the site's local midnight (e.g. 2026-02-05T22:00:00Z for
  * 6 Feb on a UTC+2 site) or as plain UTC midnight. Round to the nearest UTC midnight (add 12 h, take the UTC date).
  * Correct for any site offset within +/-12 h.
+ * A blank (null, undefined, empty) or unreadable value maps to '' (no date), never throws.
  */
-export function isoToDateKey(iso: string): DateKey {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) { return iso; }
-  const ms = Date.parse(/(Z|[+-]\d{2}:?\d{2})$/.test(iso) ? iso : iso + 'Z');
+export function isoToDateKey(iso: string | null | undefined): DateKey {
+  const s = (iso || '').trim();
+  if (!s) { return ''; }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { return s; }
+  const ms = Date.parse(/(Z|[+-]\d{2}:?\d{2})$/.test(s) ? s : s + 'Z');
+  if (isNaN(ms)) { return ''; }
   return new Date(ms + 12 * 3600 * 1000).toISOString().substring(0, 10);
 }
 

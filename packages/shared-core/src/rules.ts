@@ -55,8 +55,13 @@ export function usageRatio(used: number, target: number): number {
   return target === 0 ? 0 : used / target;
 }
 
+/** Both dates set. A contract item can have a blank date (the list does not require them); it covers no day. */
+export function hasContractPeriod(c: Pick<Contract, 'startDate' | 'latestExecutionDate'>): boolean {
+  return !!c.startDate && !!c.latestExecutionDate;
+}
+
 export function contractsCoveringDate(contracts: Contract[], date: DateKey): Contract[] {
-  return contracts.filter(c => isWithin(date, c.startDate, c.latestExecutionDate));
+  return contracts.filter(c => hasContractPeriod(c) && isWithin(date, c.startDate, c.latestExecutionDate));
 }
 
 export function isBlocked(date: DateKey, holidays: Holiday[], country: string, blockWeekends: boolean): boolean {

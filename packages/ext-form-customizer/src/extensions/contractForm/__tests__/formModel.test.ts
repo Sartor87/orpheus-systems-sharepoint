@@ -105,6 +105,12 @@ describe('findOverlaps', () => {
     expect(findOverlaps(valid, [touching])).toEqual([touching]);
   });
 
+  it('ignores other contracts with a blank start or end date (no period to overlap)', () => {
+    const noStart = contract({ id: 5, startDate: '', latestExecutionDate: '2027-02-19' });
+    const noEnd = contract({ id: 6, startDate: '2026-01-01', latestExecutionDate: '' });
+    expect(findOverlaps(valid, [noStart, noEnd])).toEqual([]);
+  });
+
   it('returns nothing while the dates are incomplete', () => {
     expect(findOverlaps({ ...valid, startDate: undefined }, [active])).toEqual([]);
   });
@@ -137,6 +143,15 @@ describe('draftFromContract', () => {
       contractManagerId: 9, startDate: '2026-03-01', latestExecutionDate: '2026-04-01', onSiteTargetDays: 3,
       offSiteTargetDays: 4.5, hoursPerDay: 6, country: 'DE', status: 'Draft'
     });
+  });
+});
+
+describe('draftFromContract with blank dates', () => {
+  it('leaves blank dates unset so validation asks for them', () => {
+    const d = draftFromContract(contract({ id: 5, startDate: '', latestExecutionDate: '' }));
+    expect(d.startDate).toBeUndefined();
+    expect(d.latestExecutionDate).toBeUndefined();
+    expect(validateContract(d, PATTERN)).toMatchObject({ startDate: 'Required.', latestExecutionDate: 'Required.' });
   });
 });
 

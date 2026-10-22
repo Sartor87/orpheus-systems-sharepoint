@@ -1,4 +1,4 @@
-import { computeRemaining, computeTotals, contractsCoveringDate, dayValue, hoursFor, isBlocked, isOnSite, usageRatio } from '../rules';
+import { computeRemaining, computeTotals, contractsCoveringDate, dayValue, hasContractPeriod, hoursFor, isBlocked, isOnSite, usageRatio } from '../rules';
 import { contract, e, hol } from './fixtures';
 
 test('computeTotals counts halves as 0.5', () => {
@@ -31,4 +31,15 @@ test('isBlocked: weekends, country holidays and * holidays', () => {
   expect(isBlocked('2027-01-01', h, 'DE', true)).toBe(true);
   expect(isBlocked('2026-11-07', h, 'BG', true)).toBe(true);   // Saturday
   expect(isBlocked('2026-11-07', h, 'BG', false)).toBe(false);
+});
+test('contractsCoveringDate skips contracts with an empty start or end date', () => {
+  const noStart = contract({ id: 1, startDate: '', latestExecutionDate: '2027-01-31' });
+  const noEnd = contract({ id: 2, startDate: '2026-11-01', latestExecutionDate: '' });
+  const ok = contract({ id: 3, startDate: '2026-11-01', latestExecutionDate: '2027-01-31' });
+  expect(contractsCoveringDate([noStart, noEnd, ok], '2026-12-01').map(c => c.id)).toEqual([3]);
+});
+test('hasContractPeriod requires both dates', () => {
+  expect(hasContractPeriod(contract())).toBe(true);
+  expect(hasContractPeriod(contract({ startDate: '' }))).toBe(false);
+  expect(hasContractPeriod(contract({ latestExecutionDate: '' }))).toBe(false);
 });

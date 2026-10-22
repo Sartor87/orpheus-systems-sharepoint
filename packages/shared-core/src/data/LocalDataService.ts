@@ -1,6 +1,6 @@
 import { CalendarEntry, Contract, DateKey, Holiday, Role, UserInfo, UserRef } from '../models';
 import { compareKeys, isWithin } from '../dates';
-import { isBlocked } from '../rules';
+import { hasContractPeriod, isBlocked } from '../rules';
 import { IDataService } from './IDataService';
 import usersJson from './fixtures/users.json';
 import contractsJson from './fixtures/contracts.json';
@@ -45,6 +45,7 @@ export class LocalDataService implements IDataService {
     const admin = this.userId === ADMIN_USER_ID;
     return clone(this.contracts
       .filter(c => c.status !== 'Closed')
+      .filter(hasContractPeriod)
       .filter(c => admin || c.contractor.id === this.userId || c.contractManager.id === this.userId)
       .sort((a, b) => compareKeys(a.startDate, b.startDate)));
   }

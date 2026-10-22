@@ -8,6 +8,12 @@ describe('LocalDataService', () => {
   test('contract titles are specific-contract numbers', async () => {
     expect((await new LocalDataService({ demoUserId: 1 }).getMyContracts()).map(c => c.title)).toEqual(['001185_2026', '001186_2027']);
   });
+  test('contracts with an empty start or end date are left out', async () => {
+    const svc = new LocalDataService({ demoUserId: 1 });
+    const store = (svc as unknown as { contracts: Array<{ id: number; startDate: string; latestExecutionDate: string }> }).contracts;
+    store.filter(c => c.id === 1).forEach(c => { c.startDate = ''; });
+    expect((await svc.getMyContracts()).map(c => c.contractCode)).toEqual(['1186-Jane-Doe']);
+  });
   test('manager sees all contracts they manage', async () => {
     expect((await new LocalDataService({ demoUserId: 3 }).getMyContracts()).length).toBe(3);
   });
