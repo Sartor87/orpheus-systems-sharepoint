@@ -86,8 +86,11 @@ $FixturesPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..' '..'
 $PnpNamespace = 'http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema'
 $Invariant = [System.Globalization.CultureInfo]::InvariantCulture
 
-# Built-in "Start Date" site column, reused by the Orpheus Contract content type (see template.xml).
-$BuiltInFields = @{ StartDate = '64cd368d-2f95-4bfc-a1f9-8d4324ecb007' }
+# Built-in date-only site columns reused by the Orpheus content types (see template.xml).
+$BuiltInFields = [ordered]@{
+    StartDate   = '64cd368d-2f95-4bfc-a1f9-8d4324ecb007'
+    HolidayDate = '335e22c3-b8a4-4234-9790-7a03eeb7b0d4'
+}
 
 # Contracts list validation, set after the template (formula built from the columns' display names).
 $ContractValidationMessage = 'Latest execution date must be on or after the start date.'
@@ -318,7 +321,8 @@ function Set-ListItemRest {
 
 function Assert-NoFieldConflicts {
     param($Template)
-    $available = @((Invoke-SpRest -Url '/_api/web/availablefields?$select=Id,InternalName').value)
+    # Collects every problem in one pass and reports them together.
+    $available = @((Invoke-SpRest -Url '/_api/web/availablefields?$select=Id,InternalName,TypeAsString,SchemaXml').value)
     $conflicts = [System.Collections.Generic.List[string]]::new()
     foreach ($f in $Template.SiteFields) {
         $clash = $available | Where-Object { $_.InternalName -ceq $f.Name -and ([string] $_.Id).ToLowerInvariant() -ne $f.Id }
@@ -327,7 +331,12 @@ function Assert-NoFieldConflicts {
     foreach ($name in $BuiltInFields.Keys) {
         $builtIn = $available | Where-Object { ([string] $_.Id).ToLowerInvariant() -eq $BuiltInFields[$name] }
         if (-not $builtIn) { $conflicts.Add("built-in site column '$name' ($($BuiltInFields[$name])) was not found") }
-        elseif ($builtIn.InternalName -cne $name) { $conflicts.Add("built-in site column $($BuiltInFields[$name]) has internal name '$($builtIn.InternalName)', expected '$name'") }
+        else {
+            if ($builtIn.InternalName -cne $name) { $conflicts.Add("built-in site column $($BuiltInFields[$name]) has internal name '$($builtIn.InternalName)', expected '$name'") }
+            if ($builtIn.TypeAsString -cne 'DateTime') { $conflicts.Add("built-in site column '$name' ($($BuiltInFields[$name])) has type '$($builtIn.TypeAsString)', expected 'DateTime'") }
+            # DisplayFormat DateOnly (0) is stored as Format="DateOnly" in the field schema.
+            elseif ([string] $builtIn.SchemaXml -notmatch '\sFormat="DateOnly"') { $conflicts.Add("built-in site column '$name' ($($BuiltInFields[$name])) is not date-only (DisplayFormat must be DateOnly)") }
+        }
     }
     foreach ($l in $Template.Lists) {
         if (-not $l.ListFields.Count) { continue }

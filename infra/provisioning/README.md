@@ -75,10 +75,13 @@ skipped when the formula and message are already in place. If it fails, the scri
 a warning and carries on, and the summary shows `Contracts validation failed`. You can then
 set it by hand in *List settings → Validation settings*.
 
-Three columns are not Orpheus site columns:
+Four columns are not Orpheus site columns:
 
-- **StartDate** reuses SharePoint's built-in *Start Date* site column
-  (`64cd368d-2f95-4bfc-a1f9-8d4324ecb007`), which already has that internal name.
+- **StartDate** and **HolidayDate** are SharePoint's own built-in date-only site
+  columns: *Start Date* (`64cd368d-2f95-4bfc-a1f9-8d4324ecb007`) and HolidayDate
+  (`335e22c3-b8a4-4234-9790-7a03eeb7b0d4`). Every site already has columns with these
+  internal names, so the Orpheus content types reuse them. The pre-flight check stops the
+  run if either is missing, has another internal name, or is not a date-only DateTime.
 - **Status** is a list column on Contracts. The built-in *Task Status* site column
   already uses the internal name `Status`, with different choices.
 - **Contract** is a list column on CalendarEntries because it is a lookup to the
@@ -155,7 +158,8 @@ The script never deletes anything. To remove everything by hand, delete in this 
    `-Recycle` deletes permanently.
 4. Content types `Orpheus Calendar Entry`, `Orpheus Contract`, `Orpheus Holiday`
    (Site settings → Site content types, group Orpheus Systems)
-5. The site columns in the group **Orpheus Systems** (leave the built-in Start Date alone)
+5. The site columns in the group **Orpheus Systems** (leave the built-in Start Date and
+   HolidayDate alone)
 
 ```powershell
 Remove-PnPList -Identity CalendarEntries -Force
