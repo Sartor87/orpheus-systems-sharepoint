@@ -184,10 +184,12 @@ const ContractForm: React.FC<IContractFormProps> = props => {
     // Locks fields and buttons until done, so the saved snapshot is exactly what the user sees.
     setSaving(true);
     const snapshot = draft;
-    const release = (): void => {
+    const unlock = (): void => {
       submitting.current = false;
       if (mounted.current) { setSaving(false); }
     };
+    // formSaved() leaves the page, so a successful save keeps the form locked.
+    let keepLocked = false;
     try {
       if (!confirmedOverlap && snapshot.contractorId !== undefined) {
         const list = await getOthers(snapshot.contractorId);
@@ -195,17 +197,19 @@ const ContractForm: React.FC<IContractFormProps> = props => {
         if (findOverlaps(snapshot, list, itemId).length > 0) {
           setOthers({ contractorId: snapshot.contractorId, list });
           setDismissedNotice(undefined);
-          release();
           setTimeout(() => { if (noticeRef.current) { noticeRef.current.focus(); } }, 0);
           return;
         }
       }
       await saveContract(sp, listId, snapshot, itemId);
       showToast({ kind: 'success', title: `Contract ${snapshot.title.trim()} saved` });
-      onSaved(); // formSaved() leaves the page; the form stays locked meanwhile.
+      keepLocked = true;
+      onSaved();
     } catch (e) {
+      keepLocked = false;
       showToast({ kind: 'error', title: 'The contract was not saved', text: e instanceof Error ? e.message : String(e) });
-      release();
+    } finally {
+      if (!keepLocked) { unlock(); }
     }
   };
 
