@@ -9,3 +9,4 @@ sharepoint/solution
 .DS_Store
 *.log
 .superpowers/
+*.tsbuildinfo
