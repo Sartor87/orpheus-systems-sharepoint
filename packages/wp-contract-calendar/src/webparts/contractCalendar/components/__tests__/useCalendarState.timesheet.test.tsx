@@ -4,7 +4,7 @@ import { IDataService, LocalDataService } from '@orpheussystems/shared-core';
 import type { TimesheetModel } from '@orpheussystems/shared-ui/timesheet';
 import { DataContext } from '../../DataContext';
 import type { IContractCalendarWebPartProps } from '../../IContractCalendarWebPartProps';
-import { useCalendarState } from '../useCalendarState';
+import { TimesheetPdfModule, useCalendarState } from '../useCalendarState';
 import { activeToasts, unmountToastHost } from '@orpheussystems/shared-ui/toast';
 
 const errorToasts = (): ReturnType<typeof activeToasts> => activeToasts().filter(t => t.kind === 'error');
@@ -22,7 +22,7 @@ async function loaded(demoUserId: number, download: jest.Mock): Promise<Hook> {
   const service: IDataService = new LocalDataService({ demoUserId });
   const value = { service, props: { ...baseProps, demoUserId } };
   const wrapper: React.FC = ({ children }) => <DataContext.Provider value={value}>{children}</DataContext.Provider>;
-  const loadPdf = (): Promise<{ downloadTimesheet: jest.Mock }> => Promise.resolve({ downloadTimesheet: download });
+  const loadPdf = (): Promise<TimesheetPdfModule> => Promise.resolve({ downloadTimesheet: download, downloadTimesheetFromTemplate: jest.fn(), sampleTimesheetTemplate: '' });
   const hook = renderHook(() => useCalendarState({ loadPdf }), { wrapper });
   await hook.waitFor(() => !hook.result.current.loading && !!hook.result.current.selected);
   return hook;
@@ -67,7 +67,7 @@ describe('generateTimesheet', () => {
     const getHolidays = jest.spyOn(service, 'getHolidays');
     const value = { service, props: { ...baseProps, approvingOrgLabel: 'Ministry', serviceProviderLabel: 'Vendor' } };
     const wrapper: React.FC = ({ children }) => <DataContext.Provider value={value}>{children}</DataContext.Provider>;
-    const loadPdf = (): Promise<{ downloadTimesheet: jest.Mock }> => Promise.resolve({ downloadTimesheet: download });
+    const loadPdf = (): Promise<TimesheetPdfModule> => Promise.resolve({ downloadTimesheet: download, downloadTimesheetFromTemplate: jest.fn(), sampleTimesheetTemplate: '' });
     const { result, waitFor } = renderHook(() => useCalendarState({ loadPdf }), { wrapper });
     await waitFor(() => !result.current.loading && !!result.current.selected);
     const c = result.current.selected!;

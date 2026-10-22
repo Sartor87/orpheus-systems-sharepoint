@@ -80,7 +80,7 @@ describe('useCalendarState toasts', () => {
   it('toasts the timesheet download with its file name', async () => {
     const service = new ControlledService(1);
     const downloadTimesheet = jest.fn().mockResolvedValue(undefined);
-    const { result } = await loaded(service, { loadPdf: () => Promise.resolve({ downloadTimesheet }) });
+    const { result } = await loaded(service, { loadPdf: () => Promise.resolve({ downloadTimesheet, downloadTimesheetFromTemplate: jest.fn(), sampleTimesheetTemplate: '' }) });
     await act(async () => { await result.current.generateTimesheet({ from: '2026-02-02', to: '2026-02-28' }); });
     expect(activeToasts()[0].title).toBe('Timesheet downloaded');
     expect(activeToasts()[0].text).toMatch(/^Timesheet_.*\.pdf$/);

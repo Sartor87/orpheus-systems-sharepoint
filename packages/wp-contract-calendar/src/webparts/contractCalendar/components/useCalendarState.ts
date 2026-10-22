@@ -19,7 +19,10 @@ import {
 } from '@orpheussystems/shared-core';
 import { buildTimesheetModel } from '@orpheussystems/shared-ui/timesheet';
 import type { TimesheetModel } from '@orpheussystems/shared-ui/timesheet';
+// Type-only: a value import would pull pdfmake into the main bundle.
+import type { TemplateInput } from '@orpheussystems/shared-ui/pdf';
 import { DataContext } from '../DataContext';
+import type { TimesheetTemplateSource } from '../templateSource';
 import { timesheetFileName } from './timesheetFileName';
 import { eligibleDates } from './rangeSelection';
 import { formatShortDate } from './calendarFormat';
@@ -33,11 +36,16 @@ type WriteOutcome = 'ok' | 'failed' | 'stale';
 /** The lazily loaded PDF module; kept out of the main bundle (it pulls in pdfmake). */
 export interface TimesheetPdfModule {
   downloadTimesheet(model: TimesheetModel, fileName: string): Promise<void>;
+  /** Throws an error named 'TemplateValidationError' (with `errors: string[]`) instead of downloading. */
+  downloadTimesheetFromTemplate(model: TimesheetModel, input: TemplateInput, fileName: string): Promise<void>;
+  sampleTimesheetTemplate: string;
 }
 
 export interface CalendarStateOptions {
   /** Test seam: replaces the dynamic import of the PDF module. */
   loadPdf?: () => Promise<TimesheetPdfModule>;
+  /** Test seam: overrides the template source from the data context. */
+  templateSource?: TimesheetTemplateSource;
 }
 
 const defaultLoadPdf = (): Promise<TimesheetPdfModule> =>
@@ -138,6 +146,24 @@ function messageOf(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+const MAX_TEMPLATE_ERRORS = 5;
+
+/** Duck-typed: the error class lives in the lazy PDF chunk, so instanceof is not available here. */
+function templateErrorsOf(e: unknown): string[] | undefined {
+  const err = e as { name?: unknown; errors?: unknown } | null;
+  return err && err.name === 'TemplateValidationError' && Array.isArray(err.errors) ? err.errors.map(String) : undefined;
+}
+
+function timesheetErrorMessage(e: unknown): string {
+  const errors = templateErrorsOf(e);
+  if (!errors) { return `Could not generate the timesheet: ${messageOf(e)}`; }
+  const shown = errors.slice(0, MAX_TEMPLATE_ERRORS);
+  const more = errors.length - shown.length;
+  return 'The timesheet template has errors:\n• ' + shown.join('\n• ')
+    + (more > 0 ? `\n• …and ${more} more` : '')
+    + '\nAsk your site owner to fix the template or clear the template setting to use the standard layout.';
+}
+
 function withEntry(entries: Record<DateKey, CalendarEntry>, date: DateKey, entry: CalendarEntry | undefined): Record<DateKey, CalendarEntry> {
   const next = { ...entries };
   if (entry) { next[date] = entry; } else { delete next[date]; }
@@ -145,7 +171,7 @@ function withEntry(entries: Record<DateKey, CalendarEntry>, date: DateKey, entry
 }
 
 export function useCalendarState(options: CalendarStateOptions = {}): CalendarState & CalendarActions {
-  const { service, props } = React.useContext(DataContext);
+  const { service, props, templateSource: contextTemplateSource } = React.useContext(DataContext);
   const today = toDateKey(new Date());
 
   const [currentUser, setCurrentUser] = React.useState<UserInfo | undefined>();
@@ -164,6 +190,8 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
   const generatingRef = React.useRef(false);
   const loadPdfRef = React.useRef(options.loadPdf || defaultLoadPdf);
   loadPdfRef.current = options.loadPdf || defaultLoadPdf;
+  const templateSourceRef = React.useRef<TimesheetTemplateSource | undefined>(undefined);
+  templateSourceRef.current = options.templateSource || contextTemplateSource;
 
   // Async callbacks compare against the latest selection, not the one captured at click time.
   const selectedIdRef = React.useRef<number | undefined>(selectedId);
@@ -484,10 +512,14 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
     setTimesheetError(undefined);
     setGenerating(true);
     try {
+      // Template only when a path is configured; otherwise the built-in layout, exactly as before.
+      const source = (props.timesheetTemplateUrl || '').trim() ? templateSourceRef.current : undefined;
       // Straight from the service, not the cached display data. getHolidays already merges the '*' (all countries) rows.
-      const [list, hols] = await Promise.all([
+      // The template and its contract data are fetched on every generation (no cache), in parallel with the entries.
+      const [list, hols, template] = await Promise.all([
         service.getEntries(contract.id, period.from, period.to),
-        service.getHolidays(contract.country, period.from, period.to)
+        service.getHolidays(contract.country, period.from, period.to),
+        source ? Promise.all([source.loadTemplate(), source.loadTemplateData(contract.id)]) : undefined
       ]);
       const model = buildTimesheetModel(contract, list, hols, period, {
         approvingOrg: props.approvingOrgLabel || 'Client approval',
@@ -495,17 +527,25 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
       });
       const pdf = await loadPdfRef.current();
       const fileName = timesheetFileName(contract, period.from, period.to);
-      await pdf.downloadTimesheet(model, fileName);
+      if (source && template) {
+        const [html, templateData] = template;
+        await pdf.downloadTimesheetFromTemplate(model, {
+          html, contract, templateData, today: toDateKey(new Date()), resolveImage: source.resolveImage
+        }, fileName);
+      } else {
+        await pdf.downloadTimesheet(model, fileName);
+      }
       raise({ kind: 'success', title: 'Timesheet downloaded', text: fileName, dedupeKey: `contract-calendar:${instanceId}:timesheet` });
       return true;
     } catch (e) {
-      if (mounted.current) { setTimesheetError(`Could not generate the timesheet: ${messageOf(e)}`); }
+      // No fallback to the built-in layout on a template problem: the user sees the error, nothing is downloaded.
+      if (mounted.current) { setTimesheetError(timesheetErrorMessage(e)); }
       return false;
     } finally {
       generatingRef.current = false; // eslint-disable-line require-atomic-updates
       if (mounted.current) { setGenerating(false); }
     }
-  }, [service, props.approvingOrgLabel, props.serviceProviderLabel]);
+  }, [service, props.approvingOrgLabel, props.serviceProviderLabel, props.timesheetTemplateUrl]);
 
   return {
     generating,

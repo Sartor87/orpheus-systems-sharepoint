@@ -13,6 +13,8 @@ define([], function() {
     "BlockWeekendsLabel": "Block weekends",
     "ApprovingOrgLabel": "Approving organisation label",
     "ServiceProviderLabel": "Service provider label",
+    "TimesheetTemplateLabel": "Timesheet template (optional)",
+    "TimesheetTemplateDescription": "Site-relative or server-relative path to an .html template in a document library of this site. Empty = built-in layout.",
     "ServiceUnavailable": "The data service is not available.",
     "AboutGroupName": "About",
     "AboutVersionLabel": "Version",
