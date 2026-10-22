@@ -21,6 +21,7 @@ import '@pnp/sp/webs';
 import '@pnp/sp/lists';
 import '@pnp/sp/items';
 import '@pnp/sp/site-users/web';
+import '@pnp/sp/files';
 import { IDataService, LocalDataService, UserInfo, UserRef } from '@orpheussystems/shared-core';
 import { deriveRoles } from '@orpheussystems/shared-core/sharepoint';
 import { orpheusBrand } from '@orpheussystems/shared-ui/brand';
@@ -31,6 +32,10 @@ import ContractCalendar from './components/ContractCalendar';
 import { DataContext } from './DataContext';
 import { createDataService, isLocalData, requiresServiceRebuild } from './createDataService';
 import { filterListsByContentType, IListWithContentTypes } from './filterListsByContentType';
+import {
+  createLocalTemplateSource, createSharePointTemplateSource, invalidTemplateSource, TimesheetTemplateSource
+} from './templateSource';
+import { templateUrlError, toServerRelative } from './templateUrl';
 import type { IContractCalendarWebPartProps } from './IContractCalendarWebPartProps';
 
 export type { IContractCalendarWebPartProps } from './IContractCalendarWebPartProps';
@@ -70,7 +75,13 @@ export default class ContractCalendarWebPart extends BaseClientSideWebPart<ICont
     if (this._service) {
       element = React.createElement(
         DataContext.Provider,
-        { value: { service: this._service, props: { ...this.properties, initialContractId: this._initialContractId } } },
+        {
+          value: {
+            service: this._service,
+            props: { ...this.properties, initialContractId: this._initialContractId },
+            templateSource: this._templateSource()
+          }
+        },
         React.createElement(ContractCalendar, { isDarkTheme: this._isDarkTheme, brandToast: true })
       );
     } else if (!this._hasBuilt) {
@@ -152,6 +163,24 @@ export default class ContractCalendarWebPart extends BaseClientSideWebPart<ICont
     this._service = service;
     this._error = error;
     this._hasBuilt = true;
+  }
+
+  /** Built per render (cheap, no I/O): the template is fetched at generation time, so property edits apply at once. */
+  private _templateSource(): TimesheetTemplateSource | undefined {
+    const url = (this.properties.timesheetTemplateUrl || '').trim();
+    if (!url) { return undefined; }
+    if (this._isLocal) {
+      return createLocalTemplateSource(() =>
+        import(/* webpackChunkName: 'orpheus-timesheet-pdf' */ '@orpheussystems/shared-ui/pdf').then(m => m.sampleTimesheetTemplate));
+    }
+    if (!this.properties.contractsListId) {
+      return invalidTemplateSource(url, 'the Contracts list is not selected in the web part settings');
+    }
+    const host = window.location.host;
+    const invalid = templateUrlError(url, host);
+    if (invalid) { return invalidTemplateSource(url, invalid); }
+    const serverRelative = toServerRelative(url, this.context.pageContext.web.serverRelativeUrl);
+    return createSharePointTemplateSource(this._getSp(), this.properties.contractsListId, serverRelative, host);
   }
 
   private _getSp(): SPFI {
@@ -278,7 +307,12 @@ export default class ContractCalendarWebPart extends BaseClientSideWebPart<ICont
               groupName: strings.TimesheetGroupName,
               groupFields: [
                 PropertyPaneTextField('approvingOrgLabel', { label: strings.ApprovingOrgLabel }),
-                PropertyPaneTextField('serviceProviderLabel', { label: strings.ServiceProviderLabel })
+                PropertyPaneTextField('serviceProviderLabel', { label: strings.ServiceProviderLabel }),
+                PropertyPaneTextField('timesheetTemplateUrl', {
+                  label: strings.TimesheetTemplateLabel,
+                  description: strings.TimesheetTemplateDescription,
+                  onGetErrorMessage: (value: string) => templateUrlError(value, window.location.host)
+                })
               ]
             },
             {

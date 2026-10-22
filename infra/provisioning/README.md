@@ -182,3 +182,62 @@ Remove-PnPList -Identity CalendarEntries -Force
 Remove-PnPList -Identity Contracts -Force
 Remove-PnPList -Identity Holidays -Force
 ```
+
+## Optional columns for timesheet templates
+
+`Add-TimesheetTemplateColumns.ps1` is a separate script that adds five optional columns
+an HTML timesheet template can show. It does not change `template.xml`. Run
+`Provision-OrpheusSite.ps1` first: the script needs the `Orpheus Contract` content type
+and the `Contracts` list, and stops with "run Provision-OrpheusSite.ps1 first" if either
+is missing.
+
+```powershell
+cd infra/provisioning
+
+# Preview: no sign-in, no changes. Prints the columns, their IDs and the seed values.
+./Add-TimesheetTemplateColumns.ps1 -SiteUrl https://<tenant>.sharepoint.com/sites/<site> -ClientId <app-client-id> -WhatIf -SeedDemoData
+
+# Add the columns
+./Add-TimesheetTemplateColumns.ps1 -SiteUrl https://<tenant>.sharepoint.com/sites/<site> -ClientId <app-client-id>
+
+# Add the columns and set the demo values on contract 1185-Jane-Doe
+./Add-TimesheetTemplateColumns.ps1 -SiteUrl https://<tenant>.sharepoint.com/sites/<site> -ClientId <app-client-id> -SeedDemoData
+```
+
+| Column (internal name) | Type | Display name |
+|---|---|---|
+| `ConsultantPosition` | Text (255) | Consultant position |
+| `Vendor` | Text (255) | Vendor (service provider) |
+| `Lot` | Text (64) | Lot |
+| `ApproverName` | Text (255) | Approver name |
+| `TemplateFields` | Note (6 lines, plain text), one `key: value` per line | Template fields |
+
+The site columns are in the group **Orpheus Systems** and have fixed IDs in the script.
+`Vendor` uses the ID `582b1c53-77a2-4a1b-918f-14e0b9eaff06`, which other Orpheus tooling
+shares. If `Vendor` already exists with that ID and type, the script reports it as
+unchanged. Each column is added to `Orpheus Contract` with `-UpdateChildren`, so the
+Contracts list gets it too. Views, indexes and the other columns are left alone, so the
+new columns do not appear in the default view.
+
+The script is idempotent: it creates a column or FieldRef only when it is missing, and a
+second run writes nothing. Before any change, it stops if one of the five internal names
+already exists as a site column or a Contracts list column with another ID or type, and
+lists every clash at once.
+
+`-SeedDemoData` sets the values from `packages/shared-core/src/data/fixtures/templateData.json`
+on the contract with `ContractCode` `1185-Jane-Doe`, only when they differ. The custom
+values become `TemplateFields` lines. Seed that contract with
+`Provision-OrpheusSite.ps1 -SeedDemoData` first.
+
+Troubleshooting: if the columns exist on the `Orpheus Contract` content type but not on the
+Contracts list, the web part shows empty values for them. Add them to the list again (list
+settings, "Add from existing site columns"), or push the content type to the list (site
+content type settings, edit one of the columns, "Update all content types inheriting from
+this type": Yes). A plain re-run of the script does not help here: it sees the FieldRefs on
+the content type and writes nothing.
+
+The mock test runs without a tenant and without Pester:
+
+```powershell
+pwsh -NoProfile -File infra/provisioning/tests/Add-TimesheetTemplateColumns.Tests.ps1
+```

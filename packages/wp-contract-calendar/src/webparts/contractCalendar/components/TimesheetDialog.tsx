@@ -73,7 +73,7 @@ const TimesheetDialog: React.FC<ITimesheetDialogProps> = ({ contract, generating
         />
       </div>
       {invalid && <div role="alert" className={styles.timesheetInvalid}>The start date must not be after the end date.</div>}
-      {error && <MessageBar messageBarType={MessageBarType.error} isMultiline>{error}</MessageBar>}
+      {error && <MessageBar messageBarType={MessageBarType.error} isMultiline><span style={{ whiteSpace: 'pre-line' }}>{error}</span></MessageBar>}
       {generating && <Spinner size={SpinnerSize.medium} label="Generating PDF…" />}
       <DialogFooter>
         <PrimaryButton text="Generate" styles={amberButtonStyles} onClick={generate} disabled={invalid || generating} />

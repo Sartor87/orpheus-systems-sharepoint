@@ -16,7 +16,8 @@
     "pdf.js",
     "pdf.d.ts",
     "timesheet.js",
-    "timesheet.d.ts"
+    "timesheet.d.ts",
+    "templates"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -25,6 +26,7 @@
   },
   "dependencies": {
     "@orpheussystems/shared-core": "*",
+    "html-to-pdfmake": "^2.5.35",
     "pdfmake": "^0.2.0"
   },
   "peerDependencies": {
@@ -35,6 +37,7 @@
     "@types/react": "17.0.45",
     "@types/react-dom": "17.0.17",
     "jest-environment-jsdom": "^30.0.0",
+    "jsdom": "^26.1.0",
     "react": "17.0.1",
     "react-dom": "17.0.1",
     "@resvg/resvg-js": "^2.6.2",

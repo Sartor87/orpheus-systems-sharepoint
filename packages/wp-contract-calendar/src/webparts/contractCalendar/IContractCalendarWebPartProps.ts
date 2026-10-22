@@ -10,4 +10,6 @@ export interface IContractCalendarWebPartProps {
   approvingOrgLabel: string;
   serviceProviderLabel: string;
   initialContractId?: number;
+  /** Optional site- or server-relative path to an .html timesheet template; empty = built-in layout. */
+  timesheetTemplateUrl?: string;
 }

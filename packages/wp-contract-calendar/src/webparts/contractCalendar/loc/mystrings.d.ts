@@ -12,6 +12,8 @@ declare interface IContractCalendarWebPartStrings {
   BlockWeekendsLabel: string;
   ApprovingOrgLabel: string;
   ServiceProviderLabel: string;
+  TimesheetTemplateLabel: string;
+  TimesheetTemplateDescription: string;
   ServiceUnavailable: string;
   AboutGroupName: string;
   AboutVersionLabel: string;
