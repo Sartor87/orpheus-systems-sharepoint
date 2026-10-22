@@ -5,7 +5,17 @@
   "license": "Apache-2.0",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
-  "files": ["lib", "tokens.js", "tokens.d.ts", "brand.js", "brand.d.ts", "pdf.js", "pdf.d.ts", "timesheet.js", "timesheet.d.ts"],
+  "files": [
+    "lib",
+    "tokens.js",
+    "tokens.d.ts",
+    "brand.js",
+    "brand.d.ts",
+    "pdf.js",
+    "pdf.d.ts",
+    "timesheet.js",
+    "timesheet.d.ts"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rimraf lib",
@@ -16,6 +26,7 @@
     "pdfmake": "^0.2.0"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@types/jest": "^30.0.0",
     "@types/pdfmake": "^0.2.0",
     "jest": "^30.0.0",

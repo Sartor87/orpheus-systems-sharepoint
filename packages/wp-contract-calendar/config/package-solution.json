@@ -5,25 +5,26 @@
     "id": "326f6878-25b8-4117-93fb-ba9882352eaf",
     "version": "1.0.0.0",
     "includeClientSideAssets": true,
+    "iconPath": "images/orpheus-icon-96.png",
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
     "developer": {
       "name": "Orpheus Systems",
       "websiteUrl": "https://orpheussystems.com/",
-      "privacyUrl": "",
-      "termsOfUseUrl": "",
+      "privacyUrl": "https://orpheussystems.com/",
+      "termsOfUseUrl": "https://orpheussystems.com/",
       "mpnId": ""
     },
     "metadata": {
       "shortDescription": {
-        "default": "wp-contract-calendar description"
+        "default": "On-site and off-site contract calendar with timesheet PDF export."
       },
       "longDescription": {
-        "default": "wp-contract-calendar description"
+        "default": "Plan on-site and off-site days per contract on a month calendar, track targets and remaining days, and generate the timesheet PDF. Built by Orpheus Systems and released under the Apache-2.0 license."
       },
       "screenshotPaths": [],
       "videoUrl": "",
-      "categories": []
+      "categories": ["Productivity"]
     },
     "features": [
       {

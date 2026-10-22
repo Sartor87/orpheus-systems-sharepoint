@@ -20,7 +20,7 @@
     "group": { "default": "Advanced" },
     "title": { "default": "ContractCalendar" },
     "description": { "default": "Contract on-site/off-site calendar with timesheet PDF" },
-    "officeFabricIconFontName": "Page",
+    "iconImageUrl": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2296%22%20height%3D%2296%22%20viewBox%3D%220%200%2096%2096%22%3E%3Crect%20width%3D%2296%22%20height%3D%2296%22%20rx%3D%2220%22%20fill%3D%22%230B0D10%22%2F%3E%3Csvg%20x%3D%2216%22%20y%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23E0A83A%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20role%3D%22img%22%20aria-hidden%3D%22true%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2220%22%20height%3D%2220%22%20rx%3D%226%22%2F%3E%3Cpolyline%20points%3D%226%2C17%2010%2C9%2013%2C14%2016%2C7%2019%2C17%22%2F%3E%3C%2Fsvg%3E%3C%2Fsvg%3E",
     "properties": {
       "monthsToShow": 0,
       "blockWeekends": true,
