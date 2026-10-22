@@ -66,7 +66,7 @@ flowchart LR
 |--------|---------|------|------|
 | ✅ **Persistent dev tunnel** | `devtunnel create` once, `devtunnel host` per session | Microsoft's tool, used by the Agents Toolkit and the plugin debugging docs; stable host name, so the agent is provisioned once; free; no Azure | Public URL while hosted; up only while the developer machine is on |
 | Temporary dev tunnel (`devtunnel host -p 8787`) | New tunnel each run | No setup | Host name changes every run, so `MCP_SERVER_URL` and the agent package change every run ([CLI reference](https://learn.microsoft.com/azure/developer/dev-tunnels/cli-commands)) |
-| ngrok or Cloudflare Tunnel | Third-party tunnels | Work the same way | Another account and tool; ngrok's free tier rotates host names |
+| ngrok or Cloudflare Tunnel | Third-party tunnels | Work the same way | Another account, tool and data processor in the request path, outside the Microsoft tooling the Agents Toolkit already uses |
 | Deploy to Azure now | The target in `XXXX-azure-target-apim-container-apps-terraform.md` | Production-like | Owner decided against it for this version; subscription question still open |
 | Tunnel access restricted to the tenant (`--tenant`) | Relay requires Entra sign-in | Tighter | Copilot cannot present a dev tunnels token, so it cannot reach the server |
 

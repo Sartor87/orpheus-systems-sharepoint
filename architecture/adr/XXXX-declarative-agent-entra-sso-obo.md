@@ -83,7 +83,7 @@ sequenceDiagram
 |--------|---------|------|------|
 | ✅ **Declarative agent, Agents Toolkit, MCP plugin** | Manifest-only agent in Copilot Chat and Teams | Custom actions work in Copilot Chat without a Copilot licence ([prerequisites](https://learn.microsoft.com/microsoft-365/copilot/extensibility/prerequisites)); dynamic tool discovery; sideload from VS Code | Developer mode debug cards need a licensed user; the SharePoint page placement waits for the Agent Chat web part |
 | Copilot Studio agent | Low-code agent with connectors | SharePoint channel exists | Rules re-implemented in flows; per-message billing |
-| Custom engine agent (Agents SDK, own orchestration) | Full control of the model loop | Any model, any UI | We would own orchestration, safety and hosting of the bot; far more than six tools need |
+| Custom engine agent (Agents SDK, own orchestration) | Full control of the model loop | Any model, any UI | We would own orchestration, safety and hosting of the bot; far more than six tools justify |
 | SharePoint `.agent` file | Site-local Q&A agent | Simple | No actions; retires March 2027 |
 
 ### Identity to SharePoint

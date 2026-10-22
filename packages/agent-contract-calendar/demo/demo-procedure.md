@@ -16,8 +16,8 @@ done by or with the owner.
   agent demo Ivan is the *manager*, and the sandbox accounts are different people from the fixture
   people. Do not mix the two when explaining the demo.
 - **Vendors are fictional.** Kuker Consulting, Samodiva Systems and Sofia SharePoint Chads are
-  invented names inspired by Bulgarian folklore; no company with these names was found. "SharePoint"
-  is a Microsoft trademark and is used here only as fictional demo data.
+  invented names. "SharePoint" is a Microsoft trademark and is used here only as fictional demo
+  data.
 - **Contract numbers.** Demo contracts use the 002xxx series (`NNNNNN_<YEAR>`); 001xxx belongs to the
   web part's seed and is never touched by the agent's setup script.
 
@@ -49,10 +49,10 @@ The prompts and expected tool calls are in `prompt-set.md`.
    "Custom App Upload Enabled" and "Copilot Access Enabled" for the signed-in account.
 3. A test site provisioned with `infra/provisioning/Provision-OrpheusSite.ps1 -SeedDemoData -Country BG`
    (lists, content types, indexes, BG holidays including 2026-12-24 to 2026-12-26).
-4. An Entra app registration for the MCP server, set up as in `../README.md` ("Entra SSO setup"):
-   exposed API with the Application ID URI, `oAuthConsentRedirect` redirect URI, pre-authorised
-   Enterprise token store client, delegated SharePoint `AllSites.Write`, admin consent, a client
-   secret for the on-behalf-of exchange. Do not reuse the provisioning app registration.
+4. An Entra app registration for the MCP server: exposed API with an Application ID URI,
+   delegated SharePoint `AllSites.Write` with admin consent, and a client secret for the
+   on-behalf-of exchange. Do not reuse the provisioning app registration. The Entra SSO
+   registration for Copilot needs the tunnel URL, so it is done later, in step 5.
 5. PowerShell 7.4 with PnP.PowerShell 3.0+, and your own PnP PowerShell app registration client id
    (see `infra/provisioning/README.md`).
 6. Podman with the compose volumes initialised (`fix-perms`, `install`), `devtunnel` CLI on the
@@ -60,7 +60,9 @@ The prompts and expected tool calls are in `prompt-set.md`.
 
 ## Start order
 
-Run from the repository root.
+Run from the repository root. Steps 3 and 4 each keep a terminal busy (the `mcp` service and
+`devtunnel host` run in the foreground), so give each its own terminal and use a third one for the
+remaining steps.
 
 ### 1. Setup script
 
@@ -87,7 +89,7 @@ SITE_URL=https://<tenant>.sharepoint.com/sites/<site>
 TENANT_ID=<tenant-id>
 CLIENT_ID=<client-id>
 CLIENT_SECRET=<client-secret>
-API_AUDIENCE=api://<app-id-uri>
+API_AUDIENCE=<application-id-uri>
 SP_SCOPE=https://<tenant>.sharepoint.com/AllSites.Write
 HR_GROUP=Orpheus HR
 AUDIT_LOG_PATH=/usr/app/spfx/packages/mcp-contract-calendar/audit-demo.jsonl
@@ -122,15 +124,30 @@ devtunnel host <tunnel-id>
 ```
 
 On the very first run open the "Connect via browser" URL once and select Continue. The public URL
-stays the same across sessions.
+stays the same across sessions; its host name is `<tunnel-host>` below.
 
-### 5. Provision the agent with Agents Toolkit
+### 5. Entra SSO registration for Copilot
+
+Needs the tunnel host from step 4, so it comes after it. Once per tunnel:
+
+1. In the Teams developer portal, Tools, "Microsoft Entra SSO client ID registration", create a
+   registration with base URL `https://<tunnel-host>` and the client id of the server's app
+   registration. Keep the generated registration id for `MCP_AUTH_REFERENCE_ID`. (Agents Toolkit
+   can do this when the MCP action is added with "Entra SSO".)
+2. In the app registration: add the registration's Application ID URI to `identifierUris`, add
+   the `oAuthConsentRedirect` redirect URI under Web authentication, and pre-authorise the
+   Enterprise token store client under Expose an API (exact values in `../README.md`, "Entra SSO
+   setup").
+3. If that Application ID URI differs from `API_AUDIENCE` in the server's `.env`, update
+   `API_AUDIENCE` and restart the `mcp` service (step 3).
+
+### 6. Provision the agent with Agents Toolkit
 
 In `packages/agent-contract-calendar`, copy `env/.env.dev.sample` to `env/.env.dev`, set
-`MCP_SERVER_URL=https://<dev-tunnel-host>/mcp` and `MCP_AUTH_REFERENCE_ID` (from the Entra SSO
-registration). Then Agents Toolkit, Lifecycle, Provision. The owner approves each provision run.
+`MCP_SERVER_URL=https://<tunnel-host>/mcp` and `MCP_AUTH_REFERENCE_ID` (from step 5). Then Agents
+Toolkit, Lifecycle, Provision. The owner approves each provision run.
 
-### 6. Copilot Chat
+### 7. Copilot Chat
 
 Sign in as one of the three demo users, open `https://m365.cloud.microsoft/chat`, pick the Contract
 Calendar agent (the name carries the `APP_NAME_SUFFIX`) and use the prompts from `prompt-set.md`.

@@ -70,7 +70,7 @@ Copy `.env.sample` to `.env` (gitignored). The `mcp` compose service reads it if
 | `TENANT_ID` | | `entra` or `sharepoint` | Entra tenant id |
 | `CLIENT_ID` | | `entra` or `sharepoint` | Client id of the server's app registration |
 | `CLIENT_SECRET` | | `DATA_MODE=sharepoint` | Credential for the on-behalf-of exchange (a Key Vault certificate in the Azure target) |
-| `API_AUDIENCE` | | `AUTH_MODE=entra` | Expected token audience, the Application ID URI (`api://...`) |
+| `API_AUDIENCE` | | `AUTH_MODE=entra` | Expected token audience, the Application ID URI |
 | `SP_SCOPE` | | `DATA_MODE=sharepoint` | `https://<tenant>.sharepoint.com/AllSites.Write` |
 | `CONTRACTS_LIST_URL` | `Lists/Contracts` | | Site-relative list URL |
 | `ENTRIES_LIST_URL` | `Lists/CalendarEntries` | | Site-relative list URL |
@@ -81,7 +81,7 @@ Copy `.env.sample` to `.env` (gitignored). The `mcp` compose service reads it if
 
 ## Running locally (no SharePoint, no Entra)
 
-Node runs only in Podman (ADR 0002). From the worktree root, in PowerShell:
+Node runs only in Podman (ADR 0002). From the repository root, in PowerShell:
 
 ```powershell
 $env:COMPOSE_PROJECT_NAME = 'orpheus-agent'

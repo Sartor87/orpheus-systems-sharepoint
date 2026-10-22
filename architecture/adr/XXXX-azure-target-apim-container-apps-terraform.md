@@ -22,9 +22,9 @@ and is reproducible per client tenant. The owner also asked for an API gateway i
 infrastructure as code.
 
 The inbound side has a constraint that rules out the usual "make it private" answer. The caller is
-Copilot itself, running in Microsoft's cloud. A declarative agent's plugin call arrives from
-Microsoft-owned public egress, not from the client's network, and the pages read for the research
-document no fixed IP range for it. A private endpoint would make the server unreachable to its only
+Copilot itself. We work from the premise that a declarative agent's plugin call comes from
+Microsoft's cloud over the public internet, not from the client's network; the pages read for the
+research document no fixed IP range for it. A private endpoint would make the server unreachable to its only
 caller. Network injection, which keeps agent traffic inside a customer virtual network, is a
 feature of Foundry Agent Service (agents injected into a delegated subnet), not of Microsoft 365
 declarative agents
@@ -44,7 +44,11 @@ environment):
    [protect an API with Entra ID](https://learn.microsoft.com/azure/api-management/api-management-howto-protect-backend-with-aad)),
    and a per-user rate limit keyed on the token's `oid` caps runaway loops. The server keeps
    validating the token itself; the gateway is defence in depth, not a replacement.
-2. **Azure Container Apps** runs the same image as Podman does locally. Ingress allows only API
+2. **Azure Container Apps** runs the server as a container image built from the same build output
+   (`lib/`, `package.json`, production dependencies) and the same configuration variables as the
+   local run. The image does not exist yet: locally, `compose.yml` runs the generic
+   `m365pnp/spfx` development image with the source mounted. A Dockerfile for a slim Node 22 image
+   is work for the target (see Consequences). Ingress allows only API
    Management (IP restriction rules on the gateway's outbound addresses,
    [IP restrictions](https://learn.microsoft.com/azure/container-apps/ip-restrictions)). `minReplicas`
    is 1, so there is no cold start inside the action timeout.
@@ -58,10 +62,10 @@ environment):
 
 ```mermaid
 flowchart LR
-  CP["Copilot Chat<br/>Microsoft-owned public egress"] -->|"HTTPS, Entra SSO token"| APIM
+  CP["Copilot Chat<br/>Microsoft cloud, public internet"] -->|"HTTPS, Entra SSO token"| APIM
   subgraph AZ["Azure subscription, provisioned with Terraform"]
     APIM["API Management<br/>validate-jwt: issuer, audience<br/>rate limit per user"] -->|"forward /mcp"| ACA
-    ACA["Container App: MCP server<br/>ingress allows APIM only<br/>min replicas 1"]
+    ACA["Container App: MCP server image<br/>ingress allows APIM only<br/>min replicas 1"]
     MI["Managed identity"] -.-> ACA
     KV["Key Vault<br/>OBO client secret or certificate"]
     LA["Log Analytics<br/>diagnostics and audit table"]
@@ -86,7 +90,7 @@ From the research's hosting comparison
 
 | Option | Summary | Pros | Cons |
 |--------|---------|------|------|
-| ✅ **Azure Container Apps, minReplicas 1** | Our image, Express + MCP SDK unchanged | Same image as local Podman; logs to Log Analytics out of the box; ingress IP restrictions; plain HTTP app, portable to App Service or AKS | One small replica always billed |
+| ✅ **Azure Container Apps, minReplicas 1** | A container image of our server, Express + MCP SDK unchanged | Same build output and configuration as the local Podman run; logs to Log Analytics out of the box; ingress IP restrictions; plain HTTP app, portable to App Service or AKS | One small replica always billed |
 | Azure Functions Flex Consumption | Functions host with MCP extension or self-hosted SDK handler | Official MCP hosting template ([host MCP SDK servers](https://learn.microsoft.com/azure/azure-functions/scenario-host-mcp-server-sdks)) | Second toolchain (Functions Core Tools); always-ready instances billed to avoid cold start ([Functions scale](https://learn.microsoft.com/azure/azure-functions/functions-scale)) |
 | App Service | Container on a plan | Familiar | Plan sizing; fewer per-app ingress controls than Container Apps |
 | AKS | Kubernetes | Full control | Cluster operations for one small service |
@@ -97,7 +101,7 @@ From the research's hosting comparison
 |--------|---------|------|------|
 | ✅ **API Management in front** | Gateway with token validation and rate limit | Rejects bad tokens before our code; throttling per user; one place for headers and logging; a stable host name across server moves | Cost of an APIM tier; one more hop inside the timeout |
 | Container Apps ingress only, built-in auth | Easy Auth on the app | Cheaper, fewer parts | No rate limiting; less control over token rules |
-| Private endpoint or internal environment | No public endpoint | Strong network isolation | Copilot cannot reach it: the caller is on Microsoft's public egress |
+| Private endpoint or internal environment | No public endpoint | Strong network isolation | Copilot cannot reach it: the caller comes from Microsoft's cloud over the public internet |
 | Front Door with WAF | Global edge | WAF rules | Adds cost and complexity; JWT validation still needed behind it |
 
 ### Infrastructure as code
@@ -113,12 +117,15 @@ From the research's hosting comparison
 ## Consequences
 
 **Positive:**
-- No code change between demo and target: the image, `AUTH_MODE=entra` and the environment
-  variables are the same; only the URL in `MCP_SERVER_URL` changes.
+- No code change between demo and target: the build output, `AUTH_MODE=entra` and the
+  environment variables are the same; only the URL in `MCP_SERVER_URL` changes.
 - A client tenant is reproducible from Terraform plus the setup script.
 - Audit events land in a queryable table with retention chosen by the client.
 
 **Negative / Trade-offs:**
+- Work still to do for the target: a Dockerfile for the server (Node 22 slim base, `npm ci
+  --omit=dev` for the workspace, built `shared-core` and server `lib/`, non-root user), an image
+  build and push to the registry, and the Terraform modules. None of it exists in this version.
 - Running cost: one warm replica, an APIM tier, Log Analytics ingestion.
 - APIM adds latency inside the 10 second budget; to measure on the target.
 - API Management's outbound addresses must be kept in the Container App's allow rules if the tier
