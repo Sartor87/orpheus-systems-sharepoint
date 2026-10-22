@@ -87,9 +87,10 @@ $PnpNamespace = 'http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema'
 $Invariant = [System.Globalization.CultureInfo]::InvariantCulture
 
 # Built-in date-only site columns reused by the Orpheus content types (see template.xml).
+# HolidayDate is NOT here: the built-in HolidayDate site column is Text, so Holidays gets its own
+# list-level HolidayDate column (like Status on Contracts); the web-level one is expected and ignored.
 $BuiltInFields = [ordered]@{
-    StartDate   = '64cd368d-2f95-4bfc-a1f9-8d4324ecb007'
-    HolidayDate = '335e22c3-b8a4-4234-9790-7a03eeb7b0d4'
+    StartDate = '64cd368d-2f95-4bfc-a1f9-8d4324ecb007'
 }
 
 # Contracts list validation, set after the template (formula built from the columns' display names).
@@ -342,10 +343,10 @@ function Assert-NoFieldConflicts {
         if (-not $l.ListFields.Count) { continue }
         $list = Get-PnPList -Identity $l.Title -ErrorAction SilentlyContinue
         if (-not $list) { continue }
-        $listFields = @((Invoke-SpRest -Url "/_api/web/lists/getbytitle('$($l.Title)')/fields?`$select=Id,InternalName").value)
+        $listFields = @((Invoke-SpRest -Url "/_api/web/lists/getbytitle('$($l.Title)')/fields?`$select=Id,InternalName,TypeAsString").value)
         foreach ($f in $l.ListFields) {
             $clash = $listFields | Where-Object { $_.InternalName -ceq $f.Name -and ([string] $_.Id).ToLowerInvariant() -ne $f.Id }
-            foreach ($c in @($clash)) { $conflicts.Add("list '$($l.Title)' already has a column '$($f.Name)' with ID $($c.Id) (template ID $($f.Id))") }
+            foreach ($c in @($clash)) { $conflicts.Add("list '$($l.Title)' already has a column '$($f.Name)' of type '$($c.TypeAsString)' with ID $($c.Id) (template: $($f.Type), ID $($f.Id))") }
         }
     }
     if ($conflicts.Count) {

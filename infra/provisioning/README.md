@@ -77,19 +77,24 @@ set it by hand in *List settings → Validation settings*.
 
 Four columns are not Orpheus site columns:
 
-- **StartDate** and **HolidayDate** are SharePoint's own built-in date-only site
-  columns: *Start Date* (`64cd368d-2f95-4bfc-a1f9-8d4324ecb007`) and HolidayDate
-  (`335e22c3-b8a4-4234-9790-7a03eeb7b0d4`). Every site already has columns with these
-  internal names, so the Orpheus content types reuse them. The pre-flight check stops the
-  run if either is missing, has another internal name, or is not a date-only DateTime.
+- **StartDate** is SharePoint's built-in date-only *Start Date* site column
+  (`64cd368d-2f95-4bfc-a1f9-8d4324ecb007`). The Orpheus Contract content type reuses it.
+  The pre-flight check stops the run if it is missing, has another internal name, or is
+  not a date-only DateTime.
+- **HolidayDate** is a list column on Holidays (date-only, required, indexed). SharePoint
+  also has a built-in `HolidayDate` site column (`335e22c3-b8a4-4234-9790-7a03eeb7b0d4`),
+  but it is a **Text** column, so it can't be reused. The list column has the same
+  internal name, which is all the web part needs. The built-in site column is left alone
+  and is not reported as a clash.
 - **Status** is a list column on Contracts. The built-in *Task Status* site column
   already uses the internal name `Status`, with different choices.
 - **Contract** is a list column on CalendarEntries because it is a lookup to the
   Contracts list.
 
-Before the template is applied, the script checks every site column it would create. If one
-already exists on the site with the same internal name but a different ID, the script stops
-without changing anything. After the template it makes sure the columns in the "Indexed"
+Before the template is applied, the script checks every site column it would create, and
+every list column on lists that already exist. If one already exists with the same internal
+name but a different ID, the script stops without changing anything, listing all clashes at
+once. After the template it makes sure the columns in the "Indexed"
 column above really are indexed.
 
 ## Idempotency
@@ -159,7 +164,7 @@ The script never deletes anything. To remove everything by hand, delete in this 
 4. Content types `Orpheus Calendar Entry`, `Orpheus Contract`, `Orpheus Holiday`
    (Site settings → Site content types, group Orpheus Systems)
 5. The site columns in the group **Orpheus Systems** (leave the built-in Start Date and
-   HolidayDate alone)
+   HolidayDate site columns alone)
 
 ```powershell
 Remove-PnPList -Identity CalendarEntries -Force

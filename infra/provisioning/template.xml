@@ -8,13 +8,13 @@
 
   Field and content type IDs are fixed. Never regenerate them: a new ID creates a second column.
 
-  Three columns deliberately are NOT Orpheus site columns, because every SharePoint site already
-  has a built-in site column with the same internal name (a second site column with that
+  Three columns deliberately are NOT Orpheus site columns, because SharePoint sites already
+  have a built-in site column with the same internal name (a second site column with that
   internal name cannot be created):
     - StartDate: the built-in "Start Date" site column (DateTime, DateOnly,
       ID 64cd368d-2f95-4bfc-a1f9-8d4324ecb007) is reused in the Orpheus Contract content type.
-    - HolidayDate: the built-in HolidayDate site column (DateTime,
-      ID 335e22c3-b8a4-4234-9790-7a03eeb7b0d4) is reused in the Orpheus Holiday content type.
+    - HolidayDate: defined as a list-level column on Holidays (the built-in HolidayDate site
+      column, ID 335e22c3-b8a4-4234-9790-7a03eeb7b0d4, is a Text column, so it cannot be reused).
     - Status: defined as a list-level column on Contracts (the built-in "Task Status" site
       column uses the internal name Status and has different choices).
   The Contract lookup is list-level on CalendarEntries because it targets the Contracts list.
@@ -69,7 +69,7 @@
         <Field ID="{44998e85-809d-41f3-a0a6-35528f8b8ea8}" Name="Note" StaticName="Note" DisplayName="Note" Type="Note" NumLines="4" RichText="FALSE" Group="Orpheus Systems" />
 
         <!-- Holidays -->
-        <!-- HolidayDate: built-in site column 335e22c3-b8a4-4234-9790-7a03eeb7b0d4, referenced by the Orpheus Holiday content type. -->
+        <!-- HolidayDate is a list-level column on Holidays (see the Holidays ListInstance). -->
         <Field ID="{7ad9c82e-359f-4fda-9aaa-f682d1bc51ba}" Name="Source" StaticName="Source" DisplayName="Source" Type="Choice" Format="Dropdown" FillInChoice="FALSE" Group="Orpheus Systems">
           <CHOICES>
             <CHOICE>Manual</CHOICE>
@@ -107,7 +107,6 @@
         </pnp:ContentType>
         <pnp:ContentType ID="0x0100B306E930FF3442F69E5B6BF90F942B57" Name="Orpheus Holiday" Group="Orpheus Systems" Description="A public holiday for one country, or for all countries (*).">
           <pnp:FieldRefs>
-            <pnp:FieldRef ID="335e22c3-b8a4-4234-9790-7a03eeb7b0d4" Name="HolidayDate" Required="true" />
             <pnp:FieldRef ID="11612c30-1d93-4855-a33d-8589df22799c" Name="Country" />
             <pnp:FieldRef ID="7ad9c82e-359f-4fda-9aaa-f682d1bc51ba" Name="Source" />
           </pnp:FieldRefs>
@@ -204,6 +203,9 @@
               <RowLimit Paged="TRUE">100</RowLimit>
             </View>
           </pnp:Views>
+          <pnp:Fields>
+            <Field ID="{2b2796ae-e634-4cc8-9cae-098d5e853bb6}" Name="HolidayDate" StaticName="HolidayDate" DisplayName="Holiday date" Type="DateTime" Format="DateOnly" FriendlyDisplayFormat="Disabled" Required="TRUE" Indexed="TRUE" Group="Orpheus Systems" />
+          </pnp:Fields>
         </pnp:ListInstance>
       </pnp:Lists>
 
