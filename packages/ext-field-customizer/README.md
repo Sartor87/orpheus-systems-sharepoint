@@ -18,6 +18,8 @@ podman compose run --rm shell bash -c "npm run package -w @orpheussystems/ext-fi
 .\scripts\podman.ps1 serve ext-field-customizer
 ```
 
+Binding: run the provisioning script (Plan 3) or set the field's ClientSideComponentId to `a7721b49-8c3e-48c7-ac67-69408fcc6a03` manually; for testing use the debug query string. The package itself provisions no field.
+
 `config/serve.json` uses `{tenantDomain}` and `{site}` placeholders. For a quick check, open the Contracts list
 with the debug query string printed by `serve`.
 

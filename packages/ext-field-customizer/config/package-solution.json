@@ -25,20 +25,7 @@
       "screenshotPaths": [],
       "videoUrl": "",
       "categories": ["Productivity"]
-    },
-    "features": [
-      {
-        "title": "Field Extension - Deployment of field customizer",
-        "description": "Deploys the remaining days field with ClientSideComponentId association",
-        "id": "71dae528-a9a1-439d-b543-66ee257f6b25",
-        "version": "1.0.0.0",
-        "assets": {
-          "elementManifests": [
-            "elements.xml"
-          ]
-        }
-      }
-    ]
+    }
   },
   "paths": {
     "zippedPackage": "solution/ext-field-customizer.sppkg"
