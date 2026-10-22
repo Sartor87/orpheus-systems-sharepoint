@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Elements xmlns="http://schemas.microsoft.com/sharepoint/">
+    <CustomAction
+        Title="OrpheusChrome"
+        Location="ClientSideExtension.ApplicationCustomizer"
+        ClientSideComponentId="30930118-2d09-49f4-bdc4-fb2c9b4af49e"
+        ClientSideComponentProperties="{&quot;testMessage&quot;:&quot;Test message&quot;}">
+    </CustomAction>
+</Elements>

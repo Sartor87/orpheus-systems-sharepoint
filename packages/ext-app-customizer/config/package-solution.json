@@ -1,0 +1,47 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "ext-app-customizer-client-side-solution",
+    "id": "8c050d2e-26f4-4a5e-822c-414d9365314f",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "iconPath": "images/orpheus-icon-96.png",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "Orpheus Systems",
+      "websiteUrl": "https://orpheussystems.com/",
+      "privacyUrl": "https://orpheussystems.com/",
+      "termsOfUseUrl": "https://orpheussystems.com/",
+      "mpnId": ""
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "Orpheus Systems header with role-aware navigation and footer for SharePoint sites."
+      },
+      "longDescription": {
+        "default": "Adds an Orpheus Systems header with role-aware navigation and a branded footer to SharePoint sites. Built by Orpheus Systems and released under the Apache-2.0 license."
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": ["Productivity"]
+    },
+    "features": [
+      {
+        "title": "Application Extension - Deployment of custom action",
+        "description": "Deploys a custom action with ClientSideComponentId association",
+        "id": "e29d4a6f-3bba-450e-92a8-fef884b053e1",
+        "version": "1.0.0.0",
+        "assets": {
+          "elementManifests": [
+            "elements.xml",
+            "ClientSideInstance.xml"
+          ]
+        }
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/ext-app-customizer.sppkg"
+  }
+}

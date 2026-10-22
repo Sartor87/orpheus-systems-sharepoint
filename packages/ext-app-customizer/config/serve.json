@@ -1,0 +1,21 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json",
+  "port": 4321,
+  "ipAddress": "0.0.0.0",
+  "https": true,
+  "serveConfigurations": {
+    "default": {
+      "pageUrl": "https://{tenantDomain}/sites/{site}/SitePages/Home.aspx",
+      "customActions": {
+        "30930118-2d09-49f4-bdc4-fb2c9b4af49e": {
+          "location": "ClientSideExtension.ApplicationCustomizer",
+          "properties": {
+            "contractsListUrl": "Lists/Contracts",
+            "calendarPageUrl": "SitePages/ContractCalendar.aspx",
+            "showFooter": true
+          }
+        }
+      }
+    }
+  }
+}

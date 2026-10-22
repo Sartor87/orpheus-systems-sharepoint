@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "orpheus-chrome-application-customizer": {
+      "components": [
+        {
+          "entrypoint": "./lib/extensions/orpheusChrome/OrpheusChromeApplicationCustomizer.js",
+          "manifest": "./src/extensions/orpheusChrome/OrpheusChromeApplicationCustomizer.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "OrpheusChromeApplicationCustomizerStrings": "lib/extensions/orpheusChrome/loc/{locale}.js"
+  }
+}

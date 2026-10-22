@@ -1,0 +1,23 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "whichFolder": "subdir",
+    "solutionName": "ext-app-customizer",
+    "useGulp": false,
+    "componentType": "extension",
+    "extensionType": "ApplicationCustomizer",
+    "componentName": "OrpheusChrome",
+    "componentDescription": "Orpheus Systems header and footer",
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.23.1",
+    "sdksVersions": {},
+    "version": "1.23.2",
+    "libraryName": "ext-app-customizer",
+    "libraryId": "8c050d2e-26f4-4a5e-822c-414d9365314f",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionShortDescription": "ext-app-customizer description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false
+  }
+}
