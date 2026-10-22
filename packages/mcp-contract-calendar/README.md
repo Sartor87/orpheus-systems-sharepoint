@@ -5,8 +5,8 @@ agent (`packages/agent-contract-calendar`): contractors book and remove days, co
 HR read contracts grouped by vendor. Writes go through `shared-core`'s `SharePointDataService`, so
 the agent and the calendar web part enforce the same rules from the same code.
 
-Why it exists and how it is secured: `architecture/adr/XXXX-custom-mcp-server-in-typescript.md`,
-`XXXX-declarative-agent-entra-sso-obo.md`, `XXXX-three-layer-audit-for-agent-actions.md`.
+Why it exists and how it is secured: `architecture/adr/0011-custom-mcp-server-in-typescript.md`,
+`0012-declarative-agent-entra-sso-obo.md`, `0014-three-layer-audit-for-agent-actions.md`.
 How to run the demo end to end: `packages/agent-contract-calendar/demo/demo-procedure.md`.
 
 ## What it serves
@@ -102,7 +102,7 @@ With `AUTH_MODE=none`, `DATA_MODE=local`, `LOCAL_USER_ID=1` in `.env`, the serve
 
 For the SharePoint-backed demo set `AUTH_MODE=entra`, `DATA_MODE=sharepoint` and the tenant values,
 run the setup script (below), and expose port 8787 with a dev tunnel
-(`architecture/adr/XXXX-dev-tunnel-for-the-agent-demo.md`).
+(`architecture/adr/0015-dev-tunnel-for-the-agent-demo.md`).
 
 ## MCP Inspector
 

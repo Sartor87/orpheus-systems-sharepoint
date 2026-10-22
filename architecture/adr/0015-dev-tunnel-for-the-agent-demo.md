@@ -1,4 +1,4 @@
-# X. Dev tunnel for the agent demo
+# 15. Dev tunnel for the agent demo
 
 ## Date: 2026-10-22
 
@@ -43,7 +43,7 @@ every request without a valid token for its audience gets 401, and `createApp` r
 The `devtunnel` CLI runs on the host OS; the server runs in the `mcp` compose service
 (`COMPOSE_PROJECT_NAME=orpheus-agent`), published on host port 8787.
 
-![Local flow through the dev tunnel](diagrams/XXXX-dev-tunnel-for-the-agent-demo-1.svg)
+![Local flow through the dev tunnel](diagrams/0015-dev-tunnel-for-the-agent-demo-1.svg)
 
 ```mermaid
 flowchart LR
@@ -67,7 +67,7 @@ flowchart LR
 | ✅ **Persistent dev tunnel** | `devtunnel create` once, `devtunnel host` per session | Microsoft's tool, used by the Agents Toolkit and the plugin debugging docs; stable host name, so the agent is provisioned once; free; no Azure | Public URL while hosted; up only while the developer machine is on |
 | Temporary dev tunnel (`devtunnel host -p 8787`) | New tunnel each run | No setup | Host name changes every run, so `MCP_SERVER_URL` and the agent package change every run ([CLI reference](https://learn.microsoft.com/azure/developer/dev-tunnels/cli-commands)) |
 | ngrok or Cloudflare Tunnel | Third-party tunnels | Work the same way | Another account, tool and data processor in the request path, outside the Microsoft tooling the Agents Toolkit already uses |
-| Deploy to Azure now | The target in `XXXX-azure-target-apim-container-apps-terraform.md` | Production-like | Owner decided against it for this version; subscription question still open |
+| Deploy to Azure now | The target in `0016-azure-target-apim-container-apps-terraform.md` | Production-like | Owner decided against it for this version; subscription question still open |
 | Tunnel access restricted to the tenant (`--tenant`) | Relay requires Entra sign-in | Tighter | Copilot cannot present a dev tunnels token, so it cannot reach the server |
 
 ---
@@ -100,8 +100,8 @@ Key Vault and Log Analytics cover each of these gaps.
 
 ## Related
 
-- Related ADRs: `XXXX-azure-target-apim-container-apps-terraform.md`,
-  `XXXX-declarative-agent-entra-sso-obo.md`, ADR 0002 (Podman, no Node on the host)
+- Related ADRs: `0016-azure-target-apim-container-apps-terraform.md`,
+  `0012-declarative-agent-entra-sso-obo.md`, ADR 0002 (Podman, no Node on the host)
 - Related documents: `docs/superpowers/specs/2026-10-22-contract-agent-design.md` (sections 4 O5, 6
   item 5), `packages/agent-contract-calendar/demo/demo-procedure.md`,
   `packages/mcp-contract-calendar/README.md`

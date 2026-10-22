@@ -49,8 +49,8 @@ destructiveHint: true` on `remove_days`.
 - `docs/architecture-amendments.md`: changes to existing architecture documents for the owner to
   apply at merge.
 
-Decisions behind the package are in `architecture/adr/XXXX-declarative-agent-entra-sso-obo.md` and
-`architecture/adr/XXXX-dev-tunnel-for-the-agent-demo.md`.
+Decisions behind the package are in `architecture/adr/0012-declarative-agent-entra-sso-obo.md` and
+`architecture/adr/0015-dev-tunnel-for-the-agent-demo.md`.
 
 ## Sources used
 

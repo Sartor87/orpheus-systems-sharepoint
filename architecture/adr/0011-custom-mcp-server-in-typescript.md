@@ -1,4 +1,4 @@
-# X. Custom MCP server in TypeScript as the agent's action layer
+# 11. Custom MCP server in TypeScript as the agent's action layer
 
 ## Date: 2026-10-22
 
@@ -43,7 +43,7 @@ The server speaks stateless Streamable HTTP (`POST /mcp`) and exposes six tools:
 The Microsoft 365 guidance is to keep a plugin under ten tools; above that, selection quality drops
 ([MCP and API plugins](https://learn.microsoft.com/microsoft-365/copilot/extensibility/overview-plugins)).
 
-![Component view of the MCP server](diagrams/XXXX-custom-mcp-server-in-typescript-1.svg)
+![Component view of the MCP server](diagrams/0011-custom-mcp-server-in-typescript-1.svg)
 
 ```mermaid
 flowchart LR
@@ -139,8 +139,8 @@ booking rules live; a server in another language would split that place in two.
 ## Related
 
 - Related ADRs: ADR 0003 (`IDataService`), ADR 0005 (filtering over item-level permissions),
-  ADR 0008 (one entry per contractor per date), `XXXX-declarative-agent-entra-sso-obo.md`,
-  `XXXX-three-layer-audit-for-agent-actions.md`
+  ADR 0008 (one entry per contractor per date), `0012-declarative-agent-entra-sso-obo.md`,
+  `0014-three-layer-audit-for-agent-actions.md`
 - Related documents: `docs/superpowers/specs/2026-10-22-contract-agent-design.md` (sections 4, 5, 6),
   `docs/research/2026-10-22-sharepoint-contract-agent.md` ("Why a generic SharePoint tool is not
   enough", decisions D1 and D2), `packages/mcp-contract-calendar/README.md`

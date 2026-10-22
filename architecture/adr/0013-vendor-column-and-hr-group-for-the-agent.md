@@ -1,4 +1,4 @@
-# X. Vendor as a text column and an HR read-only group, owned by the agent's setup script
+# 13. Vendor as a text column and an HR read-only group, owned by the agent's setup script
 
 ## Date: 2026-10-22
 
@@ -54,7 +54,7 @@ contracts. The server reads `Vendor` through its own query (`vendorQuery.ts`, `C
 touched. At merge, the column moves into the main provisioning template (plan 3) and the setup
 script's column step becomes a no-op.
 
-![Data model with the Vendor column and the roles that read it](diagrams/XXXX-vendor-column-and-hr-group-for-the-agent-1.svg)
+![Data model with the Vendor column and the roles that read it](diagrams/0013-vendor-column-and-hr-group-for-the-agent-1.svg)
 
 ```mermaid
 flowchart LR
@@ -134,7 +134,7 @@ A Vendors list stays on the phase 2 list (spec section 9).
 ## Related
 
 - Related ADRs: ADR 0005 (filtering, roles), ADR 0006 (idempotent PnP PowerShell provisioning),
-  `XXXX-html-template-timesheet.md` (same `Vendor` column), `XXXX-custom-mcp-server-in-typescript.md`
+  `0010-html-template-timesheet.md` (same `Vendor` column), `0011-custom-mcp-server-in-typescript.md`
 - Related documents: `docs/superpowers/specs/2026-10-22-contract-agent-design.md` (sections 4 O1 to
   O3, O9, O10; 5 "Vendor column", "Reading vendors and HR without touching shared-core"),
   `architecture/03-phase-c-data-architecture.md`, `packages/agent-contract-calendar/demo/demo-procedure.md`

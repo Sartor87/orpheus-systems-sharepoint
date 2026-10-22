@@ -1,4 +1,4 @@
-# X. Declarative agent with Entra SSO and on-behalf-of to SharePoint
+# 12. Declarative agent with Entra SSO and on-behalf-of to SharePoint
 
 ## Date: 2026-10-22
 
@@ -10,7 +10,7 @@ Proposed
 
 ## Problem
 
-The MCP server (`XXXX-custom-mcp-server-in-typescript.md`) needs a front end that users already
+The MCP server (`0011-custom-mcp-server-in-typescript.md`) needs a front end that users already
 have open, and it has to know who is calling. The web part's model depends on the identity of the
 signed-in user: `deriveRoles` decides contractor, manager or admin from the user's SharePoint id,
 the role filters of ADR 0005 use it, and SharePoint list permissions apply to that user. Whatever
@@ -35,7 +35,7 @@ The server:
    `AllSites.Write`. The provisioning app registration, which has `AllSites.FullControl`, is not
    reused.
 3. Calls SharePoint as that user. `deriveRoles` and the role filters run unchanged; HR is added as
-   membership of a SharePoint group (see `XXXX-vendor-column-and-hr-group-for-the-agent.md`).
+   membership of a SharePoint group (see `0013-vendor-column-and-hr-group-for-the-agent.md`).
 4. On a consent or interaction error from the exchange returns HTTP 401 with
    `WWW-Authenticate: Bearer`, so Copilot shows the sign-in prompt
    ([Entra SSO](https://learn.microsoft.com/microsoft-365/copilot/extensibility/plugin-authentication-entra-sso)).
@@ -43,7 +43,7 @@ The server:
 
 The server never uses app-only access to SharePoint.
 
-![Sequence: user, Copilot, token store, MCP server, Entra on-behalf-of, SharePoint](diagrams/XXXX-declarative-agent-entra-sso-obo-1.svg)
+![Sequence: user, Copilot, token store, MCP server, Entra on-behalf-of, SharePoint](diagrams/0012-declarative-agent-entra-sso-obo-1.svg)
 
 ```mermaid
 sequenceDiagram
@@ -128,8 +128,8 @@ has to be rebuilt from our own log alone.
 
 ## Related
 
-- Related ADRs: ADR 0003, ADR 0005, `XXXX-custom-mcp-server-in-typescript.md`,
-  `XXXX-three-layer-audit-for-agent-actions.md`, `XXXX-dev-tunnel-for-the-agent-demo.md`
+- Related ADRs: ADR 0003, ADR 0005, `0011-custom-mcp-server-in-typescript.md`,
+  `0014-three-layer-audit-for-agent-actions.md`, `0015-dev-tunnel-for-the-agent-demo.md`
 - Related documents: `docs/superpowers/specs/2026-10-22-contract-agent-design.md` (sections 4, 5
   "Identity"), `docs/research/2026-10-22-sharepoint-contract-agent.md` ("Identity and
   permissions", decisions D3 and D4), `packages/agent-contract-calendar/README.md`

@@ -4,12 +4,10 @@ For the owner, to apply when `feat/contract-agent` is merged. Existing ADRs and 
 documents were not edited on this branch, to avoid conflicts with the parallel web part and
 HTML-timesheet sessions. This file lists what each of them should gain.
 
-## New ADRs to number
+## New ADRs
 
-The six ADRs are committed as `architecture/adr/XXXX-<slug>.md` with title `# X. ...` and Status
-`Proposed`. At merge: assign the next free numbers (after the HTML-timesheet ADR, if it is numbered
-first), rename the files and the diagram files in `architecture/adr/diagrams/`, replace `X.` in each
-title, and update the cross-references between them (they refer to each other by file name).
+The six agent ADRs are numbered 0011–0016 in `architecture/adr/` (Status `Proposed` until the live check),
+with their diagrams in `architecture/adr/diagrams/` and rows in `0000-index.md`.
 
 ## Amendments
 

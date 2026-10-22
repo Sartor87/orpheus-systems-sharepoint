@@ -1,4 +1,4 @@
-# X. Azure target: API Management in front of Container Apps, provisioned with Terraform
+# 16. Azure target: API Management in front of Container Apps, provisioned with Terraform
 
 ## Date: 2026-10-22
 
@@ -8,7 +8,7 @@ Proposed
 
 This ADR records the target hosting for a client deployment. **Nothing in it is built in this
 version**: the demo runs the server locally behind a dev tunnel
-(`XXXX-dev-tunnel-for-the-agent-demo.md`).
+(`0015-dev-tunnel-for-the-agent-demo.md`).
 
 ---
 
@@ -56,9 +56,9 @@ environment):
    Vault**, which holds the OBO client secret or, preferably, a certificate. No secret in app
    settings.
 4. **Log Analytics** receives container logs and a **dedicated audit table** for the per-tool-call
-   events (`XXXX-three-layer-audit-for-agent-actions.md`), with its own retention.
+   events (`0014-three-layer-audit-for-agent-actions.md`), with its own retention.
 
-![Deployment view of the Azure target](diagrams/XXXX-azure-target-apim-container-apps-terraform-1.svg)
+![Deployment view of the Azure target](diagrams/0016-azure-target-apim-container-apps-terraform-1.svg)
 
 ```mermaid
 flowchart LR
@@ -142,8 +142,8 @@ From the research's hosting comparison
 
 ## Related
 
-- Related ADRs: `XXXX-custom-mcp-server-in-typescript.md`, `XXXX-declarative-agent-entra-sso-obo.md`,
-  `XXXX-dev-tunnel-for-the-agent-demo.md`, `XXXX-three-layer-audit-for-agent-actions.md`, ADR 0002
+- Related ADRs: `0011-custom-mcp-server-in-typescript.md`, `0012-declarative-agent-entra-sso-obo.md`,
+  `0015-dev-tunnel-for-the-agent-demo.md`, `0014-three-layer-audit-for-agent-actions.md`, ADR 0002
   (Podman, no Node on the host)
 - Related documents: `docs/superpowers/specs/2026-10-22-contract-agent-design.md` (sections 4 O6, 6
   item 4, 9), `docs/research/2026-10-22-sharepoint-contract-agent.md` ("Hosting", decision D5),

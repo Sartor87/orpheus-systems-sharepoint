@@ -1,4 +1,4 @@
-# X. Three-layer audit for agent actions
+# 14. Three-layer audit for agent actions
 
 ## Date: 2026-10-22
 
@@ -50,13 +50,13 @@ Audit in three layers, two of which Microsoft 365 records without any code.
 
    No prompt text and no free text beyond the arguments. In this version the line goes to stdout
    or to the file in `AUDIT_LOG_PATH`. The target is a dedicated Log Analytics table with its own
-   retention (`XXXX-azure-target-apim-container-apps-terraform.md`).
+   retention (`0016-azure-target-apim-container-apps-terraform.md`).
 
 The layers join on user plus time, and on the correlation id if Copilot forwards one. Whether it
 does is checked on the dev tenant with `LOG_REQUEST_HEADERS=true`, which logs the first request's
 headers with credentials redacted.
 
-![Three audit layers joined on user and time](diagrams/XXXX-three-layer-audit-for-agent-actions-1.svg)
+![Three audit layers joined on user and time](diagrams/0014-three-layer-audit-for-agent-actions-1.svg)
 
 ```mermaid
 flowchart TB
@@ -115,8 +115,8 @@ flowchart TB
 
 ## Related
 
-- Related ADRs: `XXXX-declarative-agent-entra-sso-obo.md` (on-behalf-of, actor),
-  `XXXX-azure-target-apim-container-apps-terraform.md` (Log Analytics table)
+- Related ADRs: `0012-declarative-agent-entra-sso-obo.md` (on-behalf-of, actor),
+  `0016-azure-target-apim-container-apps-terraform.md` (Log Analytics table)
 - Related documents: `docs/superpowers/specs/2026-10-22-contract-agent-design.md` (sections 4 D6, 5
   "Logging and evidence", 9), `docs/research/2026-10-22-sharepoint-contract-agent.md` ("Audit: three
   layers, two are free", decision D6), `architecture/10-requirements-management.md`

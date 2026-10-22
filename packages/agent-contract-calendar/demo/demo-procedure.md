@@ -2,7 +2,7 @@
 
 How to run the Contract Calendar agent against a developer tenant: the MCP server runs locally in
 Podman, a dev tunnel exposes it, and the sideloaded declarative agent calls it from Copilot Chat.
-Nothing is deployed to Azure (`architecture/adr/XXXX-dev-tunnel-for-the-agent-demo.md`).
+Nothing is deployed to Azure (`architecture/adr/0015-dev-tunnel-for-the-agent-demo.md`).
 
 Every step that changes the tenant (app registration, consent, group, list data, sideloading) is
 done by or with the owner.
