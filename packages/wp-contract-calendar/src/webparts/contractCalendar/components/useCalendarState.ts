@@ -21,6 +21,11 @@ import { buildTimesheetModel } from '@orpheussystems/shared-ui/timesheet';
 import type { TimesheetModel } from '@orpheussystems/shared-ui/timesheet';
 import { DataContext } from '../DataContext';
 import { timesheetFileName } from './timesheetFileName';
+import { eligibleDates } from './rangeSelection';
+import type { RangeMode } from './rangeSelection';
+
+/** Outcome of one date write as far as the screen is concerned. */
+type WriteOutcome = 'ok' | 'failed' | 'stale';
 
 /** The lazily loaded PDF module; kept out of the main bundle (it pulls in pdfmake). */
 export interface TimesheetPdfModule {
@@ -37,7 +42,16 @@ const defaultLoadPdf = (): Promise<TimesheetPdfModule> =>
 
 export interface CalendarMonth { year: number; month: number }
 
-export interface PendingOverlap { date: DateKey; candidates: Contract[] }
+export interface PendingOverlap {
+  /** Days covered by more than one of the user's contracts, ascending; one day for a single click. */
+  dates: DateKey[];
+  candidates: Contract[];
+  /**
+   * Range only: the rest of the range, held back until the question is answered and then written to the
+   * selected contract (also on cancel). Undefined for a single click.
+   */
+  deferred?: DateKey[];
+}
 
 export interface CalendarState {
   contracts: Contract[];
@@ -66,7 +80,12 @@ export interface CalendarActions {
   selectContract(id: number): void;
   setSelectionType(t: EntryType): void;
   clickDay(date: DateKey): Promise<void>;
-  /** null cancels (dialog dismissed). */
+  /**
+   * Paints the selected type on, or erases it from, every eligible day of `dates` (blocked days are skipped).
+   * Painting days covered by two of the user's contracts asks once through `pendingOverlap`.
+   */
+  applyRange(dates: DateKey[], mode: RangeMode): Promise<void>;
+  /** null cancels (dialog dismissed); for a range the non-overlap days are still written. */
   resolveOverlap(contractId: number | null): Promise<void>; // eslint-disable-line @rushstack/no-new-null
   /** Weekend (when configured), holiday, or outside the selected contract's period. */
   isDayBlocked(date: DateKey): boolean;
@@ -230,8 +249,11 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
    * Optimistic write. Writes to one date are ordered by a token: only the latest write's outcome is shown,
    * and a failure rolls back to the newest server-confirmed value, never to a click-time snapshot.
    * Local state only tracks the selected contract: writing to a sibling moves the date off it.
+   * In a batch the caller reports errors (one summary for the range), so this write leaves `error` alone.
    */
-  const write = React.useCallback(async (contractId: number, date: DateKey, type: EntryType | undefined, current: CalendarEntry | undefined): Promise<void> => {
+  const write = React.useCallback(async (
+    contractId: number, date: DateKey, type: EntryType | undefined, current: CalendarEntry | undefined, batch: boolean = false
+  ): Promise<WriteOutcome> => {
     const shownId = selectedIdRef.current;
     let rec = writes.current[date];
     if (!rec) {
@@ -261,7 +283,7 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
     try {
       const saved = await op;
       const shown: CalendarEntry | undefined = type && contractId === shownId ? saved : undefined;
-      if (!live()) { return; }
+      if (!live()) { return 'stale'; }
       if (token > book.confirmedToken) {
         book.confirmed = shown;
         book.confirmedToken = token;
@@ -269,18 +291,38 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
       if (token === book.latest) {
         book.latestState = 'ok';
         setEntries(prev => withEntry(prev, date, shown));
-        setError(undefined);
-      } else if (book.latestState === 'failed') {
+        if (!batch) { setError(undefined); }
+        return 'ok';
+      }
+      if (book.latestState === 'failed') {
         // The latest write already failed and rolled back; this older success is now the truth.
         setEntries(prev => withEntry(prev, date, book.confirmed));
       }
+      return 'stale';
     } catch (e) {
-      if (!live() || token !== book.latest) { return; }
+      if (!live() || token !== book.latest) { return 'stale'; }
       book.latestState = 'failed';
       setEntries(prev => withEntry(prev, date, book.confirmed));
-      setError(messageOf(e));
+      if (!batch) { setError(messageOf(e)); }
+      return 'failed';
     }
   }, [service]);
+
+  /** Writes several dates at once (each on its own per-date path) and reports failures as one summary. */
+  const writeMany = React.useCallback(async (
+    items: Array<{ contractId: number; date: DateKey; type: EntryType | undefined; current: CalendarEntry | undefined }>
+  ): Promise<void> => {
+    if (items.length === 0) { return; }
+    const shownId = selectedIdRef.current;
+    const outcomes = await Promise.all(items.map(i => write(i.contractId, i.date, i.type, i.current, true)));
+    if (!mounted.current || shownId !== selectedIdRef.current) { return; }
+    const failed = outcomes.filter(o => o === 'failed').length;
+    if (failed > 0) {
+      setError(`${failed} of ${items.length} days could not be saved.`);
+    } else if (outcomes.some(o => o === 'ok')) {
+      setError(undefined);
+    }
+  }, [write]);
 
   const clickDay = React.useCallback(async (date: DateKey): Promise<void> => {
     if (readOnly || !selected || !currentUser || loadedContractId !== selected.id || isDayBlocked(date)) { return; }
@@ -293,19 +335,65 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
     const covering = contractsCoveringDate(mine, date);
     if (covering.length > 1) {
       const candidates = covering.slice().sort((a, b) => compareKeys(a.startDate, b.startDate));
-      setPendingOverlap({ date, candidates });
+      setPendingOverlap({ dates: [date], candidates });
       return;
     }
     await write(selected.id, date, selectionType, existing);
   }, [readOnly, selected, currentUser, loadedContractId, isDayBlocked, entries, selectionType, contracts, write]);
 
+  const applyRange = React.useCallback(async (dates: DateKey[], mode: RangeMode): Promise<void> => {
+    if (readOnly || !selected || !currentUser || loadedContractId !== selected.id) { return; }
+    const days = eligibleDates(dates, isDayBlocked).slice().sort(compareKeys);
+    if (mode === 'erase') {
+      // Same as a single-click clear: only what the shown contract holds; a sibling contract's days are left alone.
+      await writeMany(days
+        .filter(d => entries[d]?.type === selectionType)
+        .map(d => ({ contractId: selected.id, date: d, type: undefined, current: entries[d] })));
+      return;
+    }
+    const targets = days.filter(d => entries[d]?.type !== selectionType);
+    const mine = contracts.filter(c => c.contractor.id === currentUser.id);
+    const overlap: DateKey[] = [];
+    const rest: DateKey[] = [];
+    const candidates: Contract[] = [];
+    for (const d of targets) {
+      const covering = contractsCoveringDate(mine, d);
+      if (covering.length > 1) {
+        overlap.push(d);
+        covering.forEach(c => { if (!candidates.some(x => x.id === c.id)) { candidates.push(c); } });
+      } else {
+        rest.push(d);
+      }
+    }
+    if (overlap.length > 0) {
+      // Nothing is written until the one question is answered.
+      candidates.sort((a, b) => compareKeys(a.startDate, b.startDate));
+      setPendingOverlap({ dates: overlap, candidates, deferred: rest });
+      return;
+    }
+    await writeMany(rest.map(d => ({ contractId: selected.id, date: d, type: selectionType, current: entries[d] })));
+  }, [readOnly, selected, currentUser, loadedContractId, isDayBlocked, entries, selectionType, contracts, writeMany]);
+
   const resolveOverlap = React.useCallback(async (contractId: number | null): Promise<void> => {
     const pending = pendingOverlap;
     setPendingOverlap(undefined);
-    if (!pending || contractId === null) { return; }
-    if (!pending.candidates.some(c => c.id === contractId)) { return; }
-    await write(contractId, pending.date, selectionType, entries[pending.date]);
-  }, [pendingOverlap, selectionType, entries, write]);
+    if (!pending) { return; }
+    const chosen = contractId === null ? undefined : pending.candidates.filter(c => c.id === contractId)[0];
+    if (!pending.deferred) {
+      // Single click: unchanged behaviour (cancel or an unknown id writes nothing).
+      if (chosen) { await write(chosen.id, pending.dates[0], selectionType, entries[pending.dates[0]]); }
+      return;
+    }
+    const shown = selectedRef.current;
+    if (!shown) { return; }
+    const items = pending.deferred.map(d => ({ contractId: shown.id, date: d, type: selectionType, current: entries[d] }));
+    if (chosen) {
+      pending.dates
+        .filter(d => isWithin(d, chosen.startDate, chosen.latestExecutionDate))
+        .forEach(d => items.push({ contractId: chosen.id, date: d, type: selectionType, current: entries[d] }));
+    }
+    await writeMany(items);
+  }, [pendingOverlap, selectionType, entries, write, writeMany]);
 
   const selectContract = React.useCallback((id: number): void => {
     setPendingOverlap(undefined);
@@ -374,6 +462,7 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
     selectContract,
     setSelectionType,
     clickDay,
+    applyRange,
     resolveOverlap,
     isDayBlocked,
     loadError,

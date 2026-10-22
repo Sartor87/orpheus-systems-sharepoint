@@ -85,7 +85,7 @@ describe('useCalendarState', () => {
   it('asks which contract to use on an overlap date and writes to the chosen one', async () => {
     const { result, service } = await loaded(1);
     await act(() => result.current.clickDay('2027-02-05'));
-    expect(result.current.pendingOverlap?.date).toBe('2027-02-05');
+    expect(result.current.pendingOverlap?.dates).toEqual(['2027-02-05']);
     expect(result.current.pendingOverlap?.candidates.map(c => c.id)).toEqual([1, 2]);
     expect(result.current.pendingOverlap?.candidates.map(c => c.title)).toEqual(['001185_2026', '001186_2027']);
     await act(() => result.current.resolveOverlap(2));

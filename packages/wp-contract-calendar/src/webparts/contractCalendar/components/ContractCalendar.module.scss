@@ -384,6 +384,14 @@ fieldset:disabled .choice {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
+  // A drag across days must not start a text selection.
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+// Only while a range is being dragged: a touch drag must not pan the page.
+.dragging {
+  touch-action: none;
 }
 
 .month {
@@ -532,6 +540,13 @@ fieldset:disabled .choice {
 
 .today {
   box-shadow: inset 0 0 0 2px #E0A83A;
+}
+
+// Days inside the range being dragged or extended from the keyboard (nothing is saved until release).
+// Shrunk with an outer halo so it reads differently from the "today" ring.
+.rangePreview {
+  box-shadow: inset 0 0 0 2px #E0A83A, 0 0 0 2px rgba(224, 168, 58, 0.35);
+  transform: scale(0.92);
 }
 
 .timesheetButton {

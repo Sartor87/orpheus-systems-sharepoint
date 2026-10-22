@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { DateKey, EntryType } from '@orpheussystems/shared-core';
 import styles from './ContractCalendar.module.scss';
 import { entryTypeInfo, formatLongDate } from './calendarFormat';
+import type { IDayHandlers } from './useRangeDrag';
 
 export interface IDayCellProps {
   date: DateKey;
@@ -14,7 +15,10 @@ export interface IDayCellProps {
   blockedReason?: string;
   readOnly: boolean;
   isToday: boolean;
-  onClick(date: DateKey): void;
+  /** Inside the range being dragged or extended from the keyboard (blocked days are never marked). */
+  inRange: boolean;
+  /** One stable handler set shared by every cell; not attached for read-only users. */
+  handlers: IDayHandlers;
 }
 
 const TYPE_CLASS: Record<EntryType, string> = {
@@ -24,7 +28,7 @@ const TYPE_CLASS: Record<EntryType, string> = {
   OffSiteHalf: styles.offSiteHalf
 };
 
-const DayCell: React.FC<IDayCellProps> = ({ date, day, type, blocked, outside, blockedReason, readOnly, isToday, onClick }) => {
+const DayCell: React.FC<IDayCellProps> = ({ date, day, type, blocked, outside, blockedReason, readOnly, isToday, inRange, handlers }) => {
   const state = blocked
     ? `blocked${blockedReason ? ': ' + blockedReason : ''}`
     : type ? entryTypeInfo(type).spoken : 'no entry';
@@ -35,9 +39,12 @@ const DayCell: React.FC<IDayCellProps> = ({ date, day, type, blocked, outside, b
     styles.day,
     outside ? styles.outside : blocked ? styles.blocked : type ? TYPE_CLASS[type] : '',
     readOnly && !blocked ? styles.readOnlyDay : '',
-    isToday ? styles.today : ''
+    isToday ? styles.today : '',
+    inRange ? styles.rangePreview : ''
   ].filter(Boolean).join(' ');
 
+  // Blocked days keep the handlers so a drag or Shift+click can start or end on them; the click handler ignores
+  // a plain click on a blocked day.
   return (
     <button
       type="button"
@@ -45,7 +52,11 @@ const DayCell: React.FC<IDayCellProps> = ({ date, day, type, blocked, outside, b
       aria-label={`${formatLongDate(date)}, ${state}${isToday ? ', today' : ''}`}
       aria-disabled={disabled || undefined}
       title={blocked ? blockedReason : undefined}
-      onClick={disabled ? undefined : () => onClick(date)}
+      data-date={date}
+      onClick={readOnly ? undefined : e => handlers.click(date, e)}
+      onPointerDown={readOnly ? undefined : e => handlers.pointerDown(date, e)}
+      onPointerOver={readOnly ? undefined : () => handlers.pointerOver(date)}
+      onKeyDown={readOnly ? undefined : e => handlers.keyDown(date, e)}
     >
       <span className={styles.dayNumber}>{day}</span>
       {half && <span className={styles.halfBadge} aria-hidden="true">½</span>}

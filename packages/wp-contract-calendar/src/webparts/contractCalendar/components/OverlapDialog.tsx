@@ -4,9 +4,16 @@ import type { Contract, DateKey, EntryType } from '@orpheussystems/shared-core';
 import { entryTypeInfo, formatLongDate, formatShortDate } from './calendarFormat';
 
 export interface IOverlapDialogProps {
-  pending?: { date: DateKey; candidates: Contract[] };
+  pending?: { dates: DateKey[]; candidates: Contract[] };
   selectionType: EntryType;
   onResolve(contractId: number | null): void; // eslint-disable-line @rushstack/no-new-null
+}
+
+function question(pending: { dates: DateKey[]; candidates: Contract[] }, selectionType: EntryType): string {
+  if (pending.dates.length === 1) {
+    return `${formatLongDate(pending.dates[0])} falls within more than one of your contracts. Choose where to record the ${entryTypeInfo(selectionType).spoken}.`;
+  }
+  return `Count ${pending.dates.length} days against ${pending.candidates.map(c => c.title).join(' or ')}?`;
 }
 
 const OverlapDialog: React.FC<IOverlapDialogProps> = ({ pending, selectionType, onResolve }) => {
@@ -29,9 +36,7 @@ const OverlapDialog: React.FC<IOverlapDialogProps> = ({ pending, selectionType, 
       dialogContentProps={{
         type: DialogType.normal,
         title: 'Which contract?',
-        subText: pending
-          ? `${formatLongDate(pending.date)} falls within more than one of your contracts. Choose where to record the ${entryTypeInfo(selectionType).spoken}.`
-          : undefined
+        subText: pending ? question(pending, selectionType) : undefined
       }}
       modalProps={{ isBlocking: true }}
       minWidth={360}

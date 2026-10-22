@@ -3,6 +3,7 @@ import { CalendarEntry, Contract, DateKey, daysInMonth, Holiday, isWeekend, isWi
 import styles from './ContractCalendar.module.scss';
 import DayCell from './DayCell';
 import { MONTH_NAMES, WEEKDAY_SHORT } from './calendarFormat';
+import type { IDayHandlers } from './useRangeDrag';
 
 export interface IMonthGridProps {
   year: number;
@@ -14,7 +15,13 @@ export interface IMonthGridProps {
   readOnly: boolean;
   today: DateKey;
   isDayBlocked(date: DateKey): boolean;
-  onDayClick(date: DateKey): void;
+  dayHandlers: IDayHandlers;
+  /**
+   * The part of the previewed range inside this month (strings, so untouched months keep equal props and skip
+   * re-rendering while a drag moves elsewhere).
+   */
+  previewFrom?: DateKey;
+  previewTo?: DateKey;
 }
 
 function blockedReason(date: DateKey, contract: Contract, holidays: Holiday[]): string {
@@ -24,7 +31,9 @@ function blockedReason(date: DateKey, contract: Contract, holidays: Holiday[]): 
   return isWeekend(date) ? 'Weekend' : 'Blocked';
 }
 
-const MonthGrid: React.FC<IMonthGridProps> = ({ year, month, contract, entries, holidays, readOnly, today, isDayBlocked, onDayClick }) => {
+const MonthGrid: React.FC<IMonthGridProps> = ({
+  year, month, contract, entries, holidays, readOnly, today, isDayBlocked, dayHandlers, previewFrom, previewTo
+}) => {
   // Monday-first: Monday = 0 ... Sunday = 6.
   const leading = (new Date(year, month - 1, 1).getDay() + 6) % 7;
   const count = daysInMonth(year, month);
@@ -48,7 +57,8 @@ const MonthGrid: React.FC<IMonthGridProps> = ({ year, month, contract, entries, 
         blockedReason={blocked ? blockedReason(date, contract, holidays) : undefined}
         readOnly={readOnly}
         isToday={date === today}
-        onClick={onDayClick}
+        inRange={!blocked && !!previewFrom && !!previewTo && isWithin(date, previewFrom, previewTo)}
+        handlers={dayHandlers}
       />
     );
   }

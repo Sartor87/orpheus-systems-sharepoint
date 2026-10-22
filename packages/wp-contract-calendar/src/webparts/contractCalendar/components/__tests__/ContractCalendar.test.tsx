@@ -28,6 +28,10 @@ async function flush(): Promise<void> {
 
 const hosts: HTMLDivElement[] = [];
 
+function unmountAll(): void {
+  hosts.splice(0).forEach(h => { ReactDom.unmountComponentAtNode(h); h.remove(); });
+}
+
 async function mount(demoUserId: number, service: IDataService = new LocalDataService({ demoUserId })): Promise<{ host: HTMLDivElement; service: IDataService }> {
   const host = document.createElement('div');
   document.body.appendChild(host);
@@ -58,7 +62,7 @@ describe('ContractCalendar', () => {
   });
   afterAll(() => { jest.useRealTimers(); });
   afterEach(() => {
-    hosts.splice(0).forEach(h => { ReactDom.unmountComponentAtNode(h); h.remove(); });
+    unmountAll();
   });
 
   it('renders the header metadata and Monday-first months from the current month', async () => {
@@ -130,5 +134,175 @@ describe('ContractCalendar', () => {
     const legend = Array.from(host.querySelectorAll('span')).filter(sp => sp.textContent === 'Weekend / holiday (blocked)');
     expect(legend).toHaveLength(1);
     expect(legend[0].parentElement?.contains(hint[0])).toBe(false);
+  });
+});
+
+const PointerCtor: typeof MouseEvent = typeof window.PointerEvent === 'function' ? window.PointerEvent : MouseEvent;
+
+/** React 17 derives no enter events from synthetic dispatches, so the drag listens to pointerover. */
+function pointer(el: Element, type: 'pointerdown' | 'pointerover' | 'pointerup', init: MouseEventInit = {}): void {
+  el.dispatchEvent(new PointerCtor(type, { bubbles: true, cancelable: true, button: 0, ...init }));
+}
+
+function key(el: Element, k: string, init: KeyboardEventInit = {}): void {
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...init }));
+}
+
+function shiftClick(el: Element): void {
+  el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true }));
+}
+
+async function stored(service: ControlledService, from: string, to: string, contractId: number = 1): Promise<string[]> {
+  return (await service.inner.getEntries(contractId, from, to)).map(e => e.date);
+}
+
+describe('ContractCalendar range selection', () => {
+  beforeAll(() => {
+    setIconOptions({ disableWarnings: true });
+    jest.useFakeTimers({ now: new Date(2026, 9, 22, 12), advanceTimers: true });
+  });
+  afterAll(() => { jest.useRealTimers(); });
+  afterEach(() => {
+    unmountAll();
+  });
+
+  it('drags across month cards, previews the range and paints the eligible days on release', async () => {
+    const service = new ControlledService(1);
+    const { host } = await mount(1, service);
+    await act(async () => { pointer(day(host, 'Friday 27 November 2026'), 'pointerdown'); });
+    await act(async () => { pointer(day(host, 'Monday 30 November 2026'), 'pointerover'); });
+    await act(async () => { pointer(day(host, 'Wednesday 2 December 2026'), 'pointerover'); });
+    expect(day(host, 'Tuesday 1 December 2026').className).toContain('rangePreview');
+    expect(day(host, 'Saturday 28 November 2026').className).not.toContain('rangePreview');
+    expect(day(host, 'Thursday 3 December 2026').className).not.toContain('rangePreview');
+    expect(service.calls.upsertEntry).toBe(0);
+
+    await act(async () => { pointer(day(host, 'Wednesday 2 December 2026'), 'pointerup'); });
+    await flush();
+    expect(service.calls.upsertEntry).toBe(4);
+    expect(await stored(service, '2026-11-27', '2026-12-02')).toEqual(['2026-11-27', '2026-11-30', '2026-12-01', '2026-12-02']);
+    expect(day(host, 'Tuesday 1 December 2026').className).not.toContain('rangePreview');
+    expect(day(host, 'Tuesday 1 December 2026').getAttribute('aria-label')).toBe('Tuesday 1 December 2026, off-site full day');
+  });
+
+  it('commits the current range when the pointer is released outside the grid', async () => {
+    const service = new ControlledService(1);
+    const { host } = await mount(1, service);
+    await act(async () => { pointer(day(host, 'Monday 9 November 2026'), 'pointerdown'); });
+    await act(async () => { pointer(day(host, 'Tuesday 10 November 2026'), 'pointerover'); });
+    await act(async () => { pointer(document.body, 'pointerup'); });
+    await flush();
+    expect(await stored(service, '2026-11-09', '2026-11-10')).toEqual(['2026-11-09', '2026-11-10']);
+  });
+
+  it('erases when the drag starts on a day holding the selected type', async () => {
+    const service = new ControlledService(1);
+    await service.inner.upsertEntry({ contractId: 1, date: '2026-11-03', type: 'OffSiteFull' });
+    await service.inner.upsertEntry({ contractId: 1, date: '2026-11-05', type: 'OffSiteFull' });
+    const { host } = await mount(1, service);
+    await act(async () => { pointer(day(host, 'Tuesday 3 November 2026'), 'pointerdown'); });
+    await act(async () => { pointer(day(host, 'Thursday 5 November 2026'), 'pointerover'); });
+    await act(async () => { pointer(day(host, 'Thursday 5 November 2026'), 'pointerup'); });
+    await flush();
+    expect(service.calls.upsertEntry).toBe(0);
+    expect(await stored(service, '2026-11-03', '2026-11-05')).toEqual([]);
+  });
+
+  it('cancels the drag on Escape without writing', async () => {
+    const service = new ControlledService(1);
+    const { host } = await mount(1, service);
+    await act(async () => { pointer(day(host, 'Tuesday 3 November 2026'), 'pointerdown'); });
+    await act(async () => { pointer(day(host, 'Friday 6 November 2026'), 'pointerover'); });
+    expect(day(host, 'Thursday 5 November 2026').className).toContain('rangePreview');
+    await act(async () => { key(document.body, 'Escape'); });
+    expect(day(host, 'Thursday 5 November 2026').className).not.toContain('rangePreview');
+    await act(async () => { pointer(day(host, 'Friday 6 November 2026'), 'pointerup'); });
+    await flush();
+    expect(service.calls.upsertEntry + service.calls.deleteEntry).toBe(0);
+  });
+
+  it('treats press and release on one day as a click, and swallows the click after a drag back to the anchor', async () => {
+    const service = new ControlledService(1);
+    const { host } = await mount(1, service);
+    const tue = day(host, 'Tuesday 3 November 2026');
+    await act(async () => { pointer(tue, 'pointerdown'); pointer(tue, 'pointerup'); tue.click(); });
+    await flush();
+    expect(await stored(service, '2026-11-03', '2026-11-03')).toEqual(['2026-11-03']);
+
+    const wed = day(host, 'Wednesday 4 November 2026');
+    await act(async () => { pointer(wed, 'pointerdown'); });
+    await act(async () => { pointer(day(host, 'Thursday 5 November 2026'), 'pointerover'); });
+    await act(async () => { pointer(wed, 'pointerover'); });
+    await act(async () => { pointer(wed, 'pointerup'); wed.click(); });
+    await flush();
+    expect(service.calls.upsertEntry).toBe(2);
+    expect(service.calls.deleteEntry).toBe(0);
+    expect(await stored(service, '2026-11-03', '2026-11-05')).toEqual(['2026-11-03', '2026-11-04']);
+  });
+
+  it('commits the range from the anchor on Shift+click, painting because the anchor click painted', async () => {
+    const service = new ControlledService(1);
+    const { host } = await mount(1, service);
+    await act(async () => { day(host, 'Tuesday 3 November 2026').click(); });
+    await flush();
+    await act(async () => { shiftClick(day(host, 'Tuesday 10 November 2026')); });
+    await flush();
+    expect(await stored(service, '2026-11-01', '2026-11-30')).toEqual([
+      '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-09', '2026-11-10'
+    ]);
+  });
+
+  it('extends a pending range with Shift+Arrow and commits it with Enter', async () => {
+    const service = new ControlledService(1);
+    const { host } = await mount(1, service);
+    const tue = day(host, 'Tuesday 3 November 2026');
+    tue.focus();
+    await act(async () => { key(tue, 'ArrowRight', { shiftKey: true }); });
+    await act(async () => { key(document.activeElement as Element, 'ArrowDown', { shiftKey: true }); });
+    expect(document.activeElement).toBe(day(host, 'Wednesday 11 November 2026'));
+    expect(day(host, 'Monday 9 November 2026').className).toContain('rangePreview');
+    expect(service.calls.upsertEntry).toBe(0);
+    await act(async () => { key(document.activeElement as Element, 'Enter'); });
+    await flush();
+    expect(await stored(service, '2026-11-01', '2026-11-30')).toEqual([
+      '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-09', '2026-11-10', '2026-11-11'
+    ]);
+  });
+
+  it('cancels a keyboard range with Escape', async () => {
+    const service = new ControlledService(1);
+    const { host } = await mount(1, service);
+    const tue = day(host, 'Tuesday 3 November 2026');
+    tue.focus();
+    await act(async () => { key(tue, 'ArrowRight', { shiftKey: true }); });
+    expect(day(host, 'Wednesday 4 November 2026').className).toContain('rangePreview');
+    await act(async () => { key(document.activeElement as Element, 'Escape'); });
+    expect(day(host, 'Wednesday 4 November 2026').className).not.toContain('rangePreview');
+    await act(async () => { key(document.activeElement as Element, 'Enter'); });
+    await flush();
+    expect(service.calls.upsertEntry).toBe(0);
+  });
+
+  it('asks once about the overlap days of a dragged range', async () => {
+    const service = new ControlledService(1);
+    const { host } = await mount(1, service);
+    await act(async () => { pointer(day(host, 'Thursday 28 January 2027'), 'pointerdown'); });
+    await act(async () => { pointer(day(host, 'Wednesday 3 February 2027'), 'pointerover'); });
+    await act(async () => { pointer(day(host, 'Wednesday 3 February 2027'), 'pointerup'); });
+    await flush();
+    expect(document.body.textContent).toContain('Count 3 days against 001185_2026 or 001186_2027?');
+    expect(service.calls.upsertEntry).toBe(0);
+  });
+
+  it('ignores drags and Shift+click for a read-only user', async () => {
+    const service = new ControlledService(3);
+    const { host } = await mount(3, service);
+    await act(async () => { pointer(day(host, 'Tuesday 3 November 2026'), 'pointerdown'); });
+    await act(async () => { pointer(day(host, 'Friday 6 November 2026'), 'pointerover'); });
+    expect(day(host, 'Thursday 5 November 2026').className).not.toContain('rangePreview');
+    await act(async () => { pointer(day(host, 'Friday 6 November 2026'), 'pointerup'); });
+    await act(async () => { shiftClick(day(host, 'Friday 6 November 2026')); });
+    await flush();
+    expect(service.calls.upsertEntry + service.calls.deleteEntry).toBe(0);
   });
 });

@@ -56,6 +56,7 @@ const SelectionTypePicker: React.FC<ISelectionTypePickerProps> = ({ value, disab
         <span>Weekend / holiday (blocked)</span>
       </div>
       <p className={styles.hint}>Click a marked day again with the same type to clear it.</p>
+      <p className={styles.hint}>Drag across days, or Shift+click, to mark or clear a whole range.</p>
     </fieldset>
   );
 };

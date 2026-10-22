@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { createTheme, MessageBar, MessageBarButton, MessageBarType, Spinner, SpinnerSize, ThemeProvider } from '@fluentui/react';
 import { orpheusTokens } from '@orpheussystems/shared-ui/tokens';
+import { compareKeys, toDateKey } from '@orpheussystems/shared-core';
 import styles from './ContractCalendar.module.scss';
 import type { IContractCalendarProps } from './IContractCalendarProps';
 import { useCalendarState } from './useCalendarState';
@@ -10,6 +11,18 @@ import StatsPanel from './StatsPanel';
 import MonthGrid from './MonthGrid';
 import OverlapDialog from './OverlapDialog';
 import TimesheetDialog from './TimesheetDialog';
+import { useRangeDrag } from './useRangeDrag';
+import type { RangePreview } from './useRangeDrag';
+import { rangeMode } from './rangeSelection';
+
+/** The part of the preview inside one month, or undefined when they do not meet. */
+function clipToMonth(preview: RangePreview, year: number, month: number): RangePreview | undefined {
+  const first = toDateKey(new Date(year, month - 1, 1));
+  const last = toDateKey(new Date(year, month, 0));
+  const from = compareKeys(preview.from, first) > 0 ? preview.from : first;
+  const to = compareKeys(preview.to, last) < 0 ? preview.to : last;
+  return compareKeys(from, to) <= 0 ? { from, to } : undefined;
+}
 
 /** Fluent controls inside the header card follow the Orpheus dark palette. */
 const orpheusDark = createTheme({
@@ -46,6 +59,16 @@ const ContractCalendar: React.FC<IContractCalendarProps> = () => {
   const state = useCalendarState();
   const { selected, readOnly } = state;
   const [timesheetOpen, setTimesheetOpen] = React.useState(false);
+  const monthsRef = React.useRef<HTMLDivElement>(null);
+  const range = useRangeDrag({
+    enabled: !readOnly && !state.loading && !state.loadError,
+    rootRef: monthsRef,
+    isDayBlocked: state.isDayBlocked,
+    modeAt: date => rangeMode(state.entries[date]?.type, state.selectionType),
+    onClick: date => { state.clickDay(date).catch(() => undefined); },
+    onRange: (dates, mode) => { state.applyRange(dates, mode).catch(() => undefined); }
+  });
+  const preview = range.preview;
 
   const rootStyle = {
     '--orpheus-amber': orpheusTokens.amber,
@@ -112,21 +135,26 @@ const ContractCalendar: React.FC<IContractCalendarProps> = () => {
       )}
 
       {!state.loading && selected && !state.loadError && (
-        <div className={styles.months}>
-          {state.months.map(m => (
-            <MonthGrid
-              key={`${m.year}-${m.month}`}
-              year={m.year}
-              month={m.month}
-              contract={selected}
-              entries={state.entries}
-              holidays={state.holidays}
-              readOnly={readOnly}
-              today={state.today}
-              isDayBlocked={state.isDayBlocked}
-              onDayClick={state.clickDay}
-            />
-          ))}
+        <div ref={monthsRef} className={range.dragging ? `${styles.months} ${styles.dragging}` : styles.months}>
+          {state.months.map(m => {
+            const clipped = preview && clipToMonth(preview, m.year, m.month);
+            return (
+              <MonthGrid
+                key={`${m.year}-${m.month}`}
+                year={m.year}
+                month={m.month}
+                contract={selected}
+                entries={state.entries}
+                holidays={state.holidays}
+                readOnly={readOnly}
+                today={state.today}
+                isDayBlocked={state.isDayBlocked}
+                dayHandlers={range.handlers}
+                previewFrom={clipped?.from}
+                previewTo={clipped?.to}
+              />
+            );
+          })}
         </div>
       )}
 
