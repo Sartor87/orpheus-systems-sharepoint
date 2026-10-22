@@ -9,6 +9,7 @@ import SelectionTypePicker from './SelectionTypePicker';
 import StatsPanel from './StatsPanel';
 import MonthGrid from './MonthGrid';
 import OverlapDialog from './OverlapDialog';
+import TimesheetDialog from './TimesheetDialog';
 
 /** Fluent controls inside the header card follow the Orpheus dark palette. */
 const orpheusDark = createTheme({
@@ -44,6 +45,7 @@ const orpheusDark = createTheme({
 const ContractCalendar: React.FC<IContractCalendarProps> = () => {
   const state = useCalendarState();
   const { selected, readOnly } = state;
+  const [timesheetOpen, setTimesheetOpen] = React.useState(false);
 
   const rootStyle = {
     '--orpheus-amber': orpheusTokens.amber,
@@ -64,6 +66,7 @@ const ContractCalendar: React.FC<IContractCalendarProps> = () => {
           currentUser={state.currentUser}
           readOnly={readOnly}
           onSelect={state.selectContract}
+          onGenerateTimesheet={() => setTimesheetOpen(true)}
         />
         {selected && (
           <div className={styles.headerBottom}>
@@ -128,6 +131,15 @@ const ContractCalendar: React.FC<IContractCalendarProps> = () => {
       )}
 
       <OverlapDialog pending={state.pendingOverlap} selectionType={state.selectionType} onResolve={state.resolveOverlap} />
+      {timesheetOpen && selected && (
+        <TimesheetDialog
+          key={selected.id}
+          contract={selected}
+          generating={state.generating}
+          onGenerate={state.generateTimesheet}
+          onDismiss={() => setTimesheetOpen(false)}
+        />
+      )}
     </section>
   );
 };

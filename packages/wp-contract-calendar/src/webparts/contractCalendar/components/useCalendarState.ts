@@ -17,7 +17,23 @@ import {
   Totals,
   UserInfo
 } from '@orpheussystems/shared-core';
+import { buildTimesheetModel } from '@orpheussystems/shared-ui/timesheet';
+import type { TimesheetModel } from '@orpheussystems/shared-ui/timesheet';
 import { DataContext } from '../DataContext';
+import { timesheetFileName } from './timesheetFileName';
+
+/** The lazily loaded PDF module; kept out of the main bundle (it pulls in pdfmake). */
+export interface TimesheetPdfModule {
+  downloadTimesheet(model: TimesheetModel, fileName: string): Promise<void>;
+}
+
+export interface CalendarStateOptions {
+  /** Test seam: replaces the dynamic import of the PDF module. */
+  loadPdf?: () => Promise<TimesheetPdfModule>;
+}
+
+const defaultLoadPdf = (): Promise<TimesheetPdfModule> =>
+  import(/* webpackChunkName: 'orpheus-timesheet-pdf' */ '@orpheussystems/shared-ui/pdf');
 
 export interface CalendarMonth { year: number; month: number }
 
@@ -41,6 +57,7 @@ export interface CalendarState {
   loadError?: string;
   currentUser?: UserInfo;
   today: DateKey;
+  generating: boolean;
 }
 
 export interface CalendarActions {
@@ -53,6 +70,8 @@ export interface CalendarActions {
   isDayBlocked(date: DateKey): boolean;
   retryLoad(): void;
   dismissError(): void;
+  /** Fetches the whole period (not just the shown months) and downloads the PDF. Errors surface through `error`. */
+  generateTimesheet(period: { from: DateKey; to: DateKey }): Promise<boolean>;
 }
 
 const MAX_MONTHS = 12;
@@ -100,7 +119,7 @@ function withEntry(entries: Record<DateKey, CalendarEntry>, date: DateKey, entry
   return next;
 }
 
-export function useCalendarState(): CalendarState & CalendarActions {
+export function useCalendarState(options: CalendarStateOptions = {}): CalendarState & CalendarActions {
   const { service, props } = React.useContext(DataContext);
   const today = toDateKey(new Date());
 
@@ -116,6 +135,9 @@ export function useCalendarState(): CalendarState & CalendarActions {
   const [loadedContractId, setLoadedContractId] = React.useState<number | undefined>();
   const [loadError, setLoadError] = React.useState<string | undefined>();
   const [reloadNonce, setReloadNonce] = React.useState(0);
+  const [generating, setGenerating] = React.useState(false);
+  const loadPdfRef = React.useRef(options.loadPdf || defaultLoadPdf);
+  loadPdfRef.current = options.loadPdf || defaultLoadPdf;
 
   // Async callbacks compare against the latest selection, not the one captured at click time.
   const selectedIdRef = React.useRef<number | undefined>(selectedId);
@@ -296,7 +318,35 @@ export function useCalendarState(): CalendarState & CalendarActions {
   const retryLoad = React.useCallback((): void => { setReloadNonce(n => n + 1); }, []);
   const dismissError = React.useCallback((): void => { setError(undefined); }, []);
 
+  const generateTimesheet = React.useCallback(async (period: { from: DateKey; to: DateKey }): Promise<boolean> => {
+    const contract = selectedRef.current;
+    if (!contract) { return false; }
+    setGenerating(true);
+    try {
+      // Straight from the service, not the cached display data. getHolidays already merges the '*' (all countries) rows.
+      const [list, hols] = await Promise.all([
+        service.getEntries(contract.id, period.from, period.to),
+        service.getHolidays(contract.country, period.from, period.to)
+      ]);
+      const model = buildTimesheetModel(contract, list, hols, period, {
+        approvingOrg: props.approvingOrgLabel || 'Client approval',
+        serviceProvider: props.serviceProviderLabel || 'Service provider'
+      });
+      const pdf = await loadPdfRef.current();
+      await pdf.downloadTimesheet(model, timesheetFileName(contract, period.from, period.to));
+      if (mounted.current) { setError(undefined); }
+      return true;
+    } catch (e) {
+      if (mounted.current) { setError(`Could not generate the timesheet: ${messageOf(e)}`); }
+      return false;
+    } finally {
+      if (mounted.current) { setGenerating(false); }
+    }
+  }, [service, props.approvingOrgLabel, props.serviceProviderLabel]);
+
   return {
+    generating,
+    generateTimesheet,
     contracts,
     selected,
     entries: visibleEntries,

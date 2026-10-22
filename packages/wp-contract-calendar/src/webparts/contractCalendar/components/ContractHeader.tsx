@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { Dropdown, IDropdownOption } from '@fluentui/react';
+import { Dropdown, IDropdownOption, PrimaryButton } from '@fluentui/react';
 import type { Contract, UserInfo } from '@orpheussystems/shared-core';
 import styles from './ContractCalendar.module.scss';
 import { formatShortDate } from './calendarFormat';
+import { amberButtonStyles } from './TimesheetDialog';
 
 export interface IContractHeaderProps {
   contracts: Contract[];
@@ -10,6 +11,7 @@ export interface IContractHeaderProps {
   currentUser?: UserInfo;
   readOnly: boolean;
   onSelect(id: number): void;
+  onGenerateTimesheet(): void;
 }
 
 /** Metadata in the timesheet PDF header order. */
@@ -24,7 +26,7 @@ function metadata(c: Contract): Array<{ label: string; value: string }> {
   ];
 }
 
-const ContractHeader: React.FC<IContractHeaderProps> = ({ contracts, selected, currentUser, readOnly, onSelect }) => {
+const ContractHeader: React.FC<IContractHeaderProps> = ({ contracts, selected, currentUser, readOnly, onSelect, onGenerateTimesheet }) => {
   // Show whose contract it is when the list is not just the user's own.
   const showContractor = contracts.some(c => !currentUser || c.contractor.id !== currentUser.id);
   const options: IDropdownOption[] = contracts.map(c => ({
@@ -52,6 +54,15 @@ const ContractHeader: React.FC<IContractHeaderProps> = ({ contracts, selected, c
         disabled={contracts.length === 0}
         onChange={(_, o) => o && onSelect(o.key as number)}
       />
+      {selected && (
+        <PrimaryButton
+          className={styles.timesheetButton}
+          text="Generate timesheet"
+          iconProps={{ iconName: 'PDF' }}
+          styles={amberButtonStyles}
+          onClick={onGenerateTimesheet}
+        />
+      )}
       {selected && (
         <dl className={styles.metaStrip}>
           {metadata(selected).map(m => (

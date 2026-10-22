@@ -445,3 +445,19 @@ $surfaceBorder: #E3E6EA;
 .today {
   box-shadow: inset 0 0 0 2px #E0A83A;
 }
+
+.timesheetButton {
+  justify-self: end;
+}
+
+.timesheetFields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.timesheetInvalid {
+  margin-top: 8px;
+  color: #a4262c;
+  font-size: 12px;
+}
