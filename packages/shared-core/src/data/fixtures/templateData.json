@@ -1,0 +1,12 @@
+{
+  "1": {
+    "position": "Senior Solution Architect",
+    "vendor": "Example Services Ltd",
+    "lot": "Lot 1",
+    "approverName": "Jane Example",
+    "custom": {
+      "footnote1": "1 day equals 8 hours. Blue: on-site hours. Yellow: off-site hours.",
+      "footnote2": "Hours are recorded in the contract calendar."
+    }
+  }
+}
