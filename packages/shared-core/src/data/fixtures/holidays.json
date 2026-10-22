@@ -1,0 +1,16 @@
+[
+  { "id": 1, "title": "New Year", "date": "2026-01-01", "country": "BG", "source": "Manual" },
+  { "id": 2, "title": "Liberation Day", "date": "2026-03-03", "country": "BG", "source": "Manual" },
+  { "id": 3, "title": "Orthodox Good Friday", "date": "2026-04-10", "country": "BG", "source": "Manual" },
+  { "id": 4, "title": "Orthodox Easter Monday", "date": "2026-04-13", "country": "BG", "source": "Manual" },
+  { "id": 5, "title": "Labour Day", "date": "2026-05-01", "country": "BG", "source": "Manual" },
+  { "id": 6, "title": "St George's Day", "date": "2026-05-06", "country": "BG", "source": "Manual" },
+  { "id": 7, "title": "Culture and Literacy Day", "date": "2026-05-24", "country": "BG", "source": "Manual" },
+  { "id": 8, "title": "Unification Day", "date": "2026-09-06", "country": "BG", "source": "Manual" },
+  { "id": 14, "title": "Unification Day (day off)", "date": "2026-09-07", "country": "BG", "source": "Manual" },
+  { "id": 9, "title": "Independence Day", "date": "2026-09-22", "country": "BG", "source": "Manual" },
+  { "id": 10, "title": "Christmas Eve", "date": "2026-12-24", "country": "BG", "source": "Manual" },
+  { "id": 11, "title": "Christmas Day", "date": "2026-12-25", "country": "BG", "source": "Manual" },
+  { "id": 12, "title": "Second day of Christmas", "date": "2026-12-26", "country": "BG", "source": "Manual" },
+  { "id": 13, "title": "New Year", "date": "2027-01-01", "country": "*", "source": "Manual" }
+]
