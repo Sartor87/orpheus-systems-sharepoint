@@ -10,7 +10,8 @@
     the site columns and the content types "Orpheus Contract", "Orpheus Calendar Entry" and
     "Orpheus Holiday" (group "Orpheus Systems"), and the lists Contracts, CalendarEntries and
     Holidays with their indexes. After the template it makes sure every column the web part
-    filters on is indexed.
+    filters on is indexed, and sets the Contracts list validation (latest execution date on or
+    after the start date). The validation step is non-fatal: a failure prints a warning.
 
     The script is idempotent: running it again leaves an already provisioned site unchanged.
     Before the template is applied, a pre-flight check stops the run if a column the template
@@ -88,6 +89,9 @@ $Invariant = [System.Globalization.CultureInfo]::InvariantCulture
 # Built-in "Start Date" site column, reused by the Orpheus Contract content type (see template.xml).
 $BuiltInFields = @{ StartDate = '64cd368d-2f95-4bfc-a1f9-8d4324ecb007' }
 
+# Contracts list validation, set after the template (formula built from the columns' display names).
+$ContractValidationMessage = 'Latest execution date must be on or after the start date.'
+
 # Columns the web part filters on; enforced as indexed after the template is applied.
 $IndexedColumns = [ordered]@{
     Contracts       = @('ContractCode', 'Contractor', 'ContractManager', 'Status')
@@ -157,6 +161,9 @@ function Show-TemplateSummary {
         Write-Host "    $($l.Title) -> $($l.Url) (template $($l.TemplateType)); content type: $($l.ContentTypes -join ', ')$listFields"
         Write-Host "      indexed: $($IndexedColumns[$l.Title] -join ', ')"
         Write-Host "      default view: $($l.ViewFields -join ', ')"
+        if ($l.Title -eq 'Contracts') {
+            Write-Host "      validation (post-step, non-fatal): =[<LatestExecutionDate title>]>=[<StartDate title>], message '$ContractValidationMessage'"
+        }
     }
 }
 
@@ -354,6 +361,29 @@ function Set-RequiredIndexes {
     }
 }
 
+function Set-ContractDateValidation {
+    # List validation formulas reference columns by display name, so the formula is built from the
+    # current titles of StartDate and LatestExecutionDate. Set-PnPList has no validation parameters,
+    # so the list is updated through REST. Non-fatal: a failure is reported and the run continues.
+    try {
+        $start = Get-PnPField -List 'Contracts' -Identity 'StartDate'
+        $latest = Get-PnPField -List 'Contracts' -Identity 'LatestExecutionDate'
+        $formula = "=[$($latest.Title)]>=[$($start.Title)]"
+        $current = Invoke-SpRest -Url "/_api/web/lists/getbytitle('Contracts')?`$select=ValidationFormula,ValidationMessage"
+        if ([string] $current.ValidationFormula -ceq $formula -and [string] $current.ValidationMessage -ceq $ContractValidationMessage) {
+            Add-Count 'Contracts validation unchanged'
+            return
+        }
+        $null = Invoke-SpRest -Method Merge -Url "/_api/web/lists/getbytitle('Contracts')" -Body ([ordered]@{ ValidationFormula = $formula; ValidationMessage = $ContractValidationMessage })
+        Write-Host "  Contracts validation set: $formula"
+        Add-Count 'Contracts validation set'
+    }
+    catch {
+        Write-Warning "Could not set the Contracts list validation ($($_.Exception.Message)). Set it by hand: List settings > Validation settings."
+        Add-Count 'Contracts validation failed'
+    }
+}
+
 function Invoke-DemoSeed {
     param($Fixtures)
     $me = Invoke-SpRest -Url '/_api/web/currentuser?$select=Id,Title,Email'
@@ -467,6 +497,9 @@ try {
 
     Write-Host 'Checking indexes ...' -ForegroundColor Cyan
     Set-RequiredIndexes
+
+    Write-Host 'Checking Contracts list validation ...' -ForegroundColor Cyan
+    Set-ContractDateValidation
 
     if ($SeedDemoData) { Invoke-DemoSeed -Fixtures $fixtures }
     $completed = $true

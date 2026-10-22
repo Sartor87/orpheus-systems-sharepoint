@@ -65,8 +65,15 @@ and must never be regenerated.
 | `CalendarEntries` | `Orpheus Calendar Entry` | Title, Contract (lookup to Contracts.Title), EntryDate, EntryType (OnSiteFull/OnSiteHalf/OffSiteFull/OffSiteHalf), Note | Contract, EntryDate |
 | `Holidays` | `Orpheus Holiday` | Title, HolidayDate, Country (`*` means all countries), Source (Manual/Agent, default Manual) | HolidayDate |
 
-The Contracts list validates every item with `=[LatestExecutionDate]>=[StartDate]`:
-"Latest execution date must be on or after the start date."
+After the template, the script sets the Contracts list validation "Latest execution date
+must be on or after the start date." List validation formulas name columns by their
+**display** name, so the script builds the formula from the current titles of the two
+columns, for example `=[Latest execution date]>=[Start Date]`, and sets it through REST.
+`Set-PnPList` has no validation parameters
+([Set-PnPList](https://pnp.github.io/powershell/cmdlets/Set-PnPList.html)). The step is
+skipped when the formula and message are already in place. If it fails, the script prints
+a warning and carries on, and the summary shows `Contracts validation failed`. You can then
+set it by hand in *List settings → Validation settings*.
 
 Three columns are not Orpheus site columns:
 

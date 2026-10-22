@@ -16,6 +16,10 @@
     - Status: defined as a list-level column on Contracts (the built-in "Task Status" site
       column uses the internal name Status and has different choices).
   The Contract lookup is list-level on CalendarEntries because it targets the Contracts list.
+
+  The Contracts list validation (LatestExecutionDate >= StartDate) is NOT in this template: list
+  validation formulas use column display names, and a wrong name would abort the whole apply.
+  Provision-OrpheusSite.ps1 sets it as a separate, non-fatal step after the template.
 -->
 <pnp:Provisioning xmlns:pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema">
   <pnp:Templates ID="ORPHEUS-TEMPLATES">
@@ -110,7 +114,7 @@
 
       <pnp:Lists>
         <!-- Contracts first: the CalendarEntries lookup resolves {listid:Contracts}. -->
-        <pnp:ListInstance Title="Contracts" Description="Specific contracts of the contractors." TemplateType="100" Url="Lists/Contracts" OnQuickLaunch="true" EnableVersioning="true" MaxVersionLimit="50" ContentTypesEnabled="true" RemoveExistingContentTypes="true" EnableAttachments="false" EnableFolderCreation="false" ValidationFormula="=[LatestExecutionDate]&gt;=[StartDate]" ValidationMessage="Latest execution date must be on or after the start date.">
+        <pnp:ListInstance Title="Contracts" Description="Specific contracts of the contractors." TemplateType="100" Url="Lists/Contracts" OnQuickLaunch="true" EnableVersioning="true" MaxVersionLimit="50" ContentTypesEnabled="true" RemoveExistingContentTypes="true" EnableAttachments="false" EnableFolderCreation="false">
           <pnp:ContentTypeBindings>
             <pnp:ContentTypeBinding ContentTypeID="0x0100514116295A2F4DD1A93519F365EB8AAF" Default="true" />
           </pnp:ContentTypeBindings>
