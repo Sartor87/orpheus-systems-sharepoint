@@ -1,4 +1,4 @@
-import type { Contract, Role, UserRef } from '@orpheussystems/shared-core';
+import type { Contract, DateKey, IDataService, Role, UserRef } from '@orpheussystems/shared-core';
 
 export type AgentRole = Role | 'HR';
 
@@ -22,4 +22,11 @@ export interface ContractQuery {
 export interface IContractDirectory {
   listVisible(viewer: Viewer, q: ContractQuery): Promise<VendorContract[]>;
   managersVisibleTo(viewer: Viewer): Promise<UserRef[]>;
+}
+
+export interface ToolContext {
+  viewer: Viewer;
+  data: IDataService;
+  directory: IContractDirectory;
+  today: DateKey;
 }
