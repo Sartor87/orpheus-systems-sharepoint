@@ -33,16 +33,15 @@ describe('declarative agent package', () => {
     for (const f of jsonFiles) expect(() => readJson(f)).not.toThrow();
   });
 
-  it('references only tools the MCP server exposes, and all of them', () => {
+  it('mentions only tools the MCP server exposes (dynamic discovery: none is fine)', () => {
     const names = referencedTools(readJson('ai-plugin.json'));
-    expect(names.length).toBeGreaterThan(0);
     for (const n of names) expect(TOOL_NAMES as readonly string[]).toContain(n);
-    expect(new Set(names)).toEqual(new Set(TOOL_NAMES));
   });
 
-  it('uses the Entra SSO plugin vault with a placeholder reference id', () => {
+  it('declares the MCP runtime with the server URL placeholder and Entra SSO', () => {
     const plugin: any = readJson('ai-plugin.json');
     const rt = plugin.runtimes.find((r: any) => r.type === 'RemoteMCPServer');
+    expect(rt).toBeDefined();
     expect(rt.spec.url).toBe('${{MCP_SERVER_URL}}');
     expect(rt.auth).toEqual({ type: 'OAuthPluginVault', reference_id: '${{MCP_AUTH_REFERENCE_ID}}' });
   });

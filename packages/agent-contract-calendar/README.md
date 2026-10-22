@@ -29,9 +29,9 @@ Declarative Microsoft 365 Copilot agent ("Contract Calendar") whose single actio
 3. Add the registration's Application ID URI to `identifierUris` of the Entra app, add the `oAuthConsentRedirect` redirect URI under Web authentication, and pre-authorize the Microsoft Enterprise token store client application under Expose an API (see the Learn page below for the exact values).
 4. Make sure the server accepts the new Application ID URI as a token audience (see the server README for its audience setting).
 
-## Tools: pinned, not dynamic
+## Tools: dynamic discovery
 
-`ai-plugin.json` pins the six tools (`functions` plus `run_for_functions` and inline `mcp_tool_description.tools`). A test in `mcp-contract-calendar` (`agentPackage.test.ts`) checks that these names equal the server's `TOOL_NAMES`. If you rename or add a tool, update this file. Dynamic tool discovery (empty `functions`, `run_for_functions: ["*"]`) is the Agents Toolkit default and can replace pinning later.
+`ai-plugin.json` uses the Agents Toolkit default, dynamic tool discovery: `functions` is empty and `run_for_functions` is `["*"]`, so Copilot reads the tool list and schemas from the MCP server at runtime. Nothing here needs updating when a tool changes. `agentPackage.test.ts` in `mcp-contract-calendar` checks that any tool name mentioned in the plugin exists in the server's `TOOL_NAMES`.
 
 ## Sources used
 
