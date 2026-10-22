@@ -18,6 +18,15 @@ describe('toServerRelative', () => {
     expect(toServerRelative('  Lib/t.html ', '/sites/a')).toBe('/sites/a/Lib/t.html');
   });
 
+  it('decodes percent-encoding in site-relative and server-relative paths', () => {
+    expect(toServerRelative('Shared%20Documents/t.html', '/sites/a')).toBe('/sites/a/Shared Documents/t.html');
+    expect(toServerRelative('/sites/b/My%20Lib/t.html', '/sites/a')).toBe('/sites/b/My Lib/t.html');
+  });
+
+  it('keeps a malformed percent sequence literally, segment by segment', () => {
+    expect(toServerRelative('100%/My%20Lib/t.html', '/sites/a')).toBe('/sites/a/100%/My Lib/t.html');
+  });
+
   it('takes the path of an absolute URL', () => {
     expect(toServerRelative('https://x.sharepoint.com/sites/a/Shared%20Documents/t.html', '/sites/z'))
       .toBe('/sites/a/Shared Documents/t.html');
@@ -31,6 +40,17 @@ describe('resolveImageUrl', () => {
   it('resolves a relative path against the template folder', () => {
     expect(resolveImageUrl('logo.png', tpl, host)).toEqual({ kind: 'path', serverRelativeUrl: '/sites/a/Lib/T/logo.png' });
     expect(resolveImageUrl('./img/logo.png', tpl, host)).toEqual({ kind: 'path', serverRelativeUrl: '/sites/a/Lib/T/img/logo.png' });
+  });
+
+  it('decodes percent-encoding in relative and server-relative paths', () => {
+    expect(resolveImageUrl('img/My%20Logo.png', tpl, host)).toEqual({ kind: 'path', serverRelativeUrl: '/sites/a/Lib/T/img/My Logo.png' });
+    expect(resolveImageUrl('img/My Logo.png', tpl, host)).toEqual({ kind: 'path', serverRelativeUrl: '/sites/a/Lib/T/img/My Logo.png' });
+    expect(resolveImageUrl('/sites/b/Shared%20Documents/l.png', tpl, host))
+      .toEqual({ kind: 'path', serverRelativeUrl: '/sites/b/Shared Documents/l.png' });
+  });
+
+  it('tolerates malformed percent sequences', () => {
+    expect(resolveImageUrl('50%/a%20b.png', tpl, host)).toEqual({ kind: 'path', serverRelativeUrl: '/sites/a/Lib/T/50%/a b.png' });
   });
 
   it('follows ../ segments', () => {

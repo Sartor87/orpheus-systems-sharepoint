@@ -11,12 +11,17 @@ function decode(path: string): string {
   try { return decodeURIComponent(path); } catch { return path; }
 }
 
+/** Decodes each `/` segment on its own, so one malformed sequence leaves only its segment literal. */
+function decodeSegments(path: string): string {
+  return path.split('/').map(decode).join('/');
+}
+
 /** Host and decoded path of an http(s) or protocol-relative URL; undefined for anything else. */
 function parseAbsolute(value: string): { host: string; path: string } | undefined {
   if (!HTTP.test(value) && !value.startsWith('//')) { return undefined; }
   try {
     const u = new URL(value, 'https://placeholder.invalid');
-    return { host: u.host.toLowerCase(), path: decode(u.pathname) };
+    return { host: u.host.toLowerCase(), path: decodeSegments(u.pathname) };
   } catch {
     return undefined;
   }
@@ -38,9 +43,9 @@ export function toServerRelative(path: string, webServerRelativeUrl: string): st
   const p = path.trim();
   const abs = parseAbsolute(p);
   if (abs) { return abs.path; }
-  if (p.startsWith('/')) { return p; }
+  if (p.startsWith('/')) { return decodeSegments(p); }
   const web = webServerRelativeUrl.replace(/\/+$/, '');
-  return `${web}/${p.replace(/^\/+/, '')}`;
+  return `${web}/${decodeSegments(p.replace(/^\/+/, ''))}`;
 }
 
 /**
@@ -56,9 +61,10 @@ export function resolveImageUrl(src: string, templateServerRelativeUrl: string, 
     return { kind: 'path', serverRelativeUrl: abs.path };
   }
   if (ABSOLUTE.test(s)) { throw new Error(OTHER_HOST_IMAGE); }
-  if (s.startsWith('/')) { return { kind: 'path', serverRelativeUrl: normalise(s.split('/')) }; }
+  const segments = s.split('/').map(decode);
+  if (s.startsWith('/')) { return { kind: 'path', serverRelativeUrl: normalise(segments) }; }
   const folder = templateServerRelativeUrl.split('/').slice(0, -1);
-  return { kind: 'path', serverRelativeUrl: normalise(folder.concat(s.split('/'))) };
+  return { kind: 'path', serverRelativeUrl: normalise(folder.concat(segments)) };
 }
 
 /** Property pane check: '' when valid or empty. */
