@@ -15,11 +15,14 @@
     "eject-webpack": "heft --unmanaged eject-webpack"
   },
   "dependencies": {
+    "@fluentui/react": "^8.106.4",
     "@microsoft/decorators": "1.23.2",
     "@microsoft/sp-core-library": "1.23.2",
     "@microsoft/sp-listview-extensibility": "1.23.2",
     "@orpheussystems/shared-core": "*",
     "@orpheussystems/shared-ui": "*",
+    "@pnp/sp": "^4.22.0",
+    "@pnp/spfx-controls-react": "^3",
     "react": "17.0.1",
     "react-dom": "17.0.1",
     "tslib": "2.3.1"
