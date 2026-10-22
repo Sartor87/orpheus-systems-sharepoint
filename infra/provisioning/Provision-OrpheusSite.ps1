@@ -165,14 +165,26 @@ function Show-TemplateSummary {
 #region Fixtures
 
 function ConvertTo-DateKey {
-    # Date-only values are compared as yyyy-MM-dd; a value parsed into local time is taken back to UTC first.
+    # Normalises a date-only value to yyyy-MM-dd by rounding to the nearest UTC midnight.
+    # SharePoint returns a date-only value as midnight in the site's time zone expressed in UTC
+    # (6 Feb on a UTC+2 site comes back as 2026-02-05T22:00:00Z); adding 12 hours before taking
+    # the date part maps any offset within +/-12h back to the intended day.
     param($Value)
     if ($null -eq $Value) { return $null }
     if ($Value -is [datetime]) {
-        $d = if ($Value.Kind -eq [System.DateTimeKind]::Local) { $Value.ToUniversalTime() } else { $Value }
-        return $d.ToString('yyyy-MM-dd', $Invariant)
+        # ConvertFrom-Json may already have parsed the ISO string (Local or Utc kind).
+        $utc = switch ($Value.Kind) {
+            ([System.DateTimeKind]::Local) { $Value.ToUniversalTime() }
+            ([System.DateTimeKind]::Unspecified) { [datetime]::SpecifyKind($Value, [System.DateTimeKind]::Utc) }
+            default { $Value }
+        }
     }
-    return ([string] $Value).Substring(0, 10)
+    else {
+        $text = [string] $Value
+        if ($text -match '^\d{4}-\d{2}-\d{2}$') { return $text }
+        return ConvertTo-DateKey ([datetime]::Parse($text, $Invariant, [System.Globalization.DateTimeStyles]::RoundtripKind))
+    }
+    return $utc.AddHours(12).ToString('yyyy-MM-dd', $Invariant)
 }
 
 function Read-Fixtures {
@@ -257,12 +269,29 @@ function Test-SameValues {
 $script:Counts = [ordered]@{}
 function Add-Count { param([string] $Key) $script:Counts[$Key] = 1 + [int] $script:Counts[$Key] }
 
+$script:DateRoundTripChecked = $false
+function Assert-DateRoundTrip {
+    # Once per run, after the first write of an item with a date-only column: read it back and make
+    # sure the normalised date equals the one sent. Stops before anything else is written.
+    param([string] $List, [int] $Id, [System.Collections.IDictionary] $Body, [string[]] $DateFields)
+    if ($script:DateRoundTripChecked -or -not $DateFields.Count) { return }
+    $field = $DateFields[0]
+    $item = Invoke-SpRest -Url "/_api/web/lists/getbytitle('$List')/items($Id)?`$select=Id,$field"
+    $sent = $Body[$field]
+    $read = ConvertTo-DateKey $item.$field
+    if ($read -cne $sent) {
+        throw "Date-only round-trip mismatch on $List item $Id, column $field (sent $sent, read $read; raw value '$($item.$field)') - check the site's regional time zone."
+    }
+    $script:DateRoundTripChecked = $true
+}
+
 function Set-ListItemRest {
     # Creates the item when $ExistingItem is null, updates it when values differ, otherwise leaves it alone.
     param([string] $List, $ExistingItem, [System.Collections.IDictionary] $Body, [string[]] $DateFields = @(), [string] $Label)
     if ($null -eq $ExistingItem) {
         $created = Invoke-SpRest -Method Post -Url "/_api/web/lists/getbytitle('$List')/items" -Body $Body
         Add-Count "$Label created"
+        Assert-DateRoundTrip -List $List -Id ([int] $created.Id) -Body $Body -DateFields $DateFields
         return [int] $created.Id
     }
     if (Test-SameValues -Item $ExistingItem -Body $Body -DateFields $DateFields) {
@@ -271,6 +300,7 @@ function Set-ListItemRest {
     else {
         $null = Invoke-SpRest -Method Merge -Url "/_api/web/lists/getbytitle('$List')/items($($ExistingItem.Id))" -Body $Body
         Add-Count "$Label updated"
+        Assert-DateRoundTrip -List $List -Id ([int] $ExistingItem.Id) -Body $Body -DateFields $DateFields
     }
     return [int] $ExistingItem.Id
 }
@@ -425,20 +455,27 @@ if (-not $PSCmdlet.ShouldProcess($SiteUrl, $action)) {
     return
 }
 
-Write-Host "Connecting to $SiteUrl ..." -ForegroundColor Cyan
-Connect-PnPOnline -Url $SiteUrl -ClientId $ClientId -Interactive
+$completed = $false
+try {
+    Write-Host "Connecting to $SiteUrl ..." -ForegroundColor Cyan
+    Connect-PnPOnline -Url $SiteUrl -ClientId $ClientId -Interactive
 
-Assert-NoFieldConflicts -Template $template
+    Assert-NoFieldConflicts -Template $template
 
-Write-Host "Applying $TemplatePath ..." -ForegroundColor Cyan
-Invoke-PnPSiteTemplate -Path $TemplatePath
+    Write-Host "Applying $TemplatePath ..." -ForegroundColor Cyan
+    Invoke-PnPSiteTemplate -Path $TemplatePath
 
-Write-Host 'Checking indexes ...' -ForegroundColor Cyan
-Set-RequiredIndexes
+    Write-Host 'Checking indexes ...' -ForegroundColor Cyan
+    Set-RequiredIndexes
 
-if ($SeedDemoData) { Invoke-DemoSeed -Fixtures $fixtures }
-
-Write-Host ''
-Write-Host "Done: $SiteUrl" -ForegroundColor Green
-Write-Host "  Template: $($template.SiteFields.Count) site columns, $($template.ContentTypes.Count) content types, lists $(($template.Lists | ForEach-Object { $_.Title }) -join ', ')"
-foreach ($key in $script:Counts.Keys) { Write-Host ("  {0}: {1}" -f $key, $script:Counts[$key]) }
+    if ($SeedDemoData) { Invoke-DemoSeed -Fixtures $fixtures }
+    $completed = $true
+}
+finally {
+    Write-Host ''
+    if ($completed) { Write-Host "Done: $SiteUrl" -ForegroundColor Green }
+    else { Write-Host "Stopped before completion: $SiteUrl. Changes made so far:" -ForegroundColor Yellow }
+    if ($completed) { Write-Host "  Template: $($template.SiteFields.Count) site columns, $($template.ContentTypes.Count) content types, lists $(($template.Lists | ForEach-Object { $_.Title }) -join ', ')" }
+    if ($script:Counts.Count -eq 0) { Write-Host '  No list items or indexes were written or checked.' }
+    foreach ($key in $script:Counts.Keys) { Write-Host ("  {0}: {1}" -f $key, $script:Counts[$key]) }
+}

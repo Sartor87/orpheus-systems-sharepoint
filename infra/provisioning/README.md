@@ -65,6 +65,9 @@ and must never be regenerated.
 | `CalendarEntries` | `Orpheus Calendar Entry` | Title, Contract (lookup to Contracts.Title), EntryDate, EntryType (OnSiteFull/OnSiteHalf/OffSiteFull/OffSiteHalf), Note | Contract, EntryDate |
 | `Holidays` | `Orpheus Holiday` | Title, HolidayDate, Country (`*` means all countries), Source (Manual/Agent, default Manual) | HolidayDate |
 
+The Contracts list validates every item with `=[LatestExecutionDate]>=[StartDate]`:
+"Latest execution date must be on or after the start date."
+
 Three columns are not Orpheus site columns:
 
 - **StartDate** reuses SharePoint's built-in *Start Date* site column
@@ -91,9 +94,35 @@ Seeding is an upsert keyed by:
 
 An item is updated only when its values differ from the fixture. The summary at the end
 counts created, updated and unchanged items, so a second run should report only
-"unchanged" and "already present".
+"unchanged" and "already present". The summary is also printed when a run stops partway,
+so you can see what was already written.
+
+Two things are not left as they are on a re-run:
+
+- **The default "All Items" view of each list is rebuilt on every run** from the template
+  (columns, sort order, row limit). Any changes you made to that view by hand are lost.
+  Put your own changes in a separate view.
+- `RemoveExistingContentTypes` only takes effect **when a list is first created**. On later
+  runs, content types someone added to the lists by hand stay.
+
+When the script reads a date-only value back, it rounds it to the nearest UTC midnight.
+SharePoint returns 6 Feb on a UTC+2 site as `2026-02-05T22:00:00Z`, and rounding maps
+that back to 6 Feb. This works for any site time zone within ±12 h of UTC.
 
 ## Demo data (`-SeedDemoData`)
+
+**Before the first `-SeedDemoData` run**
+
+- Check the site's time zone in *Site settings → Regional settings*. The script writes
+  dates as `yyyy-MM-dd`, the same way the web part does. After the first date-bearing
+  item is written, the script reads it back and stops with "Date-only round-trip mismatch
+  (sent X, read Y)" if the date did not survive. In that case fix the regional settings
+  and run again.
+- Re-seeding restores the fixture contract for every fixture day. Suppose you moved a
+  seeded day to another contract in the web part (the overlap dialog). The next seed
+  run recreates that day on its original contract, so the date then has two entries.
+  Delete one of them by hand, or don't re-seed once the demo data is in use.
+
 
 - Contracts: the four fixture contracts with their titles, dates and targets as in the
   fixtures. **You, the signed-in user, become Contractor and ContractManager on all of them.**
