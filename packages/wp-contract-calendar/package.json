@@ -10,6 +10,7 @@
     "serve": "heft --unmanaged start --clean --nobrowser",
     "package": "heft --unmanaged test --clean --production && heft --unmanaged package-solution --production",
     "clean": "heft --unmanaged clean",
+    "test": "jest",
     "eject-webpack": "heft --unmanaged eject-webpack"
   },
   "dependencies": {
@@ -35,10 +36,13 @@
     "@microsoft/spfx-web-build-rig": "1.23.2",
     "@microsoft/spfx-heft-plugins": "1.23.2",
     "@rushstack/heft": "1.2.17",
-    "@types/jest": "30.0.0",
+    "@types/jest": "^30.0.0",
     "@types/webpack-env": "~1.15.2",
     "css-loader": "~7.1.2",
     "eslint": "9.37.0",
+    "jest": "^30.0.0",
+    "jest-environment-jsdom": "^30.0.0",
+    "ts-jest": "^29.4.0",
     "typescript": "~5.8.0",
     "@types/react": "17.0.45",
     "@types/react-dom": "17.0.17",

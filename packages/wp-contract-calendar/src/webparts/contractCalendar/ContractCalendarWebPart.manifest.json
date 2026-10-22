@@ -22,7 +22,11 @@
     "description": { "default": "Contract on-site/off-site calendar with timesheet PDF" },
     "officeFabricIconFontName": "Page",
     "properties": {
-      "description": "ContractCalendar"
+      "monthsToShow": 0,
+      "blockWeekends": true,
+      "approvingOrgLabel": "Client approval",
+      "serviceProviderLabel": "Service provider",
+      "demoUserId": 1
     }
   }]
 }

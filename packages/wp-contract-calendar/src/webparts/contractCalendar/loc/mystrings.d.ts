@@ -1,16 +1,18 @@
 declare interface IContractCalendarWebPartStrings {
   PropertyPaneDescription: string;
-  BasicGroupName: string;
-  DescriptionFieldLabel: string;
-  AppLocalEnvironmentSharePoint: string;
-  AppLocalEnvironmentTeams: string;
-  AppLocalEnvironmentOffice: string;
-  AppLocalEnvironmentOutlook: string;
-  AppSharePointEnvironment: string;
-  AppTeamsTabEnvironment: string;
-  AppOfficeEnvironment: string;
-  AppOutlookEnvironment: string;
-  UnknownEnvironment: string;
+  DataGroupName: string;
+  DisplayGroupName: string;
+  TimesheetGroupName: string;
+  UseLocalDataLabel: string;
+  DemoUserLabel: string;
+  ContractsListLabel: string;
+  EntriesListLabel: string;
+  HolidaysListLabel: string;
+  MonthsToShowLabel: string;
+  BlockWeekendsLabel: string;
+  ApprovingOrgLabel: string;
+  ServiceProviderLabel: string;
+  ServiceUnavailable: string;
 }
 
 declare module 'ContractCalendarWebPartStrings' {
