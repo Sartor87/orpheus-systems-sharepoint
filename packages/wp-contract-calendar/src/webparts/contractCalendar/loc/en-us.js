@@ -13,6 +13,12 @@ define([], function() {
     "BlockWeekendsLabel": "Block weekends",
     "ApprovingOrgLabel": "Approving organisation label",
     "ServiceProviderLabel": "Service provider label",
-    "ServiceUnavailable": "The data service is not available."
+    "ServiceUnavailable": "The data service is not available.",
+    "AboutGroupName": "About",
+    "AboutVersionLabel": "Version",
+    "AboutBuiltByLabel": "Built by Orpheus Systems",
+    "AboutWebsiteLabel": "orpheussystems.com",
+    "AboutContactLabel": "Contact",
+    "AboutLicenseLabel": "License: Apache-2.0 (see NOTICE)"
   }
 });

@@ -5,6 +5,8 @@ import {
   type IPropertyPaneConfiguration,
   type IPropertyPaneField,
   PropertyPaneDropdown,
+  PropertyPaneLabel,
+  PropertyPaneLink,
   PropertyPaneSlider,
   PropertyPaneTextField,
   PropertyPaneToggle
@@ -21,6 +23,8 @@ import '@pnp/sp/items';
 import '@pnp/sp/site-users/web';
 import { IDataService, LocalDataService, UserInfo, UserRef } from '@orpheussystems/shared-core';
 import { deriveRoles } from '@orpheussystems/shared-core/sharepoint';
+import { orpheusBrand } from '@orpheussystems/shared-ui/brand';
+import { orpheusTokens } from '@orpheussystems/shared-ui/tokens';
 
 import * as strings from 'ContractCalendarWebPartStrings';
 import ContractCalendar from './components/ContractCalendar';
@@ -32,6 +36,8 @@ import type { IContractCalendarWebPartProps } from './IContractCalendarWebPartPr
 export type { IContractCalendarWebPartProps } from './IContractCalendarWebPartProps';
 
 declare const DEBUG: boolean;
+
+let bannerShown = false;
 
 const CT_CONTRACT = 'Orpheus Contract';
 const CT_ENTRY = 'Orpheus Calendar Entry';
@@ -83,6 +89,14 @@ export default class ContractCalendarWebPart extends BaseClientSideWebPart<ICont
     const raw = new URLSearchParams(window.location.search).get('contractId');
     const parsed = raw === null ? NaN : parseInt(raw, 10);
     this._initialContractId = isNaN(parsed) ? undefined : parsed;
+    if (!bannerShown && process.env.NODE_ENV !== 'test') {
+      bannerShown = true;
+      console.info(
+        `%c ${orpheusBrand.name} %c Contract Calendar v${this.manifest.version} — ${orpheusBrand.url}`,
+        `background:${orpheusTokens.amber};color:${orpheusTokens.bg};font-weight:600;border-radius:3px`,
+        `color:${orpheusTokens.textMuted}`
+      );
+    }
     await this._buildService();
   }
 
@@ -265,6 +279,16 @@ export default class ContractCalendarWebPart extends BaseClientSideWebPart<ICont
               groupFields: [
                 PropertyPaneTextField('approvingOrgLabel', { label: strings.ApprovingOrgLabel }),
                 PropertyPaneTextField('serviceProviderLabel', { label: strings.ServiceProviderLabel })
+              ]
+            },
+            {
+              groupName: strings.AboutGroupName,
+              groupFields: [
+                PropertyPaneLabel('aboutVersion', { text: `${strings.AboutVersionLabel} ${this.manifest.version}` }),
+                PropertyPaneLabel('aboutBuiltBy', { text: strings.AboutBuiltByLabel }),
+                PropertyPaneLink('aboutWebsite', { text: strings.AboutWebsiteLabel, href: orpheusBrand.url, target: '_blank' }),
+                PropertyPaneLink('aboutContact', { text: orpheusBrand.contactEmail, href: `mailto:${orpheusBrand.contactEmail}` }),
+                PropertyPaneLabel('aboutLicense', { text: strings.AboutLicenseLabel })
               ]
             }
           ]

@@ -13,6 +13,12 @@ declare interface IContractCalendarWebPartStrings {
   ApprovingOrgLabel: string;
   ServiceProviderLabel: string;
   ServiceUnavailable: string;
+  AboutGroupName: string;
+  AboutVersionLabel: string;
+  AboutBuiltByLabel: string;
+  AboutWebsiteLabel: string;
+  AboutContactLabel: string;
+  AboutLicenseLabel: string;
 }
 
 declare module 'ContractCalendarWebPartStrings' {
