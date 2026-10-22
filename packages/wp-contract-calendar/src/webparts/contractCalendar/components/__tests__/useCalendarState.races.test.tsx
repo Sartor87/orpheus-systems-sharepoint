@@ -58,7 +58,7 @@ describe('useCalendarState write ordering', () => {
   beforeAll(() => { jest.useFakeTimers({ now: new Date(2026, 9, 22, 12), advanceTimers: true }); });
   afterAll(() => { jest.useRealTimers(); });
 
-  it('keeps the latest click when an earlier write resolves last', async () => {
+  it('keeps the latest click while an earlier write lands', async () => {
     const service = new ControlledService(1);
     const { result } = await loaded(service);
     service.setHoldWrites(true);
@@ -67,15 +67,14 @@ describe('useCalendarState write ordering', () => {
     expect(result.current.entries[DAY]?.type).toBe('OffSiteFull');
     act(() => start(result.current.clickDay(DAY)));           // same type -> delete
     expect(result.current.entries[DAY]).toBeUndefined();
-    expect(service.held.map(h => h.op)).toEqual(['upsert', 'delete']);
 
-    await settle(() => service.held[1].succeed());               // delete lands first
+    await settle(() => service.held[0].succeed());               // stale upsert lands; delete still pending
     expect(result.current.entries[DAY]).toBeUndefined();
-    await settle(() => service.held[0].succeed());               // stale upsert lands last
+    await settle(() => service.held[1].succeed());               // delete lands
     expect(result.current.entries[DAY]).toBeUndefined();
   });
 
-  it('does not let a stale rejection roll back over a later successful write', async () => {
+  it('does not let a stale rejection roll back over a later pending write', async () => {
     const service = new ControlledService(1);
     const { result } = await loaded(service);
     service.setHoldWrites(true);
@@ -84,9 +83,10 @@ describe('useCalendarState write ordering', () => {
     act(() => result.current.setSelectionType('OnSiteFull'));
     act(() => start(result.current.clickDay(DAY)));           // B: OnSiteFull
 
-    await settle(() => service.held[1].succeed());
+    await settle(() => service.held[0].fail());                  // stale A fails while B waits
     expect(result.current.entries[DAY]?.type).toBe('OnSiteFull');
-    await settle(() => service.held[0].fail());
+    expect(result.current.error).toBeUndefined();
+    await settle(() => service.held[1].succeed());
     expect(result.current.entries[DAY]?.type).toBe('OnSiteFull');
   });
 
@@ -202,5 +202,62 @@ describe('useCalendarState load failures and service rebuilds', () => {
     expect(result.current.entries['2026-02-06']?.type).toBe('OnSiteFull');
     expect(result.current.error).toBeUndefined();
     expect(second.calls.getEntries).toBe(1);
+  });
+});
+
+describe('useCalendarState service write serialization', () => {
+  beforeAll(() => { jest.useFakeTimers({ now: new Date(2026, 9, 22, 12), advanceTimers: true }); });
+  afterAll(() => { jest.useRealTimers(); });
+
+  it('never has two service writes in flight for the same date', async () => {
+    const service = new ControlledService(1);
+    const { result } = await loaded(service);
+    service.setHoldWrites(true);
+
+    act(() => start(result.current.clickDay(DAY)));             // upsert
+    act(() => start(result.current.clickDay(DAY)));             // delete, queued behind the upsert
+    expect(result.current.entries[DAY]).toBeUndefined();         // optimistic UI is immediate
+    expect(service.held.map(h => h.op)).toEqual(['upsert']);
+    expect(service.calls.upsertEntry + service.calls.deleteEntry).toBe(1);
+
+    await settle(() => service.held[0].succeed());
+    expect(service.held.map(h => h.op)).toEqual(['upsert', 'delete']);
+    await settle(() => service.held[1].succeed());
+
+    expect(result.current.entries[DAY]).toBeUndefined();
+    expect(await service.inner.getEntries(1, DAY, DAY)).toEqual([]);
+  });
+
+  it('issues the queued write even when the earlier one fails, and the server matches the UI', async () => {
+    const service = new ControlledService(1);
+    const { result } = await loaded(service);
+    service.setHoldWrites(true);
+
+    act(() => start(result.current.clickDay(DAY)));             // OffSiteFull
+    act(() => result.current.setSelectionType('OnSiteHalf'));
+    act(() => start(result.current.clickDay(DAY)));             // OnSiteHalf, queued
+    expect(service.held).toHaveLength(1);
+
+    await settle(() => service.held[0].fail());
+    expect(service.held).toHaveLength(2);
+    await settle(() => service.held[1].succeed());
+
+    expect(result.current.entries[DAY]?.type).toBe('OnSiteHalf');
+    expect((await service.inner.getEntries(1, DAY, DAY)).map(e => e.type)).toEqual(['OnSiteHalf']);
+  });
+
+  it('runs writes for different dates concurrently', async () => {
+    const service = new ControlledService(1);
+    const { result } = await loaded(service);
+    service.setHoldWrites(true);
+
+    act(() => start(result.current.clickDay(DAY)));
+    act(() => start(result.current.clickDay('2026-11-04')));
+    expect(service.held.map(h => h.date)).toEqual([DAY, '2026-11-04']);
+
+    await settle(() => service.held[1].succeed());
+    await settle(() => service.held[0].succeed());
+    expect(result.current.entries[DAY]?.type).toBe('OffSiteFull');
+    expect(result.current.entries['2026-11-04']?.type).toBe('OffSiteFull');
   });
 });

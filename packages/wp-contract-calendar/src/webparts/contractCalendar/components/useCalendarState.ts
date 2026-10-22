@@ -122,6 +122,9 @@ export function useCalendarState(): CalendarState & CalendarActions {
   selectedIdRef.current = selectedId;
   const writes = React.useRef<Record<DateKey, DateWrites>>({});
   const writeCounter = React.useRef(0);
+  // Service writes per date run one at a time: a SharePoint upsert (delete siblings + add) and a delete are
+  // separate batches whose server-side order is not guaranteed if both are in flight.
+  const writeChains = React.useRef<Record<DateKey, Promise<unknown>>>({});
   const mounted = React.useRef(true);
   React.useEffect(() => () => { mounted.current = false; }, []);
 
@@ -217,15 +220,20 @@ export function useCalendarState(): CalendarState & CalendarActions {
     const live = (): boolean => mounted.current && writes.current[date] === book && shownId === selectedIdRef.current;
 
     setEntries(prev => withEntry(prev, date, type && contractId === shownId ? { contractId, date, type } : undefined));
+    const send = (): Promise<CalendarEntry | undefined> => type
+      ? service.upsertEntry({ contractId, date, type })
+      : service.deleteEntry(contractId, date).then(() => undefined);
+    const prior = writeChains.current[date];
+    // Chained after the previous write for this date, whatever its outcome; issued at once when idle.
+    const op = prior ? prior.catch(() => undefined).then(send) : send();
+    writeChains.current[date] = op;
+    const release = (): void => {
+      if (writeChains.current[date] === op) { delete writeChains.current[date]; }
+    };
+    op.then(release, release);
     try {
-      let shown: CalendarEntry | undefined;
-      if (type) {
-        const saved = await service.upsertEntry({ contractId, date, type });
-        shown = contractId === shownId ? saved : undefined;
-      } else {
-        await service.deleteEntry(contractId, date);
-        shown = undefined;
-      }
+      const saved = await op;
+      const shown: CalendarEntry | undefined = type && contractId === shownId ? saved : undefined;
       if (!live()) { return; }
       if (token > book.confirmedToken) {
         book.confirmed = shown;
