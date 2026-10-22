@@ -15,7 +15,7 @@ import {
   mapContract, mapEntry, mapHoliday, SPContractItem, SPEntryItem, SPHolidayItem, toEntryItem
 } from './spMappers';
 import {
-  contractsFilter, contractsOfContractorFilter, entriesFilter, entriesOnDateFilter, holidaysFilter
+  contractsFilter, contractsOfContractorFilter, entriesFilter, entriesOfContractFilter, entriesOnDateFilter, holidaysFilter
 } from './spQueries';
 
 export interface SharePointListConfig {
@@ -24,8 +24,6 @@ export interface SharePointListConfig {
   holidaysListId: string;
 }
 
-const FAR_PAST: DateKey = '1900-01-01';
-const FAR_FUTURE: DateKey = '2999-12-31';
 
 /**
  * Derives the roles of the current user (`userId` must be the current user's id: the Admin check reads the
@@ -155,6 +153,9 @@ export class SharePointDataService implements IDataService {
   }
 
   private allEntries(contractId: number): Promise<CalendarEntry[]> {
-    return this.getEntries(contractId, FAR_PAST, FAR_FUTURE);
+    return this.entriesList().items
+      .filter(entriesOfContractFilter(contractId))
+      .select(...ENTRY_SELECT).expand(...ENTRY_EXPAND).orderBy('EntryDate', true).top(5000)()
+      .then(items => (items as SPEntryItem[]).map(mapEntry));
   }
 }
