@@ -12,6 +12,7 @@ import { getCalendar } from '../tools/getCalendar';
 import { getHolidays } from '../tools/getHolidays';
 import { bookDays } from '../tools/bookDays';
 import { removeDays } from '../tools/removeDays';
+import { logError } from '../log/errorLog';
 
 export const TOOL_NAMES = [
   'get_my_contracts',
@@ -34,15 +35,26 @@ type ToolResult = { content: Array<{ type: 'text'; text: string }>; isError?: bo
  * from the zod shapes, which makes tsc blow up in memory with zod 3.25. Zod still validates at
  * runtime; each handler casts args to its own type.
  */
+/** MCP tool annotations. Copilot treats a tool without them as data-modifying and asks to confirm. */
+interface ToolAnnotations {
+  readOnlyHint: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+}
+
 type ToolRegistrar = (
   name: string,
-  config: { description: string; inputSchema: Record<string, ZodTypeAny> },
+  config: { description: string; inputSchema: Record<string, ZodTypeAny>; annotations: ToolAnnotations },
   handler: (args: Record<string, unknown>) => Promise<ToolResult>
 ) => void;
 
 const ok = (result: unknown): ToolResult => ({ content: [{ type: 'text', text: JSON.stringify(result) }] });
 
-function fail(err: unknown): ToolResult {
+const READ_ONLY: ToolAnnotations = { readOnlyHint: true };
+
+function fail(err: unknown, correlationId: string, tool: string): ToolResult {
+  if (!(err instanceof ToolError)) logError(correlationId, `tool:${tool}`, err);
   const body =
     err instanceof ToolError
       ? { code: err.code, message: err.message }
@@ -63,7 +75,7 @@ export function createMcpServer(ctx: ToolContext, meta: RequestMeta, sink: Audit
     try {
       return ok(await runTool(name, ctx, meta, sink, args, fn));
     } catch (err) {
-      return fail(err);
+      return fail(err, meta.correlationId, name);
     }
   };
 
@@ -72,7 +84,8 @@ export function createMcpServer(ctx: ToolContext, meta: RequestMeta, sink: Audit
     {
       description:
         'Lists the contracts you can see, with roles, today\'s date and used/remaining days. Start here to learn who you are and which contract ids to use. Closed contracts are excluded.',
-      inputSchema: {}
+      inputSchema: {},
+      annotations: READ_ONLY
     },
     async () => run('get_my_contracts', {}, c => getMyContracts(c))
   );
@@ -86,7 +99,8 @@ export function createMcpServer(ctx: ToolContext, meta: RequestMeta, sink: Audit
         vendor: z.string().optional().describe('Vendor (company) name, case-insensitive'),
         manager: z.string().optional().describe('Manager name or email'),
         includeClosed: z.boolean().optional()
-      }
+      },
+      annotations: READ_ONLY
     },
     args => run('list_contracts', args as unknown as Parameters<typeof listContracts>[1], listContracts)
   );
@@ -96,7 +110,8 @@ export function createMcpServer(ctx: ToolContext, meta: RequestMeta, sink: Audit
     {
       description:
         'Returns the calendar entries, holidays and totals of one contract for a date range (max 366 days). Dates are yyyy-MM-dd.',
-      inputSchema: { contractId, from: dateStr, to: dateStr }
+      inputSchema: { contractId, from: dateStr, to: dateStr },
+      annotations: READ_ONLY
     },
     args => run('get_calendar', args as unknown as Parameters<typeof getCalendar>[1], getCalendar)
   );
@@ -112,7 +127,8 @@ export function createMcpServer(ctx: ToolContext, meta: RequestMeta, sink: Audit
         type: entryType.optional().describe('Defaults to OnSiteFull'),
         contractId: contractId.optional(),
         note: z.string().max(255).optional()
-      }
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false }
     },
     args => run('book_days', args as unknown as Parameters<typeof bookDays>[1], bookDays)
   );
@@ -122,7 +138,8 @@ export function createMcpServer(ctx: ToolContext, meta: RequestMeta, sink: Audit
     {
       description:
         'Removes the signed-in contractor\'s booked days from one of their own active contracts. Dates are yyyy-MM-dd. Days with no entry are reported as notFound. Only contractors can remove days.',
-      inputSchema: { from: dateStr, to: dateStr, contractId }
+      inputSchema: { from: dateStr, to: dateStr, contractId },
+      annotations: { readOnlyHint: false, destructiveHint: true }
     },
     args => run('remove_days', args as unknown as Parameters<typeof removeDays>[1], removeDays)
   );
@@ -131,7 +148,8 @@ export function createMcpServer(ctx: ToolContext, meta: RequestMeta, sink: Audit
     'get_holidays',
     {
       description: 'Returns public holidays for a country (2-letter code, e.g. BG) in a date range (max 366 days). Dates are yyyy-MM-dd.',
-      inputSchema: { country: z.string().length(2), from: dateStr, to: dateStr }
+      inputSchema: { country: z.string().length(2), from: dateStr, to: dateStr },
+      annotations: READ_ONLY
     },
     args => run('get_holidays', args as unknown as Parameters<typeof getHolidays>[1], getHolidays)
   );

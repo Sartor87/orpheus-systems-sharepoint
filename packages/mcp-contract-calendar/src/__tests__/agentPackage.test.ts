@@ -56,9 +56,13 @@ describe('declarative agent package', () => {
     const guid = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
     for (const file of listFiles(PKG)) {
       if (file.endsWith('.png')) continue;
-      const text = fs.readFileSync(file, 'utf8').replace(/\$\{\{[^}]*\}\}/g, '');
+      // The Vendor site column id is a fixed, repo-defined constant, not a tenant value.
+      const text = fs
+        .readFileSync(file, 'utf8')
+        .replace(/\$\{\{[^}]*\}\}/g, '')
+        .replace(/582b1c53-77a2-4a1b-918f-14e0b9eaff06/gi, '');
       expect({ file, hit: guid.test(text) }).toEqual({ file, hit: false });
-      for (const m of text.matchAll(/([\w.-]*)sharepoint\.com/gi)) {
+      for (const m of text.matchAll(/([\w.<>-]*)sharepoint\.com/gi)) {
         expect({ file, host: m[0] }).toEqual({ file, host: '<tenant>.sharepoint.com' });
       }
     }

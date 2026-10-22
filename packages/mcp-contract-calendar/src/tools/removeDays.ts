@@ -5,7 +5,8 @@ import { contractTotals, requireOwnActiveContract } from './contractAccess';
 import { ToolError, parseRange } from './dateRange';
 
 export interface RemoveDaysResult {
-  removed: DateKey[];
+  /** entryId: the SharePoint item id of the deleted calendar entry (audit trail). */
+  removed: Array<{ date: DateKey; entryId: number | null }>;
   notFound: DateKey[];
   failed: Array<{ date: DateKey; error: string }>;
   totals: Totals;
@@ -21,8 +22,9 @@ export async function removeDays(
   const days = parseRange(args.from, args.to);
   const c = await requireOwnActiveContract(ctx, args.contractId, 'You can only change your own active contracts.');
 
-  const existing = new Set((await data.getEntries(c.id, days[0], days[days.length - 1])).map(e => e.date));
-  const removed: DateKey[] = [];
+  const existing = new Map<DateKey, number | null>();
+  for (const e of await data.getEntries(c.id, days[0], days[days.length - 1])) existing.set(e.date, e.id ?? null);
+  const removed: Array<{ date: DateKey; entryId: number | null }> = [];
   const notFound: DateKey[] = [];
   const failed: Array<{ date: DateKey; error: string }> = [];
   for (const day of days) {
@@ -32,7 +34,7 @@ export async function removeDays(
     }
     try {
       await data.deleteEntry(c.id, day);
-      removed.push(day);
+      removed.push({ date: day, entryId: existing.get(day) ?? null });
     } catch (e) {
       failed.push({ date: day, error: e instanceof Error ? e.message : String(e) });
     }

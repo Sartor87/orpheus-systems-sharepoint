@@ -31,6 +31,17 @@ describe('bookDays', () => {
     expect(r.totals.length).toBe(1);
   });
 
+  it('reports the SharePoint item id of each booked entry', async () => {
+    const ctx = await localContext(1);
+    const r = await bookDays(ctx, { from: '2026-11-02', to: '2026-11-03' });
+    if (r.status !== 'done') throw new Error('expected done');
+    const stored = await ctx.data.getEntries(1, '2026-11-02', '2026-11-03');
+    expect(r.booked.map(b => ({ date: b.date, entryId: b.entryId }))).toEqual(
+      stored.map(e => ({ date: e.date, entryId: e.id }))
+    );
+    expect(r.booked.every(b => typeof b.entryId === 'number')).toBe(true);
+  });
+
   it('skips a holiday', async () => {
     const ctx = await localContext(1);
     const hs = await ctx.data.getHolidays('BG', '2026-12-24', '2026-12-25');

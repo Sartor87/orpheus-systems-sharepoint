@@ -5,7 +5,9 @@ import type { ServerConfig } from '../config';
 import type { AuditSink } from '../audit/audit';
 import type { AuthedRequest, ContextFactory } from '../context/contextFactory';
 import { createMcpServer } from '../mcp/createMcpServer';
+import { randomUUID } from 'crypto';
 import { AuthRequiredError } from '../auth/errors';
+import { logError } from '../log/errorLog';
 
 export interface AppOptions {
   /** Token validation (Task 10). Runs before /mcp; must set req.claims or end the response. */
@@ -23,6 +25,16 @@ export function redactHeaders(h: Record<string, unknown>): Record<string, unknow
   }
   return out;
 }
+
+const firstHeader = (req: express.Request, name: string): string | null => {
+  const v = req.headers[name];
+  const s = Array.isArray(v) ? v[0] : v;
+  return s ? s : null;
+};
+
+/** Same precedence as the context factory, so the log line matches the audit trail. */
+const correlationIdOf = (req: express.Request): string =>
+  firstHeader(req, 'x-ms-correlation-id') ?? firstHeader(req, 'request-id') ?? randomUUID();
 
 const methodNotAllowed = (_req: express.Request, res: Response): void => {
   res
@@ -68,8 +80,10 @@ export function createApp(
   if (opts.authMiddleware) chain.push(opts.authMiddleware);
 
   app.post('/mcp', ...chain, async (req, res) => {
+    let correlationId: string | null = null;
     try {
       const { ctx, meta } = await contexts(req as AuthedRequest);
+      correlationId = meta.correlationId;
       const server = createMcpServer(ctx, meta, sink);
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       res.on('close', () => {
@@ -83,6 +97,7 @@ export function createApp(
         res.status(401).set('WWW-Authenticate', 'Bearer').json({ error: 'unauthorized' });
         return;
       }
+      logError(correlationId ?? correlationIdOf(req), 'http:/mcp', err);
       if (!res.headersSent) {
         res.status(500).json({ jsonrpc: '2.0', error: { code: -32603, message: 'Internal server error.' }, id: null });
       }

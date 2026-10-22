@@ -80,6 +80,36 @@ describe('app', () => {
     expect(logged).not.toMatch(/SECRET/);
   });
 
+  it('logs a 500 to stderr with correlation id and no token', async () => {
+    const lines: string[] = [];
+    const spy = jest.spyOn(process.stderr, 'write').mockImplementation(((s: string) => {
+      lines.push(String(s));
+      return true;
+    }) as never);
+    let status = 0;
+    let body: unknown;
+    try {
+      const failing = () => Promise.reject(new Error('OBO failed for Bearer SECRET-TOKEN'));
+      const app = createApp(cfg, failing, new MemoryAuditSink());
+      const r = await request(app)
+        .post('/mcp')
+        .set('Accept', ACCEPT)
+        .set('Authorization', 'Bearer SECRET-TOKEN')
+        .set('x-ms-correlation-id', 'corr-500')
+        .send(init);
+      status = r.status;
+      body = r.body;
+    } finally {
+      spy.mockRestore();
+    }
+    expect(status).toBe(500);
+    expect(JSON.stringify(body)).not.toMatch(/SECRET|OBO/);
+    const line = lines.find(l => l.includes('"event":"error"'));
+    expect(line).toBeDefined();
+    expect(JSON.parse(line as string)).toMatchObject({ event: 'error', where: 'http:/mcp', name: 'Error', correlationId: 'corr-500' });
+    expect(line).not.toMatch(/Bearer|SECRET/);
+  });
+
   describe('end to end over HTTP', () => {
     let server: Server;
     let client: Client;

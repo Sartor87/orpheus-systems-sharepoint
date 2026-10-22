@@ -24,8 +24,11 @@ describe('removeDays', () => {
   it('removes booked days, then reports them as notFound', async () => {
     const ctx = await localContext(1);
     await bookDays(ctx, range);
+    const before = await ctx.data.getEntries(1, range.from, range.to);
     const r = await removeDays(ctx, range);
-    expect(r.removed).toEqual(['2026-11-02', '2026-11-03', '2026-11-04']);
+    expect(r.removed).toEqual(before.map(e => ({ date: e.date, entryId: e.id })));
+    expect(r.removed.map(x => x.date)).toEqual(['2026-11-02', '2026-11-03', '2026-11-04']);
+    expect(r.removed.every(x => typeof x.entryId === 'number')).toBe(true);
     expect(r.notFound).toEqual([]);
     expect(r.failed).toEqual([]);
     expect(await ctx.data.getEntries(1, range.from, range.to)).toEqual([]);
@@ -73,7 +76,7 @@ describe('removeDays', () => {
     await bookDays(base, range);
     const ctx: ToolContext = { ...base, data: new FailingDelete(base.data as LocalDataService, '2026-11-03') };
     const r = await removeDays(ctx, range);
-    expect(r.removed).toEqual(['2026-11-02', '2026-11-04']);
+    expect(r.removed.map(x => x.date)).toEqual(['2026-11-02', '2026-11-04']);
     expect(r.failed).toEqual([{ date: '2026-11-03', error: 'SharePoint 500' }]);
     expect(r.notFound).toEqual([]);
   });

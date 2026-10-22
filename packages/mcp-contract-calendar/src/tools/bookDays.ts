@@ -10,7 +10,8 @@ export type SkipReason = 'weekend' | 'holiday' | 'outside_contract';
 export type BookDaysResult =
   | {
       status: 'done';
-      booked: Array<{ date: DateKey; contractId: number; contractTitle: string }>;
+      /** entryId: the SharePoint item id of the saved calendar entry (audit trail). */
+      booked: Array<{ date: DateKey; contractId: number; contractTitle: string; entryId: number | null }>;
       skipped: Array<{ date: DateKey; reason: SkipReason }>;
       failed: Array<{ date: DateKey; error: string }>;
       totals: Array<{ contractId: number; contractTitle: string; totals: Totals; remaining: Remaining }>;
@@ -78,14 +79,14 @@ export async function bookDays(
     };
   }
 
-  const booked: Array<{ date: DateKey; contractId: number; contractTitle: string }> = [];
+  const booked: Array<{ date: DateKey; contractId: number; contractTitle: string; entryId: number | null }> = [];
   const failed: Array<{ date: DateKey; error: string }> = [];
   const touched = new Map<number, VendorContract>();
   for (const p of plan) {
     const c = p.candidates[0];
     try {
-      await data.upsertEntry({ contractId: c.id, date: p.date, type, note: args.note });
-      booked.push({ date: p.date, contractId: c.id, contractTitle: c.title });
+      const saved = await data.upsertEntry({ contractId: c.id, date: p.date, type, note: args.note });
+      booked.push({ date: p.date, contractId: c.id, contractTitle: c.title, entryId: saved.id ?? null });
       touched.set(c.id, c);
     } catch (e) {
       failed.push({ date: p.date, error: e instanceof Error ? e.message : String(e) });
