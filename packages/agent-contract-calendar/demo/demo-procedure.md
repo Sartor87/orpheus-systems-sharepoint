@@ -177,7 +177,7 @@ written from documentation without a live run.
 | V3 | `CopilotInteraction` records for the sideloaded agent show `AISystemPlugin` with our plugin | Purview Audit search, workload Copilot | | | |
 | V4 | Cold start plus on-behalf-of plus a five-day `book_days` stays under the action timeout (about 10 s) | Restart the container, book five days, time the call in the server log | | | |
 | V5 | `m365agents.yml` v1.9 and its action list match a freshly scaffolded "Start with an MCP server" project | Scaffold a new project with the toolkit, diff | | | |
-| V6 | App manifest 1.30, declarative agent manifest v1.8 and plugin manifest v2.4 (including `security_info` and conversation starters) are accepted by provision | Provision; read toolkit validation output | | | |
+| V6 | App manifest 1.30, declarative agent manifest v1.8 and plugin manifest v2.4 (including the `RemoteMCPServer` runtime with dynamic discovery and conversation starters) are accepted by provision | Provision; read toolkit validation output | | | |
 | V7 | Entra SSO: consent or interaction errors from the on-behalf-of exchange lead to the sign-in prompt in Copilot (401 path) | First call as a user who has not consented | | | |
 | V8 | Negative cases: no token gives 401; a token for another audience gives 401 | Call `/mcp` through the tunnel without and with a foreign token | | | |
 | V9 | Manager (Ivan) and HR (Emilia) booking is refused by the server, not only by the instructions | Prompts 9 and 10 in `prompt-set.md`; audit `errorCode: forbidden` if the tool was called | | | |

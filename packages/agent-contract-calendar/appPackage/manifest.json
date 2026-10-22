@@ -30,6 +30,6 @@
       }
     ]
   },
-  "permissions": ["identity", "messageTeamMembers"],
+  "permissions": ["identity"],
   "validDomains": []
 }

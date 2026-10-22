@@ -20,7 +20,7 @@ Declarative Microsoft 365 Copilot agent ("Contract Calendar") whose single actio
 | `TEAMS_APP_ID` | Written by `teamsApp/create` during provision |
 | `MCP_SERVER_URL` | Public HTTPS URL of the MCP server including `/mcp` (for dev, the dev tunnel URL) |
 | `MCP_AUTH_REFERENCE_ID` | Auth config id of the Entra SSO registration (see below) |
-| `APP_NAME_SUFFIX` | Suffix appended to the app name, e.g. `dev` |
+| `APP_NAME_SUFFIX` | Appended as-is to the app name, e.g. `" (dev)"` gives "Contract Calendar (dev)" (keep the leading space and quotes) |
 
 ## Entra SSO setup (owner step)
 
@@ -35,9 +35,11 @@ Declarative Microsoft 365 Copilot agent ("Contract Calendar") whose single actio
 
 Dynamic discovery has one cost: the plugin manifest no longer lists the write tools, so there is no
 per-function place for a confirmation hint. The confirmation step lives in `instruction.txt`
-(restate dates, type and contract, confirm once, then one `book_days` call), and the server refuses
-writes by anyone but the contract's contractor. MCP tool annotations (`destructiveHint`) are the
-candidate fix once Copilot honours them.
+(restate dates, type and contract, confirm once, then one `book_days` call; the same for `remove_days` with dates and contract), and the server refuses
+writes by anyone but the contract's contractor. The server also sets MCP tool annotations, which
+Copilot reads to decide when to ask for confirmation: `readOnlyHint: true` on the four read tools,
+`readOnlyHint: false, destructiveHint: false` on `book_days`, and `readOnlyHint: false,
+destructiveHint: true` on `remove_days`.
 
 ## Demo
 
@@ -65,4 +67,4 @@ These were written from the documentation without running the toolkit:
 - `m365agents.yml`: the `v1.9` yaml schema version and the exact action list (`teamsApp/extendToM365` outputs). Compare with a freshly scaffolded "Start with an MCP Server" project and align.
 - `manifest.json`: `manifestVersion` 1.30 (the page I read lists 1.30 as current); lower it if the installed toolkit rejects it.
 - `declarativeAgent.json`: `v1.8` was not fetched in full (v1.6 was); only fields common to both are used. The `$[file('instruction.txt')]` include is the toolkit syntax.
-- `ai-plugin.json`: `security_info.data_handling` on the write tools and the `capabilities.conversation_starters` block follow the 2.4 reference.
+- `ai-plugin.json`: the `RemoteMCPServer` runtime with dynamic discovery (no `functions`, so no per-function `security_info`) and the `capabilities.conversation_starters` block follow the 2.4 reference.
