@@ -16,3 +16,4 @@ packages/*/env/.env.*
 !packages/*/env/.env.*.sample
 !packages/*/.env.sample
 audit-*.jsonl
+packages/*/appPackage/build/
