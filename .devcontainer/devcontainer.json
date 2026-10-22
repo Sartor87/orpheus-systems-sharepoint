@@ -2,6 +2,8 @@
   "name": "Orpheus SPFx",
   "image": "docker.io/m365pnp/spfx:1.23.2",
   "workspaceFolder": "/usr/app/spfx",
+  "containerUser": "node",
+  "remoteUser": "node",
   "workspaceMount": "source=${localWorkspaceFolder},target=/usr/app/spfx,type=bind",
   "mounts": [
     "source=nm-root,target=/usr/app/spfx/node_modules,type=volume",

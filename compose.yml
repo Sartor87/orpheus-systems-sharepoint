@@ -1,17 +1,34 @@
 x-spfx: &spfx
   image: docker.io/m365pnp/spfx:1.23.2
   working_dir: /usr/app/spfx
+  # Run as the bind mount's owner (uid 1000 = `node` in the image). The Windows
+  # drvfs/9p mount refuses chmod/fchmod from any other uid, which breaks
+  # fs.copyFile (Heft copy steps). Run `fix-perms` once after creating volumes.
+  user: "1000:1000"
   volumes:
     - .:/usr/app/spfx
     - npm-cache:/home/spfx/.npm
+    - rushstack:/home/spfx/.rushstack
     - nm-root:/usr/app/spfx/node_modules
     - nm-shared-core:/usr/app/spfx/packages/shared-core/node_modules
     - nm-shared-ui:/usr/app/spfx/packages/shared-ui/node_modules
     - nm-wp-contract-calendar:/usr/app/spfx/packages/wp-contract-calendar/node_modules
   environment:
+    - "HOME=/home/spfx"
     - "npm_config_cache=/home/spfx/.npm"
 
 services:
+  fix-perms:
+    <<: *spfx
+    user: "0:0"
+    command: >-
+      chown -R 1000:1000
+      /home/spfx/.npm
+      /home/spfx/.rushstack
+      /usr/app/spfx/node_modules
+      /usr/app/spfx/packages/shared-core/node_modules
+      /usr/app/spfx/packages/shared-ui/node_modules
+      /usr/app/spfx/packages/wp-contract-calendar/node_modules
   shell:
     <<: *spfx
     command: bash
@@ -38,6 +55,7 @@ services:
 
 volumes:
   npm-cache:
+  rushstack:
   nm-root:
   nm-shared-core:
   nm-shared-ui:

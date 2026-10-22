@@ -3,7 +3,7 @@ import styles from './ContractCalendar.module.scss';
 import type { IContractCalendarProps } from './IContractCalendarProps';
 import { escape } from '@microsoft/sp-lodash-subset';
 import { toDateKey } from '@orpheussystems/shared-core';
-import { orpheusTokens } from '@orpheussystems/shared-ui';
+import { orpheusTokens } from '@orpheussystems/shared-ui/lib/theme/tokens';
 import welcomeDark from '../assets/welcome-dark.png';
 import welcomeLight from '../assets/welcome-light.png';
 
