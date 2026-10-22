@@ -16,3 +16,19 @@ shared-core must be built (`npm run build:shared`) before the tests run.
 ## Local configuration
 
 Copy `.env.sample` to `.env` (gitignored). The `mcp` compose service reads it if present.
+
+## Running locally (no SharePoint, no Entra)
+
+Set `AUTH_MODE=none`, `DATA_MODE=local`, `LOCAL_USER_ID=1` in `.env`, then `podman compose run --rm --service-ports mcp`. The server listens on `http://localhost:8787/mcp` (stateless Streamable HTTP; `GET /healthz` for liveness).
+
+Manual check with MCP Inspector (needs Node on some machine or a second container):
+
+```
+npx @modelcontextprotocol/inspector
+```
+
+Connect with transport "Streamable HTTP" to `http://localhost:8787/mcp`, list tools, call `book_days` with `from=2026-11-02`, `to=2026-11-06`. Expected: 5 booked. An automated equivalent runs in `src/__tests__/app.test.ts` (SDK client over HTTP).
+
+## Type checking
+
+Jest transpiles only (`isolatedModules`); run `npm run typecheck` for type errors. The MCP SDK `registerTool` is called through a loosely typed wrapper in `src/mcp/createMcpServer.ts` because its zod-driven generics exhaust memory in tsc with zod 3.25.
