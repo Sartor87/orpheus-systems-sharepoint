@@ -1,0 +1,36 @@
+x-spfx: &spfx
+  image: docker.io/m365pnp/spfx:1.23.2
+  working_dir: /usr/app/spfx
+  volumes:
+    - .:/usr/app/spfx
+    - npm-cache:/home/spfx/.npm
+  environment:
+    - "npm_config_cache=/home/spfx/.npm"
+
+services:
+  shell:
+    <<: *spfx
+    command: bash
+    stdin_open: true
+    tty: true
+  install:
+    <<: *spfx
+    command: npm ci
+  build:
+    <<: *spfx
+    command: npm run build
+  test:
+    <<: *spfx
+    command: npm run test:shared
+  serve:
+    <<: *spfx
+    command: bash -c "npm run serve -w ${PKG:-@orpheussystems/wp-contract-calendar}"
+    ports:
+      - "4321:4321"
+      - "35729:35729"
+  package:
+    <<: *spfx
+    command: npm run package
+
+volumes:
+  npm-cache:

@@ -1,0 +1,16 @@
+{
+  "name": "Orpheus SPFx",
+  "image": "docker.io/m365pnp/spfx:1.23.2",
+  "workspaceFolder": "/usr/app/spfx",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/usr/app/spfx,type=bind",
+  "forwardPorts": [4321, 35729],
+  "postCreateCommand": "npm ci",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "orta.vscode-jest"
+      ]
+    }
+  }
+}
