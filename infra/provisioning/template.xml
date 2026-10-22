@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Orpheus Systems: SharePoint list provisioning template (PnP Provisioning Schema 2022-09).
+  Applied by Provision-OrpheusSite.ps1 with Invoke-PnPSiteTemplate; safe to re-apply.
+
+  Column internal names are a contract with packages/shared-core/src/data (spMappers.ts,
+  spQueries.ts, SharePointDataService.ts). Do not rename them.
+
+  Field and content type IDs are fixed. Never regenerate them: a new ID creates a second column.
+
+  Two columns deliberately are NOT Orpheus site columns, because every SharePoint site already
+  has a built-in site column with the same internal name (a second site column with that
+  internal name cannot be created):
+    - StartDate: the built-in "Start Date" site column (DateTime, DateOnly,
+      ID 64cd368d-2f95-4bfc-a1f9-8d4324ecb007) is reused in the Orpheus Contract content type.
+    - Status: defined as a list-level column on Contracts (the built-in "Task Status" site
+      column uses the internal name Status and has different choices).
+  The Contract lookup is list-level on CalendarEntries because it targets the Contracts list.
+-->
+<pnp:Provisioning xmlns:pnp="http://schemas.dev.office.com/PnP/2022/09/ProvisioningSchema">
+  <pnp:Templates ID="ORPHEUS-TEMPLATES">
+    <pnp:ProvisioningTemplate ID="ORPHEUS-LISTS" Version="1.0" DisplayName="Orpheus Systems lists" Description="Content types and lists for the Orpheus contract calendar.">
+
+      <pnp:SiteFields>
+        <!-- Contracts -->
+        <Field ID="{c51765ad-9252-4b91-a3c5-dd1a83d782c9}" Name="ContractCode" StaticName="ContractCode" DisplayName="Contract code" Type="Text" MaxLength="64" Required="TRUE" Indexed="TRUE" Group="Orpheus Systems" />
+        <Field ID="{f7f5db1e-fcb8-4be4-8729-3a943d3f5966}" Name="FrameworkContract" StaticName="FrameworkContract" DisplayName="Framework contract" Type="Text" MaxLength="255" Group="Orpheus Systems" />
+        <Field ID="{db5481ea-1f98-477a-b674-c2d7fdf75826}" Name="Modality" StaticName="Modality" DisplayName="Modality" Type="Choice" Format="Dropdown" FillInChoice="FALSE" Group="Orpheus Systems">
+          <CHOICES>
+            <CHOICE>On-site</CHOICE>
+            <CHOICE>Off-site</CHOICE>
+            <CHOICE>Hybrid</CHOICE>
+          </CHOICES>
+        </Field>
+        <Field ID="{da8236df-d489-49a2-8739-0e1bc7d1b0bb}" Name="Contractor" StaticName="Contractor" DisplayName="Contractor" Type="User" List="UserInfo" ShowField="ImnName" UserSelectionMode="PeopleOnly" UserSelectionScope="0" Mult="FALSE" Indexed="TRUE" Group="Orpheus Systems" />
+        <Field ID="{c76c4fc4-c7d1-47ff-9ba6-2d2b87984155}" Name="ContractManager" StaticName="ContractManager" DisplayName="Contract manager" Type="User" List="UserInfo" ShowField="ImnName" UserSelectionMode="PeopleOnly" UserSelectionScope="0" Mult="FALSE" Indexed="TRUE" Group="Orpheus Systems" />
+        <Field ID="{531a726a-2248-48dc-8493-998e7e9aeabf}" Name="LatestExecutionDate" StaticName="LatestExecutionDate" DisplayName="Latest execution date" Type="DateTime" Format="DateOnly" FriendlyDisplayFormat="Disabled" Group="Orpheus Systems" />
+        <Field ID="{e04b3927-fc99-4392-bfb9-ceda2b38c280}" Name="OnSiteTargetDays" StaticName="OnSiteTargetDays" DisplayName="On-site target days" Type="Number" Decimals="1" Min="0" Group="Orpheus Systems" />
+        <Field ID="{2a59f2e0-593d-47cd-a8b9-9650b2e72c13}" Name="OffSiteTargetDays" StaticName="OffSiteTargetDays" DisplayName="Off-site target days" Type="Number" Decimals="1" Min="0" Group="Orpheus Systems" />
+        <Field ID="{29f85b0c-b777-49b3-a1d8-354ec113d7c0}" Name="HoursPerDay" StaticName="HoursPerDay" DisplayName="Hours per day" Type="Number" Decimals="2" Min="0" Max="24" Group="Orpheus Systems">
+          <Default>8</Default>
+        </Field>
+        <!-- ISO 3166-1 alpha-2; Holidays also use "*" for all countries. -->
+        <Field ID="{11612c30-1d93-4855-a33d-8589df22799c}" Name="Country" StaticName="Country" DisplayName="Country" Type="Text" MaxLength="2" Group="Orpheus Systems" />
+        <Field ID="{986ea676-682f-48b2-8f1b-df600c81ce02}" Name="OnSiteUsedDays" StaticName="OnSiteUsedDays" DisplayName="On-site used days" Type="Number" Decimals="1" Min="0" Group="Orpheus Systems">
+          <Default>0</Default>
+        </Field>
+        <Field ID="{7482522e-b98e-477a-b655-683a119a2bc6}" Name="OffSiteUsedDays" StaticName="OffSiteUsedDays" DisplayName="Off-site used days" Type="Number" Decimals="1" Min="0" Group="Orpheus Systems">
+          <Default>0</Default>
+        </Field>
+        <Field ID="{9ab62480-95bb-4ea8-bff0-f74da70d4ff2}" Name="RemainingDays" StaticName="RemainingDays" DisplayName="Remaining days" Type="Number" Decimals="1" Group="Orpheus Systems" />
+
+        <!-- CalendarEntries -->
+        <Field ID="{1de91234-0b51-4789-bd5c-1d6e8cb126bf}" Name="EntryDate" StaticName="EntryDate" DisplayName="Entry date" Type="DateTime" Format="DateOnly" FriendlyDisplayFormat="Disabled" Required="TRUE" Indexed="TRUE" Group="Orpheus Systems" />
+        <Field ID="{d5dc5c6b-5ddb-4090-85a0-6536f3357dc0}" Name="EntryType" StaticName="EntryType" DisplayName="Entry type" Type="Choice" Format="Dropdown" FillInChoice="FALSE" Required="TRUE" Group="Orpheus Systems">
+          <CHOICES>
+            <CHOICE>OnSiteFull</CHOICE>
+            <CHOICE>OnSiteHalf</CHOICE>
+            <CHOICE>OffSiteFull</CHOICE>
+            <CHOICE>OffSiteHalf</CHOICE>
+          </CHOICES>
+        </Field>
+        <Field ID="{44998e85-809d-41f3-a0a6-35528f8b8ea8}" Name="Note" StaticName="Note" DisplayName="Note" Type="Note" NumLines="4" RichText="FALSE" Group="Orpheus Systems" />
+
+        <!-- Holidays -->
+        <Field ID="{122fcd9d-97dc-49fb-874c-e3160777fa9e}" Name="HolidayDate" StaticName="HolidayDate" DisplayName="Holiday date" Type="DateTime" Format="DateOnly" FriendlyDisplayFormat="Disabled" Required="TRUE" Indexed="TRUE" Group="Orpheus Systems" />
+        <Field ID="{7ad9c82e-359f-4fda-9aaa-f682d1bc51ba}" Name="Source" StaticName="Source" DisplayName="Source" Type="Choice" Format="Dropdown" FillInChoice="FALSE" Group="Orpheus Systems">
+          <CHOICES>
+            <CHOICE>Manual</CHOICE>
+            <CHOICE>Agent</CHOICE>
+          </CHOICES>
+          <Default>Manual</Default>
+        </Field>
+      </pnp:SiteFields>
+
+      <pnp:ContentTypes>
+        <pnp:ContentType ID="0x0100514116295A2F4DD1A93519F365EB8AAF" Name="Orpheus Contract" Group="Orpheus Systems" Description="A specific contract of a contractor.">
+          <pnp:FieldRefs>
+            <pnp:FieldRef ID="c51765ad-9252-4b91-a3c5-dd1a83d782c9" Name="ContractCode" Required="true" />
+            <pnp:FieldRef ID="f7f5db1e-fcb8-4be4-8729-3a943d3f5966" Name="FrameworkContract" />
+            <pnp:FieldRef ID="db5481ea-1f98-477a-b674-c2d7fdf75826" Name="Modality" />
+            <pnp:FieldRef ID="da8236df-d489-49a2-8739-0e1bc7d1b0bb" Name="Contractor" />
+            <pnp:FieldRef ID="c76c4fc4-c7d1-47ff-9ba6-2d2b87984155" Name="ContractManager" />
+            <pnp:FieldRef ID="64cd368d-2f95-4bfc-a1f9-8d4324ecb007" Name="StartDate" />
+            <pnp:FieldRef ID="531a726a-2248-48dc-8493-998e7e9aeabf" Name="LatestExecutionDate" />
+            <pnp:FieldRef ID="e04b3927-fc99-4392-bfb9-ceda2b38c280" Name="OnSiteTargetDays" />
+            <pnp:FieldRef ID="2a59f2e0-593d-47cd-a8b9-9650b2e72c13" Name="OffSiteTargetDays" />
+            <pnp:FieldRef ID="29f85b0c-b777-49b3-a1d8-354ec113d7c0" Name="HoursPerDay" />
+            <pnp:FieldRef ID="11612c30-1d93-4855-a33d-8589df22799c" Name="Country" />
+            <pnp:FieldRef ID="986ea676-682f-48b2-8f1b-df600c81ce02" Name="OnSiteUsedDays" />
+            <pnp:FieldRef ID="7482522e-b98e-477a-b655-683a119a2bc6" Name="OffSiteUsedDays" />
+            <pnp:FieldRef ID="9ab62480-95bb-4ea8-bff0-f74da70d4ff2" Name="RemainingDays" />
+          </pnp:FieldRefs>
+        </pnp:ContentType>
+        <pnp:ContentType ID="0x0100132A2604253B4066BC1E4812B8F5929E" Name="Orpheus Calendar Entry" Group="Orpheus Systems" Description="One worked day (full or half, on-site or off-site) against a contract.">
+          <pnp:FieldRefs>
+            <pnp:FieldRef ID="1de91234-0b51-4789-bd5c-1d6e8cb126bf" Name="EntryDate" Required="true" />
+            <pnp:FieldRef ID="d5dc5c6b-5ddb-4090-85a0-6536f3357dc0" Name="EntryType" Required="true" />
+            <pnp:FieldRef ID="44998e85-809d-41f3-a0a6-35528f8b8ea8" Name="Note" />
+          </pnp:FieldRefs>
+        </pnp:ContentType>
+        <pnp:ContentType ID="0x0100B306E930FF3442F69E5B6BF90F942B57" Name="Orpheus Holiday" Group="Orpheus Systems" Description="A public holiday for one country, or for all countries (*).">
+          <pnp:FieldRefs>
+            <pnp:FieldRef ID="122fcd9d-97dc-49fb-874c-e3160777fa9e" Name="HolidayDate" Required="true" />
+            <pnp:FieldRef ID="11612c30-1d93-4855-a33d-8589df22799c" Name="Country" />
+            <pnp:FieldRef ID="7ad9c82e-359f-4fda-9aaa-f682d1bc51ba" Name="Source" />
+          </pnp:FieldRefs>
+        </pnp:ContentType>
+      </pnp:ContentTypes>
+
+      <pnp:Lists>
+        <!-- Contracts first: the CalendarEntries lookup resolves {listid:Contracts}. -->
+        <pnp:ListInstance Title="Contracts" Description="Specific contracts of the contractors." TemplateType="100" Url="Lists/Contracts" OnQuickLaunch="true" EnableVersioning="true" MaxVersionLimit="50" ContentTypesEnabled="true" RemoveExistingContentTypes="true" EnableAttachments="false" EnableFolderCreation="false">
+          <pnp:ContentTypeBindings>
+            <pnp:ContentTypeBinding ContentTypeID="0x0100514116295A2F4DD1A93519F365EB8AAF" Default="true" />
+          </pnp:ContentTypeBindings>
+          <pnp:Views>
+            <View DisplayName="All Items" DefaultView="TRUE" BaseViewID="1" Type="HTML" MobileView="TRUE" MobileDefaultView="TRUE" Url="{site}/Lists/Contracts/AllItems.aspx">
+              <ViewFields>
+                <FieldRef Name="LinkTitle" />
+                <FieldRef Name="ContractCode" />
+                <FieldRef Name="Contractor" />
+                <FieldRef Name="ContractManager" />
+                <FieldRef Name="Modality" />
+                <FieldRef Name="StartDate" />
+                <FieldRef Name="LatestExecutionDate" />
+                <FieldRef Name="OnSiteTargetDays" />
+                <FieldRef Name="OnSiteUsedDays" />
+                <FieldRef Name="OffSiteTargetDays" />
+                <FieldRef Name="OffSiteUsedDays" />
+                <FieldRef Name="RemainingDays" />
+                <FieldRef Name="Country" />
+                <FieldRef Name="Status" />
+              </ViewFields>
+              <Query>
+                <OrderBy>
+                  <FieldRef Name="StartDate" Ascending="FALSE" />
+                </OrderBy>
+              </Query>
+              <RowLimit Paged="TRUE">30</RowLimit>
+            </View>
+          </pnp:Views>
+          <pnp:Fields>
+            <Field ID="{d99f4591-4a0f-47c4-87c4-161bb319f1a9}" Name="Status" StaticName="Status" DisplayName="Status" Type="Choice" Format="Dropdown" FillInChoice="FALSE" Required="TRUE" Indexed="TRUE" Group="Orpheus Systems">
+              <CHOICES>
+                <CHOICE>Draft</CHOICE>
+                <CHOICE>Active</CHOICE>
+                <CHOICE>Closed</CHOICE>
+              </CHOICES>
+              <Default>Active</Default>
+            </Field>
+          </pnp:Fields>
+        </pnp:ListInstance>
+
+        <pnp:ListInstance Title="CalendarEntries" Description="Worked days per contract (one entry per contractor per date)." TemplateType="100" Url="Lists/CalendarEntries" OnQuickLaunch="false" EnableVersioning="true" MaxVersionLimit="50" ContentTypesEnabled="true" RemoveExistingContentTypes="true" EnableAttachments="false" EnableFolderCreation="false">
+          <pnp:ContentTypeBindings>
+            <pnp:ContentTypeBinding ContentTypeID="0x0100132A2604253B4066BC1E4812B8F5929E" Default="true" />
+          </pnp:ContentTypeBindings>
+          <pnp:Views>
+            <View DisplayName="All Items" DefaultView="TRUE" BaseViewID="1" Type="HTML" MobileView="TRUE" MobileDefaultView="TRUE" Url="{site}/Lists/CalendarEntries/AllItems.aspx">
+              <ViewFields>
+                <FieldRef Name="LinkTitle" />
+                <FieldRef Name="Contract" />
+                <FieldRef Name="EntryDate" />
+                <FieldRef Name="EntryType" />
+                <FieldRef Name="Note" />
+              </ViewFields>
+              <Query>
+                <OrderBy>
+                  <FieldRef Name="EntryDate" Ascending="FALSE" />
+                </OrderBy>
+              </Query>
+              <RowLimit Paged="TRUE">100</RowLimit>
+            </View>
+          </pnp:Views>
+          <pnp:Fields>
+            <Field ID="{35caafbf-89e2-4c39-a072-cc6f96cf13f5}" Name="Contract" StaticName="Contract" DisplayName="Contract" Type="Lookup" List="{listid:Contracts}" ShowField="Title" Required="TRUE" Indexed="TRUE" Group="Orpheus Systems" />
+          </pnp:Fields>
+        </pnp:ListInstance>
+
+        <pnp:ListInstance Title="Holidays" Description="Public holidays per country; Country * applies to all countries." TemplateType="100" Url="Lists/Holidays" OnQuickLaunch="true" EnableVersioning="true" MaxVersionLimit="50" ContentTypesEnabled="true" RemoveExistingContentTypes="true" EnableAttachments="false" EnableFolderCreation="false">
+          <pnp:ContentTypeBindings>
+            <pnp:ContentTypeBinding ContentTypeID="0x0100B306E930FF3442F69E5B6BF90F942B57" Default="true" />
+          </pnp:ContentTypeBindings>
+          <pnp:Views>
+            <View DisplayName="All Items" DefaultView="TRUE" BaseViewID="1" Type="HTML" MobileView="TRUE" MobileDefaultView="TRUE" Url="{site}/Lists/Holidays/AllItems.aspx">
+              <ViewFields>
+                <FieldRef Name="LinkTitle" />
+                <FieldRef Name="HolidayDate" />
+                <FieldRef Name="Country" />
+                <FieldRef Name="Source" />
+              </ViewFields>
+              <Query>
+                <OrderBy>
+                  <FieldRef Name="HolidayDate" Ascending="TRUE" />
+                </OrderBy>
+              </Query>
+              <RowLimit Paged="TRUE">100</RowLimit>
+            </View>
+          </pnp:Views>
+        </pnp:ListInstance>
+      </pnp:Lists>
+
+    </pnp:ProvisioningTemplate>
+  </pnp:Templates>
+</pnp:Provisioning>
