@@ -123,7 +123,7 @@ and the totals, which you cannot write as plain HTML.
 |---|---|
 | `{{grid}}` | Month by day grid with per-month totals columns |
 | `{{grid.days}}` | The same grid without the totals columns |
-| `{{totals}}` | Table of on-site, off-site and total hours per month and in grand total |
+| `{{totals}}` | Table of on-site, off-site and total days per month and in grand total |
 | `{{header}}` | The built-in two-row contract header |
 | `{{signatures}}` | The built-in three signature boxes |
 
@@ -133,6 +133,8 @@ Rules for blocks:
 
 - A block must be the **only content of its element**: `<div>{{grid.days}}</div>`, not
   `<div>Grid: {{grid.days}}</div>`.
+- A block must be inside the body. `<title>{{grid}}</title>` or any other block in `<head>`
+  is reported as an error.
 - Put each block in a plain full-width `<div>`. A block placed inside a table cell gets an
   automatic width that is often narrow.
 - The grid repeats its day-header row when it runs onto a new page. The rest of your template
@@ -158,6 +160,8 @@ The conversion supports a document subset: `table`, `tr`, `td`, `th`, `div`, `p`
   - `data-pdfmake='{"layout":"noBorders"}'` removes the table borders. The starter template
     uses it on its title table.
   - Options combine: `data-pdfmake='{"widths":["*","*","*"],"dontBreakRows":true}'`.
+  - The key `orpheusBlock` is reserved: the web part uses it to mark blocks. Do not write it
+    in your own `data-pdfmake`; an unknown value is reported as `Unknown block "..."`.
 - `colspan` on a table cell works (the starter template uses it in the header table).
 
 The easiest way to learn what works is to change the starter template step by step and
@@ -170,10 +174,13 @@ download a timesheet after each change.
   URL. Images from other hosts are rejected.
 - Write the path relative to the template's folder (`logo.png`, `img/logo.png`) or
   server-relative (`/sites/<site>/Shared Documents/Templates/logo.png`).
-- Use the literal file name. In relative and server-relative paths, percent-encoded names such as
-  `My%20Logo.png` are not decoded and will report "file not found". Avoiding spaces in the file name is simplest.
+- Literal and percent-encoded file names both work: `img/My Logo.png` and `img/My%20Logo.png`
+  point to the same file, in relative, server-relative and absolute paths alike. The same holds
+  for the template path in the property pane.
 - **SVG** logos are not accepted through `<img>`. Paste the `<svg>` element into the template
   instead; the starter template does this for its logo placeholder.
+- The same-site check applies to `<img>` only. Do not reference external images inside an
+  inline `<svg>` (for example `<image href="https://...">`); keep the SVG self-contained.
 - Everyone who downloads timesheets needs read access to the image, as for the template.
 
 ## What the code always generates
@@ -196,6 +203,8 @@ in the template are listed together, so you can fix them in one go.
 |---|---|
 | `Unknown placeholder {{name}}` | The name is misspelled or does not exist. Compare with the tables above. Names are case-sensitive. |
 | `{{name}} must be the only content of its element` | A block shares its element with other text or elements. Put it alone in its own `<div>`. |
+| `{{name}} must be inside the body` | A block is in `<head>`, for example in `<title>`. Move it into the body. |
+| `Unknown block "..."` | A `data-pdfmake` attribute uses the reserved key `orpheusBlock`. Remove that key. |
 | `The template must contain {{grid}} or {{grid.days}}` | Add one of the two grid blocks. |
 | `Malformed placeholder: "{{" without a matching "}}" in the same text` | A placeholder is not closed, or is split over two elements. Keep `{{name}}` in one piece of text. |
 | `Invalid orpheus:page value "..."` | Use size A4, A3 or Letter and orientation portrait or landscape, for example `A4 portrait`. |
