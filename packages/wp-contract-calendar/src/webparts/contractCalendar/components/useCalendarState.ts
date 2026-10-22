@@ -22,6 +22,8 @@ import type { TimesheetModel } from '@orpheussystems/shared-ui/timesheet';
 import { DataContext } from '../DataContext';
 import { timesheetFileName } from './timesheetFileName';
 import { eligibleDates } from './rangeSelection';
+import { formatShortDate } from './calendarFormat';
+import { showToast } from '@orpheussystems/shared-ui/toast';
 import type { RangeMode } from './rangeSelection';
 
 /** Outcome of one date write as far as the screen is concerned. */
@@ -131,6 +133,8 @@ interface DateWrites {
   confirmedToken: number;
 }
 
+interface WriteItem { contractId: number; date: DateKey; type: EntryType | undefined; current: CalendarEntry | undefined }
+
 function messageOf(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
@@ -200,6 +204,10 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
 
   const selected = React.useMemo(() => contracts.find(c => c.id === selectedId), [contracts, selectedId]);
 
+  const contractsRef = React.useRef<Contract[]>(contracts);
+  contractsRef.current = contracts;
+  const titleOf = (id: number): string => (contractsRef.current.filter(c => c.id === id)[0] || { title: 'the contract' }).title;
+
   const selectedRef = React.useRef<Contract | undefined>(selected);
   selectedRef.current = selected;
 
@@ -251,8 +259,13 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
    * Local state only tracks the selected contract: writing to a sibling moves the date off it.
    * In a batch the caller reports errors (one summary for the range), so this write leaves `error` alone.
    */
+  // Retry buttons in toasts call the newest write functions through these refs (assigned below).
+  const writeRef = React.useRef<(c: number, d: DateKey, t: EntryType | undefined, cur: CalendarEntry | undefined) => Promise<WriteOutcome>>(
+    () => Promise.resolve('stale')
+  );
+  const writeManyRef = React.useRef<(items: WriteItem[]) => Promise<void>>(() => Promise.resolve());
   const write = React.useCallback(async (
-    contractId: number, date: DateKey, type: EntryType | undefined, current: CalendarEntry | undefined, batch: boolean = false
+    contractId: number, date: DateKey, type: EntryType | undefined, current: CalendarEntry | undefined, batch: boolean = false, successTitle?: string | null
   ): Promise<WriteOutcome> => {
     const shownId = selectedIdRef.current;
     let rec = writes.current[date];
@@ -291,7 +304,12 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
       if (token === book.latest) {
         book.latestState = 'ok';
         setEntries(prev => withEntry(prev, date, shown));
-        if (!batch) { setError(undefined); }
+        if (!batch) {
+          setError(undefined);
+          if (type && successTitle !== null) {
+            showToast({ kind: 'success', title: successTitle || `Saved ${formatShortDate(date)}`, text: successTitle ? undefined : titleOf(contractId) });
+          }
+        }
         return 'ok';
       }
       if (book.latestState === 'failed') {
@@ -303,26 +321,57 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
       if (!live() || token !== book.latest) { return 'stale'; }
       book.latestState = 'failed';
       setEntries(prev => withEntry(prev, date, book.confirmed));
-      if (!batch) { setError(messageOf(e)); }
+      if (!batch) {
+        setError(messageOf(e));
+        showToast({
+          kind: 'error',
+          title: `Could not save ${formatShortDate(date)}`,
+          text: messageOf(e),
+          action: { label: 'Retry', onClick: () => { writeRef.current(contractId, date, type, book.confirmed).catch(() => undefined); } }
+        });
+      }
       return 'failed';
     }
   }, [service]);
 
+  writeRef.current = (c, d, t, cur) => write(c, d, t, cur);
+
   /** Writes several dates at once (each on its own per-date path) and reports failures as one summary. */
   const writeMany = React.useCallback(async (
-    items: Array<{ contractId: number; date: DateKey; type: EntryType | undefined; current: CalendarEntry | undefined }>
+    items: WriteItem[],
+    counted?: { title: string; dates: DateKey[] }
   ): Promise<void> => {
     if (items.length === 0) { return; }
     const shownId = selectedIdRef.current;
     const outcomes = await Promise.all(items.map(i => write(i.contractId, i.date, i.type, i.current, true)));
     if (!mounted.current || shownId !== selectedIdRef.current) { return; }
-    const failed = outcomes.filter(o => o === 'failed').length;
+    const failedItems = items.filter((_, i) => outcomes[i] === 'failed');
+    const failed = failedItems.length;
     if (failed > 0) {
       setError(`${failed} of ${items.length} days could not be saved.`);
-    } else if (outcomes.some(o => o === 'ok')) {
-      setError(undefined);
+      showToast({
+        kind: 'error',
+        title: `${failed} of ${items.length} days could not be saved`,
+        action: { label: 'Retry', onClick: () => { writeManyRef.current(failedItems).catch(() => undefined); } }
+      });
+      return;
+    }
+    if (outcomes.some(o => o === 'ok')) { setError(undefined); }
+    const okTyped = items.filter((i, idx) => outcomes[idx] === 'ok' && i.type);
+    const isCounted = (i: WriteItem): boolean => !!counted && counted.dates.indexOf(i.date) >= 0;
+    const countedItems = okTyped.filter(isCounted);
+    const savedItems = okTyped.filter(i => !isCounted(i));
+    const days = (n: number): string => `${n} day${n === 1 ? '' : 's'}`;
+    if (counted && countedItems.length > 0) {
+      showToast({ kind: 'success', title: `Counted ${days(countedItems.length)} against ${counted.title}` });
+    }
+    if (savedItems.length === 1) {
+      showToast({ kind: 'success', title: `Saved ${formatShortDate(savedItems[0].date)}`, text: titleOf(savedItems[0].contractId) });
+    } else if (savedItems.length > 1) {
+      showToast({ kind: 'success', title: `Saved ${days(savedItems.length)} to ${titleOf(savedItems[0].contractId)}` });
     }
   }, [write]);
+  writeManyRef.current = items => writeMany(items);
 
   const clickDay = React.useCallback(async (date: DateKey): Promise<void> => {
     if (readOnly || !selected || !currentUser || loadedContractId !== selected.id || isDayBlocked(date)) { return; }
@@ -381,7 +430,7 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
     const chosen = contractId === null ? undefined : pending.candidates.filter(c => c.id === contractId)[0];
     if (!pending.deferred) {
       // Single click: unchanged behaviour (cancel or an unknown id writes nothing).
-      if (chosen) { await write(chosen.id, pending.dates[0], selectionType, entries[pending.dates[0]]); }
+      if (chosen) { await write(chosen.id, pending.dates[0], selectionType, entries[pending.dates[0]], false, `Counted 1 day against ${chosen.title}`); }
       return;
     }
     const shown = selectedRef.current;
@@ -395,7 +444,7 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
         date: d, type: selectionType, current: entries[d]
       }));
     }
-    await writeMany(items);
+    await writeMany(items, chosen ? { title: chosen.title, dates: pending.dates } : undefined);
   }, [pendingOverlap, selectionType, entries, write, writeMany]);
 
   const selectContract = React.useCallback((id: number): void => {
@@ -432,7 +481,9 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
         serviceProvider: props.serviceProviderLabel || 'Service provider'
       });
       const pdf = await loadPdfRef.current();
-      await pdf.downloadTimesheet(model, timesheetFileName(contract, period.from, period.to));
+      const fileName = timesheetFileName(contract, period.from, period.to);
+      await pdf.downloadTimesheet(model, fileName);
+      showToast({ kind: 'success', title: 'Timesheet downloaded', text: fileName });
       return true;
     } catch (e) {
       if (mounted.current) { setTimesheetError(`Could not generate the timesheet: ${messageOf(e)}`); }

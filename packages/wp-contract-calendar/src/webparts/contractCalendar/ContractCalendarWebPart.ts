@@ -71,7 +71,7 @@ export default class ContractCalendarWebPart extends BaseClientSideWebPart<ICont
       element = React.createElement(
         DataContext.Provider,
         { value: { service: this._service, props: { ...this.properties, initialContractId: this._initialContractId } } },
-        React.createElement(ContractCalendar, { isDarkTheme: this._isDarkTheme })
+        React.createElement(ContractCalendar, { isDarkTheme: this._isDarkTheme, brandToast: true })
       );
     } else if (!this._hasBuilt) {
       element = React.createElement(Spinner);
@@ -89,7 +89,7 @@ export default class ContractCalendarWebPart extends BaseClientSideWebPart<ICont
     const raw = new URLSearchParams(window.location.search).get('contractId');
     const parsed = raw === null ? NaN : parseInt(raw, 10);
     this._initialContractId = isNaN(parsed) ? undefined : parsed;
-    if (!bannerShown && process.env.NODE_ENV !== 'test') {
+    if (!bannerShown && (typeof process === 'undefined' || process.env.NODE_ENV !== 'test')) {
       bannerShown = true;
       console.info(
         `%c ${orpheusBrand.name} %c Contract Calendar v${this.manifest.version} — ${orpheusBrand.url}`,
@@ -287,7 +287,7 @@ export default class ContractCalendarWebPart extends BaseClientSideWebPart<ICont
                 PropertyPaneLabel('aboutVersion', { text: `${strings.AboutVersionLabel} ${this.manifest.version}` }),
                 PropertyPaneLabel('aboutBuiltBy', { text: strings.AboutBuiltByLabel }),
                 PropertyPaneLink('aboutWebsite', { text: strings.AboutWebsiteLabel, href: orpheusBrand.url, target: '_blank' }),
-                PropertyPaneLink('aboutContact', { text: orpheusBrand.contactEmail, href: `mailto:${orpheusBrand.contactEmail}` }),
+                PropertyPaneLink('aboutContact', { text: strings.AboutContactLabel, href: `mailto:${orpheusBrand.contactEmail}` }),
                 PropertyPaneLabel('aboutLicense', { text: strings.AboutLicenseLabel })
               ]
             }

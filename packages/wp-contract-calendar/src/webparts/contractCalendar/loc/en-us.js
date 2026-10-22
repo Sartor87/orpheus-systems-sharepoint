@@ -18,7 +18,7 @@ define([], function() {
     "AboutVersionLabel": "Version",
     "AboutBuiltByLabel": "Built by Orpheus Systems",
     "AboutWebsiteLabel": "orpheussystems.com",
-    "AboutContactLabel": "Contact",
+    "AboutContactLabel": "Contact Orpheus Systems",
     "AboutLicenseLabel": "License: Apache-2.0 (see NOTICE)"
   }
 });

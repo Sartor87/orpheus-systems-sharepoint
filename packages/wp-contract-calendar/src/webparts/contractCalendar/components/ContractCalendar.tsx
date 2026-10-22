@@ -14,6 +14,9 @@ import TimesheetDialog from './TimesheetDialog';
 import { useRangeDrag } from './useRangeDrag';
 import type { RangePreview } from './useRangeDrag';
 import { rangeMode } from './rangeSelection';
+import { showBrandToastOnce } from '@orpheussystems/shared-ui/toast';
+
+const BRAND_TOAST_KEY = 'orpheus.contractCalendar.brandToastShownAt';
 
 /** The part of the preview inside one month, or undefined when they do not meet. */
 function clipToMonth(preview: RangePreview, year: number, month: number): RangePreview | undefined {
@@ -55,7 +58,10 @@ const orpheusDark = createTheme({
   }
 });
 
-const ContractCalendar: React.FC<IContractCalendarProps> = () => {
+const ContractCalendar: React.FC<IContractCalendarProps> = ({ brandToast }) => {
+  React.useEffect(() => {
+    if (brandToast) { showBrandToastOnce(BRAND_TOAST_KEY, 7); }
+  }, [brandToast]);
   const state = useCalendarState();
   const { selected, readOnly } = state;
   const [timesheetOpen, setTimesheetOpen] = React.useState(false);
@@ -108,17 +114,6 @@ const ContractCalendar: React.FC<IContractCalendarProps> = () => {
           actions={<MessageBarButton onClick={state.retryLoad}>Retry</MessageBarButton>}
         >
           Could not load the calendar: {state.loadError}
-        </MessageBar>
-      )}
-      {state.error && (
-        <MessageBar
-          messageBarType={MessageBarType.error}
-          isMultiline={false}
-          className={styles.message}
-          onDismiss={state.dismissError}
-          dismissButtonAriaLabel="Dismiss"
-        >
-          {state.error}
         </MessageBar>
       )}
       {readOnly && selected && !state.loading && !state.loadError && (

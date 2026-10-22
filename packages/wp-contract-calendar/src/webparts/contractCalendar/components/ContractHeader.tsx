@@ -44,7 +44,7 @@ const ContractHeader: React.FC<IContractHeaderProps> = ({ contracts, selected, c
         href={orpheusBrand.url}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Orpheus Systems website (opens in a new tab)"
+        aria-label={`${orpheusBrand.name} website (opens in a new tab)`}
       >
         <OrpheusMark size={20} color={orpheusTokens.amber} />
         <span className={styles.orpheusName}>
