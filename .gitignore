@@ -8,3 +8,4 @@ sharepoint/solution
 .pnpm-store
 .DS_Store
 *.log
+.superpowers/
