@@ -1,0 +1,46 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "ext-field-customizer-client-side-solution",
+    "id": "ff0771c6-d3da-4799-a42d-4d1e225cb3b3",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "iconPath": "images/orpheus-icon-96.png",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "Orpheus Systems",
+      "websiteUrl": "https://orpheussystems.com/",
+      "privacyUrl": "https://orpheussystems.com/",
+      "termsOfUseUrl": "https://orpheussystems.com/",
+      "mpnId": ""
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "Remaining on-site and off-site days bars for the Contracts list."
+      },
+      "longDescription": {
+        "default": "Shows compact remaining on-site and off-site days bars in a SharePoint list column. Built by Orpheus Systems and released under the Apache-2.0 license."
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": ["Productivity"]
+    },
+    "features": [
+      {
+        "title": "Field Extension - Deployment of field customizer",
+        "description": "Deploys the remaining days field with ClientSideComponentId association",
+        "id": "71dae528-a9a1-439d-b543-66ee257f6b25",
+        "version": "1.0.0.0",
+        "assets": {
+          "elementManifests": [
+            "elements.xml"
+          ]
+        }
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/ext-field-customizer.sppkg"
+  }
+}

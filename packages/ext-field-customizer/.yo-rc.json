@@ -1,0 +1,24 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "whichFolder": "subdir",
+    "solutionName": "ext-field-customizer",
+    "useGulp": false,
+    "componentType": "extension",
+    "extensionType": "FieldCustomizer",
+    "template": "react",
+    "componentName": "RemainingDays",
+    "componentDescription": "Remaining on-site/off-site days bars",
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.23.1",
+    "sdksVersions": {},
+    "version": "1.23.2",
+    "libraryName": "ext-field-customizer",
+    "libraryId": "ff0771c6-d3da-4799-a42d-4d1e225cb3b3",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionShortDescription": "ext-field-customizer description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false
+  }
+}

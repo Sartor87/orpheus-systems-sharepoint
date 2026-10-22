@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Elements xmlns="http://schemas.microsoft.com/sharepoint/">
+    <Field ID="{5e3a64da-92ed-4a3d-8a02-14708c3af5c8}"
+            Name="RemainingDays"
+            DisplayName="Remaining days"
+            Type="Text"
+            Required="FALSE"
+            Group="Orpheus"
+            ClientSideComponentId="a7721b49-8c3e-48c7-ac67-69408fcc6a03">
+    </Field>
+</Elements>

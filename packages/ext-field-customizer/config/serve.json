@@ -1,0 +1,17 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json",
+  "port": 4321,
+  "ipAddress": "0.0.0.0",
+  "https": true,
+  "serveConfigurations": {
+    "default": {
+      "pageUrl": "https://{tenantDomain}/sites/{site}/Lists/Contracts/AllItems.aspx",
+      "fieldCustomizers": {
+        "RemainingDays": {
+          "id": "a7721b49-8c3e-48c7-ac67-69408fcc6a03",
+          "properties": {}
+        }
+      }
+    }
+  }
+}
