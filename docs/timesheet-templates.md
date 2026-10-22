@@ -170,8 +170,8 @@ download a timesheet after each change.
   URL. Images from other hosts are rejected.
 - Write the path relative to the template's folder (`logo.png`, `img/logo.png`) or
   server-relative (`/sites/<site>/Shared Documents/Templates/logo.png`).
-- Use the literal file name. Percent-encoded paths such as `My%20Logo.png` are not decoded and
-  will report "file not found". Avoiding spaces in the file name is simplest.
+- Use the literal file name. In relative and server-relative paths, percent-encoded names such as
+  `My%20Logo.png` are not decoded and will report "file not found". Avoiding spaces in the file name is simplest.
 - **SVG** logos are not accepted through `<img>`. Paste the `<svg>` element into the template
   instead; the starter template does this for its logo placeholder.
 - Everyone who downloads timesheets needs read access to the image, as for the template.

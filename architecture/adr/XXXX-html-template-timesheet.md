@@ -66,8 +66,9 @@ Authoring guide: `docs/timesheet-templates.md`.
   and nothing is downloaded. This avoids a signed document silently changing layout, but the
   site owner must fix the file or clear the setting.
 - The built-in PDF now shows the contract header on every page. The refactor to share the block
-  builders exposed a bug where one set of header nodes was reused on every page and pdfmake mutated them, so the header was dropped
-  from page 2 on; fixing it changed the built-in output on multi-page periods.
+  builders exposed a bug where one set of header nodes was reused on every page and pdfmake
+  mutated them, so the header was dropped from page 2 on. Fixing it changed the built-in output
+  on multi-page periods.
 - The template frame (title, logo, signatures) does not repeat per page; only the grid's day
   header does.
 - The template and its images are read with the viewer's permissions, so they must be readable
@@ -88,4 +89,6 @@ Authoring guide: `docs/timesheet-templates.md`.
 
 - Related ADRs: ADR 0004 (`0004-client-side-pdf-pdfmake.md`), ADR 0006 (`0006-idempotent-pnp-powershell-provisioning.md`)
 - Related documents: [timesheet template guide](../../docs/timesheet-templates.md)
+- TOGAF phase: C — Application Architecture
 - Decision maker(s): Kiril Iliev (owner)
+- Stakeholders: site owners and client IT who author templates; contract managers and contractors who download timesheets; Orpheus Systems (maintainer)
