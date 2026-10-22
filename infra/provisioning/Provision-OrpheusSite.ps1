@@ -246,7 +246,41 @@ function Invoke-SpRest {
     }
     $raw = Invoke-PnPSPRestMethod @params
     if ([string]::IsNullOrWhiteSpace([string] $raw)) { return $null }
-    return $raw | ConvertFrom-Json
+    return ConvertFrom-SpJson ([string] $raw)
+}
+
+# Spelling kept when a SharePoint response has keys that differ only in case (the script uses .Id).
+$SpPreferredKeys = @('Id')
+
+function ConvertFrom-SpJson {
+    # SharePoint list items (odata=nometadata) carry both "Id" and "ID", even with $select=Id, and may
+    # carry other case-only duplicates. Plain ConvertFrom-Json rejects that, so parse case-sensitively
+    # (-AsHashtable) and collapse each case-only duplicate into one property. The result is the usual
+    # PSCustomObject tree with case-insensitive dot access. ISO dates are still parsed to DateTime
+    # (Utc for "Z", Local for an offset, Unspecified otherwise), exactly as without -AsHashtable.
+    param([Parameter(Mandatory)] [string] $Json)
+    return ConvertTo-SpObject ($Json | ConvertFrom-Json -AsHashtable -NoEnumerate)
+}
+
+function ConvertTo-SpObject {
+    param($Node)
+    if ($null -eq $Node) { return $null }
+    if ($Node -is [System.Collections.IDictionary]) {
+        # [ordered] keys are case-insensitive: one slot per name, holding the spelling to keep
+        # (the first one seen, or the preferred spelling when it occurs).
+        $chosen = [ordered]@{}
+        foreach ($key in $Node.Keys) {
+            if (-not $chosen.Contains($key) -or $key -cin $SpPreferredKeys) { $chosen[$key] = $key }
+        }
+        $props = [ordered]@{}
+        foreach ($key in $chosen.Values) { $props[$key] = ConvertTo-SpObject $Node[$key] }
+        return [pscustomobject] $props
+    }
+    if ($Node -is [System.Collections.IList]) {
+        # The leading comma keeps arrays (also empty or single-element ones) from being unrolled.
+        return , [object[]] @(foreach ($x in $Node) { , (ConvertTo-SpObject $x) })
+    }
+    return $Node
 }
 
 function Get-ListItemsRest {

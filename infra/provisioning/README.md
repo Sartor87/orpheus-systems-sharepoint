@@ -158,6 +158,11 @@ that back to 6 Feb. This works for any site time zone within ±12 h of UTC.
 Date-only values are written through the SharePoint REST API as `yyyy-MM-dd`, the same way the
 web part writes them.
 
+SharePoint list item responses contain both `Id` and `ID`, and plain `ConvertFrom-Json` rejects
+keys that differ only in case. The script therefore parses every REST response with
+`-AsHashtable` and merges each case-only duplicate into one property (`Id` wins). Paged reads
+follow `odata.nextLink`.
+
 ## Removing
 
 The script never deletes anything. To remove everything by hand, delete in this order:
