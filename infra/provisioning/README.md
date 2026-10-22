@@ -118,7 +118,13 @@ Two things are not left as they are on a re-run:
   (columns, sort order, row limit). Any changes you made to that view by hand are lost.
   Put your own changes in a separate view.
 - `RemoveExistingContentTypes` only takes effect **when a list is first created**. On later
-  runs, content types someone added to the lists by hand stay.
+  runs, content types someone added to the lists by hand stay. PnP may print "In case of a list
+  update we cannot remove existing content types" even on the first apply. A separate check
+  therefore runs after the template. It makes sure each list has its Orpheus content type and
+  that it is the default. It removes the list's copy of the `Item` content type, but only
+  while the list is empty, and otherwise prints a warning. If everything is already right,
+  the check only reads and reports `Content types unchanged`. A failure is a warning, not a
+  stop.
 
 When the script reads a date-only value back, it rounds it to the nearest UTC midnight.
 SharePoint returns 6 Feb on a UTC+2 site as `2026-02-05T22:00:00Z`, and rounding maps

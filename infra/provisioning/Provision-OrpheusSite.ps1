@@ -165,6 +165,7 @@ function Show-TemplateSummary {
         Write-Host "    $($l.Title) -> $($l.Url) (template $($l.TemplateType)); content type: $($l.ContentTypes -join ', ')$listFields"
         Write-Host "      indexed: $($IndexedColumns[$l.Title] -join ', ')"
         Write-Host "      default view: $($l.ViewFields -join ', ')"
+        Write-Host "      content types (post-step, non-fatal): '$($l.ContentTypes -join ', ')' as default; list copy of Item removed while the list is empty"
         if ($l.Title -eq 'Contracts') {
             Write-Host "      validation (post-step, non-fatal): =[<LatestExecutionDate title>]>=[<StartDate title>], message '$ContractValidationMessage'"
         }
@@ -237,7 +238,10 @@ function Invoke-SpRest {
     )
     $params = @{ Method = $Method; Url = $Url; Raw = $true }
     if ($null -ne $Body) {
-        $params.Content = $Body | ConvertTo-Json -Compress -Depth 5
+        # The cmdlet only sends a raw System.String verbatim; a pipeline result is PSObject-wrapped and
+        # would be serialized as an object (Members/Properties). The [string] cast unwraps it.
+        [string] $json = $Body | ConvertTo-Json -Compress -Depth 5
+        $params.Content = $json
         $params.ContentType = 'application/json;odata=nometadata'
     }
     $raw = Invoke-PnPSPRestMethod @params
@@ -367,6 +371,50 @@ function Set-RequiredIndexes {
                 Write-Host "  Indexed $listTitle.$name"
                 Add-Count 'Indexes added'
             }
+        }
+    }
+}
+
+function Set-ListContentTypes {
+    # Guard for "RemoveExistingContentTypes only acts on list creation": each list must carry its
+    # Orpheus content type as the default, and the list copy of Item (0x0100 + 32 hex) is removed
+    # while the list is empty. Reads only when everything is already right. Non-fatal per list.
+    param($Template)
+    foreach ($l in $Template.Lists) {
+        $wanted = $l.ContentTypes[0]
+        $base = "/_api/web/lists/getbytitle('$($l.Title)')"
+        try {
+            $changed = $false
+            $cts = @((Invoke-SpRest -Url "$base/contenttypes?`$select=Name,StringId").value)
+            $mine = @($cts | Where-Object { $_.Name -ceq $wanted })
+            $items = @($cts | Where-Object { $_.StringId -match '^0x0100[0-9A-Fa-f]{32}$' })
+            if (-not $mine.Count) {
+                Add-PnPContentTypeToList -List $l.Title -ContentType $wanted -DefaultContentType
+                $changed = $true
+            }
+            elseif ($cts.Count -gt 1) {
+                $order = @((Invoke-SpRest -Url "$base/rootfolder?`$select=ContentTypeOrder").ContentTypeOrder)
+                if ($order.Count -and [string] $order[0].StringValue -ne [string] $mine[0].StringId) {
+                    Set-PnPDefaultContentTypeToList -List $l.Title -ContentType $wanted
+                    $changed = $true
+                }
+            }
+            foreach ($item in $items) {
+                $count = [int] (Invoke-SpRest -Url "$base`?`$select=ItemCount").ItemCount
+                if ($count -eq 0) {
+                    Remove-PnPContentTypeFromList -List $l.Title -ContentType $item.Name
+                    $changed = $true
+                }
+                else {
+                    Write-Warning "List '$($l.Title)' still has the '$($item.Name)' content type and $count item(s); not removed. Remove it by hand once no item uses it."
+                }
+            }
+            if ($changed) { Write-Host "  Content types fixed on $($l.Title): default '$wanted'"; Add-Count 'Content types fixed' }
+            else { Add-Count 'Content types unchanged' }
+        }
+        catch {
+            Write-Warning "Could not check the content types of '$($l.Title)' ($($_.Exception.Message))."
+            Add-Count 'Content types failed'
         }
     }
 }
@@ -507,6 +555,9 @@ try {
 
     Write-Host 'Checking indexes ...' -ForegroundColor Cyan
     Set-RequiredIndexes
+
+    Write-Host 'Checking list content types ...' -ForegroundColor Cyan
+    Set-ListContentTypes -Template $template
 
     Write-Host 'Checking Contracts list validation ...' -ForegroundColor Cyan
     Set-ContractDateValidation
