@@ -1,0 +1,4444 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`buildTimesheetDocDefinition golden output matches the snapshot for 14 months (two pages) 1`] = `
+{
+  "content": [
+    {
+      "pageBreak": "after",
+      "stack": [
+        {
+          "columns": [
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Framework contract",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "FWC",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Modality",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "Hybrid",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Specific contract",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "Contract",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Starting date",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "02 February 2026",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "SC latest execution date",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "19 February 2027",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Consultant days on-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "10",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Consultant days off-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "10",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Consultant days total",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "20",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          "columns": [
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "SC days on-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "10",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "SC days off-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "10",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "SC days total",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "20",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Remaining on-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "9",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Remaining off-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "9.5",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Remaining total",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "18.5",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          "layout": {
+            "paddingBottom": [Function],
+            "paddingLeft": [Function],
+            "paddingRight": [Function],
+            "paddingTop": [Function],
+          },
+          "margin": [
+            0,
+            6,
+            0,
+            0,
+          ],
+          "table": {
+            "body": [
+              [
+                {
+                  "bold": true,
+                  "text": "Month",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "1",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "2",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "3",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "4",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "5",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "6",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "7",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "8",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "9",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "10",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "11",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "12",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "13",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "14",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "15",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "16",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "17",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "18",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "19",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "20",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "21",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "22",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "23",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "24",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "25",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "26",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "27",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "28",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "29",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "30",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "31",
+                },
+                {
+                  "bold": true,
+                  "text": "on-site",
+                },
+                {
+                  "bold": true,
+                  "text": "off-site",
+                },
+                {
+                  "bold": true,
+                  "text": "total",
+                },
+              ],
+              [
+                {
+                  "text": "February 2026",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#9DC3E6",
+                  "text": "8.00",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "text": "1.00",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "1.00",
+                },
+              ],
+              [
+                {
+                  "text": "March 2026",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+              ],
+              [
+                {
+                  "text": "April 2026",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+              ],
+              [
+                {
+                  "text": "May 2026",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+              ],
+              [
+                {
+                  "text": "June 2026",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+              ],
+              [
+                {
+                  "text": "July 2026",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+              ],
+              [
+                {
+                  "text": "August 2026",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+              ],
+              [
+                {
+                  "text": "September 2026",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+              ],
+              [
+                {
+                  "text": "October 2026",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+              ],
+              [
+                {
+                  "text": "November 2026",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+              ],
+              [
+                {
+                  "text": "December 2026",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+              ],
+              [
+                {
+                  "text": "January 2027",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+              ],
+            ],
+            "headerRows": 1,
+            "widths": [
+              62,
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              28,
+              28,
+              28,
+            ],
+          },
+        },
+      ],
+    },
+    {
+      "stack": [
+        {
+          "columns": [
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Framework contract",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "FWC",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Modality",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "Hybrid",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Specific contract",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "Contract",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Starting date",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "02 February 2026",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "SC latest execution date",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "19 February 2027",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Consultant days on-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "10",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Consultant days off-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "10",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Consultant days total",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "20",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          "columns": [
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "SC days on-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "10",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "SC days off-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "10",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "SC days total",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "20",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Remaining on-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "9",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Remaining off-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "9.5",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Remaining total",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "18.5",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          "layout": {
+            "paddingBottom": [Function],
+            "paddingLeft": [Function],
+            "paddingRight": [Function],
+            "paddingTop": [Function],
+          },
+          "margin": [
+            0,
+            6,
+            0,
+            0,
+          ],
+          "table": {
+            "body": [
+              [
+                {
+                  "bold": true,
+                  "text": "Month",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "1",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "2",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "3",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "4",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "5",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "6",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "7",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "8",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "9",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "10",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "11",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "12",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "13",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "14",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "15",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "16",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "17",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "18",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "19",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "20",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "21",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "22",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "23",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "24",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "25",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "26",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "27",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "28",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "29",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "30",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "31",
+                },
+                {
+                  "bold": true,
+                  "text": "on-site",
+                },
+                {
+                  "bold": true,
+                  "text": "off-site",
+                },
+                {
+                  "bold": true,
+                  "text": "total",
+                },
+              ],
+              [
+                {
+                  "text": "February 2027",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.00",
+                },
+              ],
+              [
+                {
+                  "text": "March 2027",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#E8DB9C",
+                  "text": "4.00",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "text": "0.00",
+                },
+                {
+                  "text": "0.50",
+                },
+                {
+                  "text": "0.50",
+                },
+              ],
+              [
+                {
+                  "bold": true,
+                  "text": "Total",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "bold": true,
+                  "text": "1.00",
+                },
+                {
+                  "bold": true,
+                  "text": "0.50",
+                },
+                {
+                  "bold": true,
+                  "text": "1.50",
+                },
+              ],
+            ],
+            "headerRows": 1,
+            "widths": [
+              62,
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              28,
+              28,
+              28,
+            ],
+          },
+        },
+        {
+          "columns": [
+            {
+              "text": "Signature of consultant",
+              "width": "*",
+            },
+            {
+              "text": "Signature of Service provider",
+              "width": "*",
+            },
+            {
+              "text": "Client approval",
+              "width": "*",
+            },
+          ],
+          "margin": [
+            0,
+            30,
+            0,
+            0,
+          ],
+        },
+        {
+          "alignment": "center",
+          "color": "#7F7F7F",
+          "fontSize": 6,
+          "link": "https://orpheussystems.com/",
+          "margin": [
+            0,
+            14,
+            0,
+            0,
+          ],
+          "text": "Generated with Orpheus Systems Contract Calendar · orpheussystems.com",
+        },
+      ],
+    },
+  ],
+  "defaultStyle": {
+    "fontSize": 7,
+  },
+  "info": {
+    "author": "Orpheus Systems",
+    "creator": "Orpheus Systems Contract Calendar",
+    "keywords": "timesheet, contract, Orpheus Systems",
+    "producer": "Orpheus Systems Contract Calendar (pdfmake)",
+    "subject": "On-site / off-site timesheet",
+    "title": "Timesheet Contract 2026-02-01–2027-03-31",
+  },
+  "pageMargins": [
+    20,
+    20,
+    20,
+    20,
+  ],
+  "pageOrientation": "landscape",
+  "pageSize": "A4",
+}
+`;
+
+exports[`buildTimesheetDocDefinition golden output matches the snapshot for one month with on-site, off-site, half days and a holiday 1`] = `
+{
+  "content": [
+    {
+      "stack": [
+        {
+          "columns": [
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Framework contract",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "FWC",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Modality",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "Hybrid",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Specific contract",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "Contract",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Starting date",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "02 February 2026",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "SC latest execution date",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "19 February 2027",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Consultant days on-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "10",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Consultant days off-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "10",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Consultant days total",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "20",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          "columns": [
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "SC days on-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "10",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "SC days off-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "10",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "SC days total",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "20",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Remaining on-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "8.5",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Remaining off-site",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "8.5",
+                },
+              ],
+            },
+            {
+              "margin": [
+                0,
+                0,
+                0,
+                4,
+              ],
+              "stack": [
+                {
+                  "color": "#7F7F7F",
+                  "fontSize": 6,
+                  "text": "Remaining total",
+                },
+                {
+                  "bold": true,
+                  "color": "#262626",
+                  "text": "17",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          "layout": {
+            "paddingBottom": [Function],
+            "paddingLeft": [Function],
+            "paddingRight": [Function],
+            "paddingTop": [Function],
+          },
+          "margin": [
+            0,
+            6,
+            0,
+            0,
+          ],
+          "table": {
+            "body": [
+              [
+                {
+                  "bold": true,
+                  "text": "Month",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "1",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "2",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "3",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "4",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "5",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "6",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "7",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "8",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "9",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "10",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "11",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "12",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "13",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "14",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "15",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "16",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "17",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "18",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "19",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "20",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "21",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "22",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "23",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "24",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "25",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "26",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "27",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "28",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "29",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "30",
+                },
+                {
+                  "alignment": "center",
+                  "bold": true,
+                  "text": "31",
+                },
+                {
+                  "bold": true,
+                  "text": "on-site",
+                },
+                {
+                  "bold": true,
+                  "text": "off-site",
+                },
+                {
+                  "bold": true,
+                  "text": "total",
+                },
+              ],
+              [
+                {
+                  "text": "February 2026",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#9DC3E6",
+                  "text": "8.00",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#E8DB9C",
+                  "text": "8.00",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#9DC3E6",
+                  "text": "4.00",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#E8DB9C",
+                  "text": "4.00",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": "#EDEDED",
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "alignment": "center",
+                  "fillColor": undefined,
+                  "text": "",
+                },
+                {
+                  "text": "1.50",
+                },
+                {
+                  "text": "1.50",
+                },
+                {
+                  "text": "3.00",
+                },
+              ],
+              [
+                {
+                  "bold": true,
+                  "text": "Total",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "text": "",
+                },
+                {
+                  "bold": true,
+                  "text": "1.50",
+                },
+                {
+                  "bold": true,
+                  "text": "1.50",
+                },
+                {
+                  "bold": true,
+                  "text": "3.00",
+                },
+              ],
+            ],
+            "headerRows": 1,
+            "widths": [
+              62,
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              "*",
+              28,
+              28,
+              28,
+            ],
+          },
+        },
+        {
+          "columns": [
+            {
+              "text": "Signature of consultant",
+              "width": "*",
+            },
+            {
+              "text": "Signature of Service provider",
+              "width": "*",
+            },
+            {
+              "text": "Client approval",
+              "width": "*",
+            },
+          ],
+          "margin": [
+            0,
+            30,
+            0,
+            0,
+          ],
+        },
+        {
+          "alignment": "center",
+          "color": "#7F7F7F",
+          "fontSize": 6,
+          "link": "https://orpheussystems.com/",
+          "margin": [
+            0,
+            14,
+            0,
+            0,
+          ],
+          "text": "Generated with Orpheus Systems Contract Calendar · orpheussystems.com",
+        },
+      ],
+    },
+  ],
+  "defaultStyle": {
+    "fontSize": 7,
+  },
+  "info": {
+    "author": "Orpheus Systems",
+    "creator": "Orpheus Systems Contract Calendar",
+    "keywords": "timesheet, contract, Orpheus Systems",
+    "producer": "Orpheus Systems Contract Calendar (pdfmake)",
+    "subject": "On-site / off-site timesheet",
+    "title": "Timesheet Contract 2026-02-01–2026-02-28",
+  },
+  "pageMargins": [
+    20,
+    20,
+    20,
+    20,
+  ],
+  "pageOrientation": "landscape",
+  "pageSize": "A4",
+}
+`;
