@@ -11,7 +11,8 @@
     "source=nm-shared-ui,target=/usr/app/spfx/packages/shared-ui/node_modules,type=volume",
     "source=nm-wp-contract-calendar,target=/usr/app/spfx/packages/wp-contract-calendar/node_modules,type=volume",
     "source=nm-ext-app-customizer,target=/usr/app/spfx/packages/ext-app-customizer/node_modules,type=volume",
-    "source=nm-ext-field-customizer,target=/usr/app/spfx/packages/ext-field-customizer/node_modules,type=volume"
+    "source=nm-ext-field-customizer,target=/usr/app/spfx/packages/ext-field-customizer/node_modules,type=volume",
+    "source=nm-ext-form-customizer,target=/usr/app/spfx/packages/ext-form-customizer/node_modules,type=volume"
   ],
   "forwardPorts": [4321, 35729],
   "postCreateCommand": "npm ci",

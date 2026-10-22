@@ -1,0 +1,24 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "whichFolder": "subdir",
+    "solutionName": "ext-form-customizer",
+    "useGulp": false,
+    "componentType": "extension",
+    "extensionType": "FormCustomizer",
+    "template": "react",
+    "componentName": "ContractForm",
+    "componentDescription": "Orpheus contract form",
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.23.1",
+    "sdksVersions": {},
+    "version": "1.23.2",
+    "libraryName": "ext-form-customizer",
+    "libraryId": "f5fa93dd-a37d-498c-8c17-87a94be561e5",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionShortDescription": "ext-form-customizer description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false
+  }
+}

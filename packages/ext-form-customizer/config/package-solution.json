@@ -1,0 +1,33 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "ext-form-customizer-client-side-solution",
+    "id": "f5fa93dd-a37d-498c-8c17-87a94be561e5",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "iconPath": "images/orpheus-icon-96.png",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "Orpheus Systems",
+      "websiteUrl": "https://orpheussystems.com/",
+      "privacyUrl": "https://orpheussystems.com/",
+      "termsOfUseUrl": "https://orpheussystems.com/",
+      "mpnId": ""
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "Contract form for the Contracts list."
+      },
+      "longDescription": {
+        "default": "A custom new, edit and display form for the Contracts list, with validation and overlap detection. Built by Orpheus Systems and released under the Apache-2.0 license."
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": ["Productivity"]
+    }
+  },
+  "paths": {
+    "zippedPackage": "solution/ext-form-customizer.sppkg"
+  }
+}

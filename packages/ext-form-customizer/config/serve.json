@@ -1,0 +1,50 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json",
+  "port": 4321,
+  "ipAddress": "0.0.0.0",
+  "https": true,
+  "serveConfigurations": {
+    "default": {
+      "pageUrl": "https://{tenantDomain}/sites/{site}/_layouts/15/SPListForm.aspx",
+      "formCustomizer": {
+        "componentId": "9ec4e23b-5adb-4be5-af3a-85f46fa4fc27",
+        "PageType": 8,
+        "RootFolder": "/sites/{site}/Lists/Contracts",
+        "ContentType": "Orpheus Contract",
+        "properties": {}
+      }
+    },
+    "contractNew": {
+      "pageUrl": "https://{tenantDomain}/sites/{site}/_layouts/15/SPListForm.aspx",
+      "formCustomizer": {
+        "componentId": "9ec4e23b-5adb-4be5-af3a-85f46fa4fc27",
+        "PageType": 8,
+        "RootFolder": "/sites/{site}/Lists/Contracts",
+        "ContentType": "Orpheus Contract",
+        "properties": {}
+      }
+    },
+    "contractEdit": {
+      "pageUrl": "https://{tenantDomain}/sites/{site}/_layouts/15/SPListForm.aspx",
+      "formCustomizer": {
+        "componentId": "9ec4e23b-5adb-4be5-af3a-85f46fa4fc27",
+        "PageType": 6,
+        "RootFolder": "/sites/{site}/Lists/Contracts",
+        "ContentType": "Orpheus Contract",
+        "ID": 1,
+        "properties": {}
+      }
+    },
+    "contractDisplay": {
+      "pageUrl": "https://{tenantDomain}/sites/{site}/_layouts/15/SPListForm.aspx",
+      "formCustomizer": {
+        "componentId": "9ec4e23b-5adb-4be5-af3a-85f46fa4fc27",
+        "PageType": 4,
+        "RootFolder": "/sites/{site}/Lists/Contracts",
+        "ContentType": "Orpheus Contract",
+        "ID": 1,
+        "properties": {}
+      }
+    }
+  }
+}

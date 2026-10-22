@@ -15,6 +15,7 @@ x-spfx: &spfx
     - nm-wp-contract-calendar:/usr/app/spfx/packages/wp-contract-calendar/node_modules
     - nm-ext-app-customizer:/usr/app/spfx/packages/ext-app-customizer/node_modules
     - nm-ext-field-customizer:/usr/app/spfx/packages/ext-field-customizer/node_modules
+    - nm-ext-form-customizer:/usr/app/spfx/packages/ext-form-customizer/node_modules
   environment:
     - "HOME=/home/spfx"
     - "npm_config_cache=/home/spfx/.npm"
@@ -33,6 +34,7 @@ services:
       /usr/app/spfx/packages/wp-contract-calendar/node_modules
       /usr/app/spfx/packages/ext-app-customizer/node_modules
       /usr/app/spfx/packages/ext-field-customizer/node_modules
+      /usr/app/spfx/packages/ext-form-customizer/node_modules
   shell:
     <<: *spfx
     command: bash
@@ -66,3 +68,4 @@ volumes:
   nm-wp-contract-calendar:
   nm-ext-app-customizer:
   nm-ext-field-customizer:
+  nm-ext-form-customizer:
