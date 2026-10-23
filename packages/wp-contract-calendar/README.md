@@ -46,7 +46,7 @@ podman compose run --rm shell bash -c "npm run package -w @orpheussystems/wp-con
 .\scripts\podman.ps1 serve wp-contract-calendar
 ```
 
-`serve` opens nothing by itself (`--nobrowser`). Open `https://{tenantDomain}/_layouts/15/workbench.aspx` and add **ContractCalendar**; a debug build starts on local demo data. The tests need the Heft-generated `*.module.scss` typings, so build or package the package once on a fresh clone before running them.
+`serve` opens nothing by itself (`--nobrowser`). Open `https://{tenantDomain}/_layouts/15/workbench.aspx` and add **ContractCalendar**; a debug build starts on local demo data. The tests run on a fresh clone without a prior build: a fallback `*.module.scss` typing covers the styles until Heft generates the real ones.
 
 Output: `sharepoint/solution/wp-contract-calendar.sppkg`. Deployment: [docs/deployment.md](../../docs/deployment.md).
 

@@ -7,6 +7,7 @@ The domain layer shared by the web part, the extensions and the MCP server: mode
 | Import | Contents |
 |---|---|
 | `@orpheussystems/shared-core` | Models (`Contract`, `CalendarEntry`, `Holiday`, `EntryType`, roles), `dates` (`DateKey` helpers), `rules` (totals, remaining days, blocked days, who may create or edit a contract), `IDataService`, `LocalDataService`, timesheet template data |
+| `@orpheussystems/shared-core/links` | `resolveWebLink` and `DEFAULT_CALENDAR_PAGE_URL`: the one rule every component uses to turn a configured link into a URL. Small and dependency-free, so the extensions import it instead of the root barrel |
 | `@orpheussystems/shared-core/sharepoint` | `SharePointDataService` (PnPjs 4), the list mappers and queries, list lookup and role derivation. Imports `@pnp/sp`, a peer dependency, so code that does not talk to SharePoint should not import it |
 
 ## The rules live here once
