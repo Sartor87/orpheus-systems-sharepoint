@@ -575,7 +575,10 @@ Describe 'Set-OrpheusFieldCustomizer' {
         $script:ViewFields = @('LinkTitle', 'ContractCode', 'RemainingDays')
         Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter {
             $Method -eq 'Get' -and $Url -like "/_api/web/lists/getbytitle('Contracts')/fields/getbyinternalnameortitle('RemainingDays')*"
-        } -MockWith { [pscustomobject]@{ ClientSideComponentId = $script:FieldComponentId } }
+        } -MockWith { [pscustomobject]@{ ClientSideComponentId = $null } }  # live: the REST $select returned no id
+        Mock -ModuleName OrpheusSolutions Get-PnPField -ParameterFilter { (Get-BindValue $List '_name') -eq 'Contracts' -and $Identity.Name -eq 'RemainingDays' } -MockWith {
+            [pscustomobject]@{ InternalName = 'RemainingDays'; ClientSideComponentId = [guid] $script:FieldComponentId }
+        }
         Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter {
             $Method -eq 'Get' -and $Url -eq "/_api/web/lists/getbytitle('Contracts')/DefaultView/ViewFields"
         } -MockWith { [pscustomobject]@{ SchemaXml = '<FieldRef />'; Items = @($script:ViewFields) } }
@@ -720,6 +723,7 @@ Describe 'Set-OrpheusFormCustomizer' {
 Describe 'Binding functions under -Confirm and with chatty cmdlets' {
     BeforeEach {
         New-PnPSafetyNet
+        Mock -ModuleName OrpheusSolutions Get-PnPField { [pscustomobject]@{ InternalName = 'RemainingDays'; ClientSideComponentId = [guid]::Empty } }
         Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Method -eq 'Get' } -MockWith {
             switch -Wildcard ($Url) {
                 '/_api/web/UserCustomActions' { [pscustomobject]@{ value = @() } }
@@ -1184,6 +1188,7 @@ Describe 'Invoke-OrpheusSolutionInstall -WhatIf on a fresh site' {
         New-PnPSafetyNet
         Mock -ModuleName OrpheusSolutions Get-PnPApp { }
         Mock -ModuleName OrpheusSolutions Get-PnPList { [pscustomobject]@{ Id = [guid]::NewGuid() } }
+        Mock -ModuleName OrpheusSolutions Get-PnPField { [pscustomobject]@{ InternalName = 'RemainingDays'; ClientSideComponentId = [guid]::Empty } }
         Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Method -eq 'Get' } -MockWith {
             switch -Wildcard ($Url) {
                 '/_api/web/UserCustomActions' { [pscustomobject]@{ value = @() } }

@@ -473,7 +473,10 @@ function Set-OrpheusFieldCustomizer {
     param()
 
     $list = "/_api/web/lists/getbytitle('$script:ContractsListTitle')"
-    $field = Invoke-OrpheusRest -Url "$list/fields/getbyinternalnameortitle('$script:RemainingDaysField')?`$select=ClientSideComponentId"
+    # Read through PnP: live, the REST $select of ClientSideComponentId on the list field came back empty
+    # although the field was bound, so every run re-bound it.
+    $field = Get-PnPField -List $script:ContractsListTitle -Identity $script:RemainingDaysField
+    if (-not $field) { throw "$script:ContractsListTitle has no $script:RemainingDaysField column; run the list provisioning first." }
     $current = [string] $field.ClientSideComponentId
     $result = 'Unchanged'
     $declined = $false
