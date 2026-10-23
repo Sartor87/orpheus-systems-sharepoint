@@ -33,6 +33,23 @@ $ErrorActionPreference = 'Stop'
 # Seconds between two polls of an asynchronous App Catalog operation. Tests set it to 0.
 $script:PollIntervalSeconds = 5
 
+# Fixed component ids from the SPFx manifests. Never change them: SharePoint binds by id.
+$script:AppCustomizerId = '30930118-2d09-49f4-bdc4-fb2c9b4af49e'
+$script:FieldCustomizerId = 'a7721b49-8c3e-48c7-ac67-69408fcc6a03'
+$script:FormCustomizerId = '9ec4e23b-5adb-4be5-af3a-85f46fa4fc27'
+$script:WebPartId = '8e7c3d81-db98-46c9-993e-d4c26928926f'
+
+# The Orpheus Contract site content type. The Contracts list copy has an id that starts with it.
+$script:ContractContentTypeId = '0x0100514116295A2F4DD1A93519F365EB8AAF'
+
+$script:ChromeName = 'OrpheusChrome'
+$script:ChromeTitle = 'Orpheus header and footer'
+$script:ChromeLocation = 'ClientSideExtension.ApplicationCustomizer'
+$script:ChromeProperties = '{"contractsListUrl":"Lists/Contracts","calendarPageUrl":"SitePages/ContractCalendar.aspx","showFooter":true}'
+
+$script:ContractsListTitle = 'Contracts'
+$script:RemainingDaysField = 'RemainingDays'
+
 #endregion
 
 #region SharePoint REST helper
@@ -58,6 +75,40 @@ function ConvertTo-NormalizedId {
     # A GUID as SharePoint may spell it ('{8C05...}', '8c05...') to lowercase, no braces.
     param([string] $Id)
     return $Id.Trim().Trim('{', '}').ToLowerInvariant()
+}
+
+function Test-SameId {
+    # True when two GUID strings name the same id, whatever the case or braces. Empty never matches.
+    param([string] $Actual, [string] $Expected)
+    return -not [string]::IsNullOrWhiteSpace($Actual) -and (ConvertTo-NormalizedId $Actual) -eq (ConvertTo-NormalizedId $Expected)
+}
+
+function Test-EmptyId {
+    # True for a missing id: null, empty or the all-zero GUID.
+    param([string] $Id)
+    return [string]::IsNullOrWhiteSpace($Id) -or (ConvertTo-NormalizedId $Id) -eq [guid]::Empty.ToString()
+}
+
+function ConvertTo-CanonicalJson {
+    # JSON text with object keys sorted at every level and no whitespace, so two documents that differ
+    # only in key order or spacing give the same string. Invalid or empty JSON gives $null.
+    param([string] $Json)
+    if ([string]::IsNullOrWhiteSpace($Json)) { return $null }
+    try { $value = $Json | ConvertFrom-Json -AsHashtable -NoEnumerate } catch { return $null }
+    return ConvertTo-SortedValue $value | ConvertTo-Json -Compress -Depth 20
+}
+
+function ConvertTo-SortedValue {
+    param($Value)
+    if ($Value -is [System.Collections.IDictionary]) {
+        $sorted = [ordered]@{}
+        foreach ($key in ($Value.Keys | Sort-Object -CaseSensitive)) { $sorted[$key] = ConvertTo-SortedValue $Value[$key] }
+        return $sorted
+    }
+    if ($Value -is [System.Collections.IList]) {
+        return , @($Value | ForEach-Object { ConvertTo-SortedValue $_ })
+    }
+    return $Value
 }
 
 #endregion
@@ -260,4 +311,128 @@ function Install-OrpheusSolution {
 
 #endregion
 
-Export-ModuleMember -Function Read-SppkgInfo, Get-MissingManifests, Install-OrpheusSolution
+#region Bindings
+
+function Set-OrpheusAppCustomizer {
+    <#
+    .SYNOPSIS
+        Registers the OrpheusChrome header and footer custom action on the web, exactly once.
+    .DESCRIPTION
+        Reads the web's custom actions through GET /_api/web/UserCustomActions and keeps those whose
+        ClientSideComponentId is the app customizer. With none it adds one. With more than one it keeps
+        the first and removes the rest. When the kept action's properties differ from -PropertiesJson
+        (compared as parsed JSON) it updates them in place with a REST MERGE.
+    .OUTPUTS
+        'Unchanged', 'Added', 'Updated' or 'Deduplicated' (duplicates removed, and the kept action
+        updated when needed).
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    [OutputType([string])]
+    param([ValidateNotNullOrEmpty()] [string] $PropertiesJson = $script:ChromeProperties)
+
+    if ($null -eq (ConvertTo-CanonicalJson $PropertiesJson)) { throw "-PropertiesJson is not valid JSON: $PropertiesJson" }
+
+    $actions = @(@((Invoke-OrpheusRest -Url '/_api/web/UserCustomActions').value) |
+            Where-Object { $null -ne $_ -and (Test-SameId ([string] $_.ClientSideComponentId) $script:AppCustomizerId) })
+
+    if ($actions.Count -eq 0) {
+        if ($PSCmdlet.ShouldProcess("web custom action $script:ChromeName", 'Add the header and footer application customizer')) {
+            $null = Add-PnPCustomAction -Name $script:ChromeName -Title $script:ChromeTitle -Location $script:ChromeLocation `
+                -ClientSideComponentId ([guid] $script:AppCustomizerId) -ClientSideComponentProperties $PropertiesJson -Scope Web
+        }
+        return 'Added'
+    }
+
+    $result = 'Unchanged'
+    $kept = $actions[0]
+    foreach ($duplicate in @($actions | Select-Object -Skip 1)) {
+        if ($PSCmdlet.ShouldProcess("web custom action $($duplicate.Name) ($($duplicate.Id))", "Remove the duplicate (keeping $($kept.Id))")) {
+            Remove-PnPCustomAction -Identity ([guid] $duplicate.Id) -Scope Web -Force
+        }
+        $result = 'Deduplicated'
+    }
+
+    if ((ConvertTo-CanonicalJson ([string] $kept.ClientSideComponentProperties)) -ne (ConvertTo-CanonicalJson $PropertiesJson)) {
+        if ($PSCmdlet.ShouldProcess("web custom action $($kept.Name) ($($kept.Id))", "Set ClientSideComponentProperties to $PropertiesJson")) {
+            # Invoke-PnPSPRestMethod -Method Merge sends the MERGE that SharePoint REST expects for an update.
+            $null = Invoke-OrpheusRest -Method Merge -Url "/_api/web/UserCustomActions('$($kept.Id)')" -Body @{ ClientSideComponentProperties = $PropertiesJson }
+        }
+        if ($result -eq 'Unchanged') { $result = 'Updated' }
+    }
+    return $result
+}
+
+function Set-OrpheusFieldCustomizer {
+    <#
+    .SYNOPSIS
+        Binds the field customizer to Contracts.RemainingDays and shows the column in the default view.
+    .OUTPUTS
+        'Added' when the field had no customizer, 'Updated' when it had another one or the default view
+        lacked the column, otherwise 'Unchanged'.
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    [OutputType([string])]
+    param()
+
+    $list = "/_api/web/lists/getbytitle('$script:ContractsListTitle')"
+    $field = Invoke-OrpheusRest -Url "$list/fields/getbyinternalnameortitle('$script:RemainingDaysField')?`$select=ClientSideComponentId"
+    $current = [string] $field.ClientSideComponentId
+    $result = 'Unchanged'
+
+    if (-not (Test-SameId $current $script:FieldCustomizerId)) {
+        $result = if (Test-EmptyId $current) { 'Added' } else { 'Updated' }
+        if ($PSCmdlet.ShouldProcess("$script:ContractsListTitle.$script:RemainingDaysField", "Set ClientSideComponentId to $script:FieldCustomizerId")) {
+            Set-PnPField -List $script:ContractsListTitle -Identity $script:RemainingDaysField -Values @{ ClientSideComponentId = [guid] $script:FieldCustomizerId }
+        }
+    }
+
+    $viewFields = @((Invoke-OrpheusRest -Url "$list/DefaultView/ViewFields").Items)
+    if ($viewFields -notcontains $script:RemainingDaysField) {
+        if ($result -eq 'Unchanged') { $result = 'Updated' }
+        if ($PSCmdlet.ShouldProcess("$script:ContractsListTitle default view", "Add the $script:RemainingDaysField column")) {
+            $null = Invoke-OrpheusRest -Method Post -Url "$list/DefaultView/ViewFields/addviewfield('$script:RemainingDaysField')"
+        }
+    }
+    return $result
+}
+
+function Set-OrpheusFormCustomizer {
+    <#
+    .SYNOPSIS
+        Binds the form customizer to the New, Edit and Display forms of the Contracts list's
+        Orpheus Contract content type.
+    .DESCRIPTION
+        Reads the three form ids through REST, and writes through CSOM ($ct.Update($false) and
+        Invoke-PnPQuery) only when one of them differs.
+    .OUTPUTS
+        'Added' when none of the three was set, 'Updated' when some differed, otherwise 'Unchanged'.
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    [OutputType([string])]
+    param()
+
+    $forms = 'NewFormClientSideComponentId', 'EditFormClientSideComponentId', 'DisplayFormClientSideComponentId'
+    $url = "/_api/web/lists/getbytitle('$script:ContractsListTitle')/contenttypes?`$select=Name,StringId,$($forms -join ',')"
+    $listCt = @(@((Invoke-OrpheusRest -Url $url).value) |
+            Where-Object { $null -ne $_ -and ([string] $_.StringId).StartsWith($script:ContractContentTypeId, [System.StringComparison]::OrdinalIgnoreCase) }) |
+        Select-Object -First 1
+    if (-not $listCt) { throw "The $script:ContractsListTitle list has no Orpheus Contract content type ($script:ContractContentTypeId...): run list provisioning first." }
+
+    $differ = @($forms | Where-Object { -not (Test-SameId ([string] $listCt.$_) $script:FormCustomizerId) })
+    if (-not $differ.Count) { return 'Unchanged' }
+    $result = if (@($forms | Where-Object { -not (Test-EmptyId ([string] $listCt.$_)) }).Count -eq 0) { 'Added' } else { 'Updated' }
+
+    if ($PSCmdlet.ShouldProcess("$script:ContractsListTitle content type $($listCt.Name) ($($listCt.StringId))", "Set $($differ -join ', ') to $script:FormCustomizerId")) {
+        $ct = Get-PnPContentType -List $script:ContractsListTitle -Identity ([string] $listCt.StringId)
+        if (-not $ct) { throw "Content type $($listCt.StringId) not found on the $script:ContractsListTitle list." }
+        foreach ($form in $differ) { $ct.$form = $script:FormCustomizerId }
+        $ct.Update($false)
+        Invoke-PnPQuery
+    }
+    return $result
+}
+
+#endregion
+
+Export-ModuleMember -Function Read-SppkgInfo, Get-MissingManifests, Install-OrpheusSolution,
+    Set-OrpheusAppCustomizer, Set-OrpheusFieldCustomizer, Set-OrpheusFormCustomizer
