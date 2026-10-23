@@ -392,4 +392,4 @@ D (technology: Container Apps, Entra app registration, Log Analytics), and Requi
 - Choose an Azure service for your MCP server: https://learn.microsoft.com/azure/container-apps/mcp-choosing-azure-service
 - Azure Functions hosting options and Flex Consumption always-ready instances: https://learn.microsoft.com/azure/azure-functions/functions-scale
 - SharePoint agent web part, roadmap 481512 (the existing `.agent` web part): https://mc.merill.net/message/RM481512
-- In-repo: `docs/superpowers/specs/2026-10-22-orpheus-spfx-monorepo-design.md`, `packages/shared-core/src/data/SharePointDataService.ts`, `architecture/adr/0008-one-calendar-entry-per-contractor-per-date.md`, `docs/dev-environment.md`
+- In-repo: the monorepo design document of 2026-10-22 (not published), `packages/shared-core/src/data/SharePointDataService.ts`, `architecture/adr/0008-one-calendar-entry-per-contractor-per-date.md`, `docs/dev-environment.md`

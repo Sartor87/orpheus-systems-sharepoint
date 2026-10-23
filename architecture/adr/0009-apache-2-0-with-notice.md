@@ -27,6 +27,22 @@ readable copy of the NOTICE attribution. Every `package.json` declares
 `"license": "Apache-2.0"`. The visible footer attribution in the SharePoint
 extensions is appreciated but not required.
 
+![What the license requires of a redistribution](diagrams/0009-apache-2-0-with-notice-1.svg)
+
+```mermaid
+flowchart LR
+  subgraph REPO["Repository root"]
+    LIC["LICENSE<br/>Apache-2.0, unmodified"]
+    NOT["NOTICE<br/>Orpheus Systems, author, contact"]
+    PKG["Every package.json<br/>license: Apache-2.0"]
+  end
+  REPO --> USE["Use, modify, build"]
+  USE --> RED["Redistribution or<br/>Derivative Work"]
+  RED -->|"Section 4(d): required"| KEEP["Readable copy of<br/>the NOTICE attribution"]
+  RED -.->|"appreciated, not required"| UI["Visible attribution<br/>footer, About pane, PDF footer"]
+  RED -.->|"not required"| SRC["Publishing modifications"]
+```
+
 ---
 
 ## Considered Options

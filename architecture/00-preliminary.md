@@ -13,7 +13,7 @@ lightweight:
 
 - Architecture artefacts are Markdown in this repository under `architecture/`.
 - Decisions are recorded as ADRs under `architecture/adr/`.
-- The design document under `docs/superpowers/specs/` is the originating
+- The design document of 2026-10-22 (kept with the owner, not published) is the originating
   statement of work; this folder is the structured, maintained view of it.
 
 > ⚠️ **Open:** The design does not name any reviewer other than the owner. If a

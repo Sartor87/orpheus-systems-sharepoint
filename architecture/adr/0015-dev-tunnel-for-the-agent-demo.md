@@ -102,7 +102,7 @@ Key Vault and Log Analytics cover each of these gaps.
 
 - Related ADRs: `0016-azure-target-apim-container-apps-terraform.md`,
   `0012-declarative-agent-entra-sso-obo.md`, ADR 0002 (Podman, no Node on the host)
-- Related documents: `docs/superpowers/specs/2026-10-22-contract-agent-design.md` (sections 4 O5, 6
+- Related documents: the contract agent design document of 2026-10-22 (not published) (sections 4 O5, 6
   item 5), `packages/agent-contract-calendar/demo/demo-procedure.md`,
   `packages/mcp-contract-calendar/README.md`
 - Sources: [Dev tunnels security](https://learn.microsoft.com/azure/developer/dev-tunnels/security),

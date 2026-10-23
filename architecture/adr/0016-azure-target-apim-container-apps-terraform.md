@@ -145,7 +145,7 @@ From the research's hosting comparison
 - Related ADRs: `0011-custom-mcp-server-in-typescript.md`, `0012-declarative-agent-entra-sso-obo.md`,
   `0015-dev-tunnel-for-the-agent-demo.md`, `0014-three-layer-audit-for-agent-actions.md`, ADR 0002
   (Podman, no Node on the host)
-- Related documents: `docs/superpowers/specs/2026-10-22-contract-agent-design.md` (sections 4 O6, 6
+- Related documents: the contract agent design document of 2026-10-22 (not published) (sections 4 O6, 6
   item 4, 9), `docs/research/2026-10-22-sharepoint-contract-agent.md` ("Hosting", decision D5),
   `architecture/05-phase-d-technology-architecture.md`
 - TOGAF phase: D — Technology Architecture

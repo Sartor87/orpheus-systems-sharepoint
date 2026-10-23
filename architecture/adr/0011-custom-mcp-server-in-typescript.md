@@ -141,7 +141,7 @@ booking rules live; a server in another language would split that place in two.
 - Related ADRs: ADR 0003 (`IDataService`), ADR 0005 (filtering over item-level permissions),
   ADR 0008 (one entry per contractor per date), `0012-declarative-agent-entra-sso-obo.md`,
   `0014-three-layer-audit-for-agent-actions.md`
-- Related documents: `docs/superpowers/specs/2026-10-22-contract-agent-design.md` (sections 4, 5, 6),
+- Related documents: the contract agent design document of 2026-10-22 (not published) (sections 4, 5, 6),
   `docs/research/2026-10-22-sharepoint-contract-agent.md` ("Why a generic SharePoint tool is not
   enough", decisions D1 and D2), `packages/mcp-contract-calendar/README.md`
 - TOGAF phase: C — Application Architecture

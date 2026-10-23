@@ -135,7 +135,7 @@ A Vendors list stays on the phase 2 list (spec section 9).
 
 - Related ADRs: ADR 0005 (filtering, roles), ADR 0006 (idempotent PnP PowerShell provisioning),
   `0010-html-template-timesheet.md` (same `Vendor` column), `0011-custom-mcp-server-in-typescript.md`
-- Related documents: `docs/superpowers/specs/2026-10-22-contract-agent-design.md` (sections 4 O1 to
+- Related documents: the contract agent design document of 2026-10-22 (not published) (sections 4 O1 to
   O3, O9, O10; 5 "Vendor column", "Reading vendors and HR without touching shared-core"),
   `architecture/03-phase-c-data-architecture.md`, `packages/agent-contract-calendar/demo/demo-procedure.md`
 - TOGAF phase: C — Data Architecture

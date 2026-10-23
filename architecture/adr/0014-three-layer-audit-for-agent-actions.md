@@ -117,7 +117,7 @@ flowchart TB
 
 - Related ADRs: `0012-declarative-agent-entra-sso-obo.md` (on-behalf-of, actor),
   `0016-azure-target-apim-container-apps-terraform.md` (Log Analytics table)
-- Related documents: `docs/superpowers/specs/2026-10-22-contract-agent-design.md` (sections 4 D6, 5
+- Related documents: the contract agent design document of 2026-10-22 (not published) (sections 4 D6, 5
   "Logging and evidence", 9), `docs/research/2026-10-22-sharepoint-contract-agent.md` ("Audit: three
   layers, two are free", decision D6), `architecture/10-requirements-management.md`
 - TOGAF phase: Requirements Management (audit and traceability); D — Technology Architecture

@@ -15,7 +15,7 @@ were taken in the design document of 2026-10-22 and are recorded here as
 | [ADR-007](0007-fresh-orphan-branch-for-public-repo.md) | Fresh orphan branch for the public repository | Accepted | 2026-10-22 | Preliminary / A |
 | [ADR-008](0008-one-calendar-entry-per-contractor-per-date.md) | One calendar entry per contractor per date across contracts | Accepted | 2026-10-22 | C (data) |
 | [ADR-009](0009-apache-2-0-with-notice.md) | Apache-2.0 license with NOTICE attribution | Accepted | 2026-10-22 | Preliminary |
-| [ADR-010](0010-html-template-timesheet.md) | HTML template timesheet | Accepted | 2026-10-22 | Preliminary |
+| [ADR-010](0010-html-template-timesheet.md) | HTML template for the timesheet PDF | Accepted | 2026-10-22 | C (application) |
 | [ADR-011](0011-custom-mcp-server-in-typescript.md) | Custom MCP server in TypeScript as the agent's action layer | Proposed | 2026-10-22 | C (application) |
 | [ADR-012](0012-declarative-agent-entra-sso-obo.md) | Declarative agent with Entra SSO and on-behalf-of to SharePoint | Proposed | 2026-10-22 | C (application) / D |
 | [ADR-013](0013-vendor-column-and-hr-group-for-the-agent.md) | Vendor text column and HR read-only group, owned by the agent setup script | Proposed | 2026-10-22 | C (data) |

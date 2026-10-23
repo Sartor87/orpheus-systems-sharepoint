@@ -18,6 +18,8 @@ podman compose run --rm fix-perms   # once, after the named volumes are created
 .\scripts\podman.ps1 install
 ```
 
+Run both again after pulling a change that adds a volume to `compose.yml` (for example a new package): the new volume starts out owned by the wrong user, and its `node_modules` is empty.
+
 ## Commands
 
 ```powershell
@@ -34,7 +36,7 @@ podman compose run --rm fix-perms   # once, after the named volumes are created
 .\scripts\podman.ps1 trust-dev-cert
 ```
 
-Or directly: `podman compose run --rm <service>`. To serve one package from a shell: `npm run serve -w @orpheussystems/<package>`. Only one package can be served at a time (all use port 4321).
+Or directly: `podman compose run --rm <service>`. `serve` is the exception: `compose run` does not publish ports unless asked, so use `podman compose run --rm --service-ports serve` (the wrapper does this for you). To serve one package from a shell: `npm run serve -w @orpheussystems/<package>`. Only one package can be served at a time (all use port 4321).
 
 ## Container user
 
@@ -58,9 +60,13 @@ That runs `heft --unmanaged trust-dev-cert` in the web part package. The cert is
 - The web part `tsconfig.json` overrides `outDir`, `rootDir`, `rootDirs`, `include` and `typeRoots`. The rig's values are relative to the rig's install folder and point outside the package when the rig is hoisted.
 - Keep a single TypeScript version across the workspace (`~5.8.0`). If two versions are installed, Heft's lint step fails with `Parsing error: Cannot read properties of undefined (reading 'kind')`.
 
+## Placeholders
+
+This document and the `config/serve.json` files use `{tenantDomain}` for the tenant's SharePoint host (for example `contoso.sharepoint.com`) and `{site}` for the site's URL name. Replace them locally; never commit a real tenant URL.
+
 ## Hosted workbench
 
-`https://<tenant>.sharepoint.com/_layouts/15/workbench.aspx`
+`https://{tenantDomain}/sites/{site}/_layouts/15/workbench.aspx`
 
 ## Debugging the extensions
 
@@ -90,7 +96,9 @@ The browser probes the legacy `http://localhost:4321/temp/manifests.js` and logs
 .\scripts\podman.ps1 package
 ```
 
-Builds the shared packages, then runs `heft build --production` and `heft package-solution --production` in every package that has a `package` script. Output, one per package: `packages/<package>/sharepoint/solution/<package>.sppkg` — `wp-contract-calendar`, `ext-app-customizer`, `ext-field-customizer`, `ext-form-customizer`. Packaging all four needs more than the default 2 GB Podman VM; give it at least 6 GB (`podman machine stop; podman machine set --memory 6144; podman machine start`).
+Builds the shared packages, then runs `heft build --production` and `heft package-solution --production` in every package that has a `package` script, one package at a time. Output, one per package: `packages/<package>/sharepoint/solution/<package>.sppkg` — `wp-contract-calendar`, `ext-app-customizer`, `ext-field-customizer`, `ext-form-customizer`. Run it with `NODE_OPTIONS=--max-old-space-size=1536`.
+
+On Windows the Podman machine is a WSL distribution, so its memory is the WSL limit (`memory=` in `%UserProfile%\.wslconfig`); `podman machine set --memory` has no effect on WSL. Never run `wsl --shutdown` to apply a change while other containers are running: it stops every WSL distribution.
 
 The extension packages deploy code only (`skipFeatureDeployment: true`, no features). Adding the app does not register the application customizer on any site. Until the provisioning script does it, register it on the Orpheus site by hand, for example with PnP PowerShell:
 
@@ -99,6 +107,25 @@ Add-PnPCustomAction -Name 'OrpheusChrome' -Title 'Orpheus chrome' -Location 'Cli
   -ClientSideComponentId '30930118-2d09-49f4-bdc4-fb2c9b4af49e' `
   -ClientSideComponentProperties '{"contractsListUrl":"Lists/Contracts","calendarPageUrl":"SitePages/ContractCalendar.aspx","showFooter":true}'
 ```
+
+## When an extension does not appear after an upgrade
+
+Symptom: after `Update-PnPApp` (or **Update** in the App Catalog) an extension no longer loads, even in a private window. The page requests no bundle for it, yet the same code works with the debug query string. It looks like caching, but it is not.
+
+1. Ask the site whether it knows the component's manifest:
+
+   ```powershell
+   Invoke-PnPSPRestMethod -Method Post -Url '/_api/web/GetClientSideComponentsById' `
+     -Content @{ componentIds = @('30930118-2d09-49f4-bdc4-fb2c9b4af49e') }
+   ```
+
+   A healthy component returns a non-empty `Manifest`. An empty `Manifest` (with `ManifestActivatedTime` null) means the upgrade did not activate the new version. This happened when a version dropped its `features` block.
+2. Fix it with a clean reinstall, not another upgrade: remove the extension's custom actions → `Uninstall-PnPApp` → `Remove-PnPApp` (remove it from the catalog) → `Add-PnPApp` → `Install-PnPApp` → register the custom action again.
+3. Read custom actions through REST, not with `Get-PnPCustomAction`: PnP.PowerShell 3.4.1 does not reliably return `ClientSideComponentId`, so a check by component id misses existing actions and duplicates pile up.
+
+   ```powershell
+   Invoke-PnPSPRestMethod -Url "/_api/web/UserCustomActions?`$select=Id,Name,Location,ClientSideComponentId"
+   ```
 
 ## Linux note
 

@@ -5,11 +5,11 @@ TOGAF ADM scaffold for the Orpheus Systems SharePoint Framework monorepo
 
 - Owner: Kiril Iliev <kiril.iliev@orpheussystems.com>
 - Organisation: Orpheus Systems, https://orpheussystems.com/
-- Source design: `docs/superpowers/specs/2026-10-22-orpheus-spfx-monorepo-design.md`
+- Source design: the design document of 2026-10-22 (kept with the owner, not published in this repository)
 - Behavioural mock: `docs/mocks/onsite_calendar.html`
 - Scaffold date: 2026-10-22
 
-Everything in this folder is derived from the design document above. Where the
+Everything in this folder is derived from the design document above and from the ADRs written since. Where the
 design is silent the text says so with an `⚠️ Open` note instead of inventing a
 fact. Technology and vendor choices live in ADRs, not in the phase documents.
 
@@ -45,12 +45,20 @@ See [adr/0000-index.md](adr/0000-index.md) for the index.
 | [ADR-007](adr/0007-fresh-orphan-branch-for-public-repo.md) | Fresh orphan branch for the public repository |
 | [ADR-008](adr/0008-one-calendar-entry-per-contractor-per-date.md) | One calendar entry per contractor per date across contracts |
 | [ADR-009](adr/0009-apache-2-0-with-notice.md) | Apache-2.0 license with NOTICE attribution |
+| [ADR-010](adr/0010-html-template-timesheet.md) | HTML template for the timesheet PDF |
+| [ADR-011](adr/0011-custom-mcp-server-in-typescript.md) | Custom MCP server in TypeScript as the agent's action layer |
+| [ADR-012](adr/0012-declarative-agent-entra-sso-obo.md) | Declarative agent with Entra SSO and on-behalf-of to SharePoint |
+| [ADR-013](adr/0013-vendor-column-and-hr-group-for-the-agent.md) | Vendor text column and HR read-only group, owned by the agent setup script |
+| [ADR-014](adr/0014-three-layer-audit-for-agent-actions.md) | Three-layer audit for agent actions |
+| [ADR-015](adr/0015-dev-tunnel-for-the-agent-demo.md) | Dev tunnel for the agent demo |
+| [ADR-016](adr/0016-azure-target-apim-container-apps-terraform.md) | Azure target: API Management in front of Container Apps, Terraform |
 
 ## Conventions
 
 - `> ⚠️ **Open:**` — the design is silent or undecided; needs the owner or the builder.
 - `> 📝 **Assumption:**` — a reading of the design that should be validated.
-- Diagrams are Mermaid, embedded in the Markdown.
+- Diagrams are Mermaid, embedded in the Markdown. ADRs with a diagram also keep a
+  rendered SVG in `adr/diagrams/` (`NNNN-slug-1.svg`) for viewers that do not render Mermaid.
 - The approving organisation on the timesheet is a configurable label; its
   default is "Client approval". No real client or previous employer is named
   anywhere in this folder.
