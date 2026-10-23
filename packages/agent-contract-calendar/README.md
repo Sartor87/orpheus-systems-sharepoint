@@ -71,7 +71,8 @@ These were written from the documentation without running the toolkit:
 
 ## Privacy and terms URLs
 
-The Teams manifest requires `developer.privacyUrl` and `developer.termsOfUseUrl`. They point to
-[PRIVACY.md](PRIVACY.md) and [TERMS.md](TERMS.md) in this package on GitHub, so the links resolve
-only while the repository is public. An organisation that publishes the agent to its users should
-replace both with its own reviewed pages and raise `version` in `appPackage/manifest.json`.
+The Teams manifest requires `developer.privacyUrl` and `developer.termsOfUseUrl`. They come from
+`PRIVACY_URL` and `TERMS_URL` in `env/.env.dev`, so the manifest names no repository host. Point them
+at [PRIVACY.md](PRIVACY.md) and [TERMS.md](TERMS.md) of this package on the hosting repository; the
+links resolve only while that repository is public. An organisation that publishes the agent to its
+users should set its own reviewed pages and raise `version` in `appPackage/manifest.json`.

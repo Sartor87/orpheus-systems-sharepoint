@@ -30,6 +30,14 @@ function referencedTools(plugin: any): string[] {
 }
 
 describe('declarative agent package', () => {
+  it('takes the privacy and terms URLs from the environment, so no repo owner is committed', () => {
+    const manifest = readJson('manifest.json') as { developer: { privacyUrl: string; termsOfUseUrl: string } };
+    expect(manifest.developer.privacyUrl).toBe('${{PRIVACY_URL}}');
+    expect(manifest.developer.termsOfUseUrl).toBe('${{TERMS_URL}}');
+    const sample = fs.readFileSync(path.join(PKG, 'env', '.env.dev.sample'), 'utf8');
+    expect(sample).toMatch(/^PRIVACY_URL=.+$/m);
+    expect(sample).toMatch(/^TERMS_URL=.+$/m);
+  });
   it('has JSON files that all parse', () => {
     const jsonFiles = fs.readdirSync(APP).filter(f => f.endsWith('.json'));
     expect(jsonFiles).toEqual(expect.arrayContaining(['manifest.json', 'declarativeAgent.json', 'ai-plugin.json']));

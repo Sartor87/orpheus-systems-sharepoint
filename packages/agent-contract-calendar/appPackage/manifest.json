@@ -6,8 +6,8 @@
   "developer": {
     "name": "Orpheus Systems",
     "websiteUrl": "https://orpheussystems.com/",
-    "privacyUrl": "https://github.com/Sartor87/orpheus-systems-sharepoint/blob/main/packages/agent-contract-calendar/PRIVACY.md",
-    "termsOfUseUrl": "https://github.com/Sartor87/orpheus-systems-sharepoint/blob/main/packages/agent-contract-calendar/TERMS.md"
+    "privacyUrl": "${{PRIVACY_URL}}",
+    "termsOfUseUrl": "${{TERMS_URL}}"
   },
   "icons": {
     "color": "color.png",
