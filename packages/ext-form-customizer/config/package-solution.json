@@ -22,7 +22,7 @@
       "longDescription": {
         "default": "A custom new, edit and display form for the Contracts list, with validation and overlap detection. Built by Orpheus Systems and released under the Apache-2.0 license."
       },
-      "screenshotPaths": [],
+      "screenshotPaths": ["images/screenshots/09-form-new.png", "images/screenshots/10-form-edit.png", "images/screenshots/11-form-display.png"],
       "videoUrl": "",
       "categories": ["Productivity"]
     }

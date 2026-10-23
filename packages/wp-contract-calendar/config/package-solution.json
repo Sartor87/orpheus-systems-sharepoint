@@ -22,7 +22,7 @@
       "longDescription": {
         "default": "Plan on-site and off-site days per contract on a month calendar, track targets and remaining days, and generate the timesheet PDF. Built by Orpheus Systems and released under the Apache-2.0 license."
       },
-      "screenshotPaths": [],
+      "screenshotPaths": ["images/screenshots/01-calendar-month-view.png", "images/screenshots/02-calendar-range-drag.png", "images/screenshots/04-timesheet-dialog.png", "images/screenshots/05-timesheet-pdf.png"],
       "videoUrl": "",
       "categories": ["Productivity"]
     },

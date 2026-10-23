@@ -22,7 +22,7 @@
       "longDescription": {
         "default": "Adds an Orpheus Systems header with role-aware navigation and a branded footer to SharePoint sites. Built by Orpheus Systems and released under the Apache-2.0 license."
       },
-      "screenshotPaths": [],
+      "screenshotPaths": ["images/screenshots/06-header-footer.png", "images/screenshots/07-header-compact-menu.png"],
       "videoUrl": "",
       "categories": ["Productivity"]
     }

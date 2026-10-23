@@ -22,7 +22,7 @@
       "longDescription": {
         "default": "Shows compact remaining on-site and off-site days bars in a SharePoint list column. Built by Orpheus Systems and released under the Apache-2.0 license."
       },
-      "screenshotPaths": [],
+      "screenshotPaths": ["images/screenshots/08-remaining-days-bars.png"],
       "videoUrl": "",
       "categories": ["Productivity"]
     }
