@@ -157,6 +157,8 @@ All Node tooling runs in the `docker.io/m365pnp/spfx:1.23.2` container through P
 
 5. Open the hosted workbench, `https://{tenantDomain}/_layouts/15/workbench.aspx` (`{tenantDomain}` is your SharePoint host, for example `contoso.sharepoint.com`), and add **ContractCalendar**. In the property pane, **Use local demo data** is on, and **Demo user** switches between the demo contractor, manager and admin.
 
+   ![The web part on demo data in the hosted workbench](docs/screenshots/16-workbench-demo-data.png)
+
 Tests run in the same container, one package at a time: `podman compose run --rm shell bash -c "npm test -w @orpheussystems/<package>"`. The extensions' debug URLs, packaging and troubleshooting are in [docs/dev-environment.md](docs/dev-environment.md); continuous integration is described in [docs/ci.md](docs/ci.md).
 
 ## Deploy to a site
