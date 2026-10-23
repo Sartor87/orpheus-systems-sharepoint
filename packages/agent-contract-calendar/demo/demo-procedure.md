@@ -194,7 +194,7 @@ The agent cannot run in the SharePoint side chat pane: that pane hosts only Copi
 (Copilot licence) and `.agent` files. Until the Agent Chat web part is released, add a Button or
 Quick links web part next to the Contract Calendar web part that opens the agent's share link
 (Copilot Chat, agent menu, Share, Copy link). See
-`architecture/adr/XXXX-sharepoint-placement-waits-for-agent-chat-web-part.md`.
+`architecture/adr/0017-sharepoint-placement-waits-for-agent-chat-web-part.md`.
 
 ## After the demo
 

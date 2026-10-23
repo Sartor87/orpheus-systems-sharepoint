@@ -22,6 +22,7 @@ were taken in the design document of 2026-10-22 and are recorded here as
 | [ADR-014](0014-three-layer-audit-for-agent-actions.md) | Three-layer audit for agent actions | Proposed | 2026-10-22 | Requirements / D |
 | [ADR-015](0015-dev-tunnel-for-the-agent-demo.md) | Dev tunnel for the agent demo | Proposed | 2026-10-22 | D |
 | [ADR-016](0016-azure-target-apim-container-apps-terraform.md) | Azure target: API Management in front of Container Apps, Terraform | Proposed | 2026-10-22 | D |
+| [ADR-017](0017-sharepoint-placement-waits-for-agent-chat-web-part.md) | SharePoint placement of the agent waits for the Agent Chat web part | Accepted | 2026-10-23 | E / F |
 
 Lifecycle: `Proposed → Accepted → (Deprecated | Superseded by NNNN)`. See
 Phase H for the change process. Candidate future ADRs (not yet written):

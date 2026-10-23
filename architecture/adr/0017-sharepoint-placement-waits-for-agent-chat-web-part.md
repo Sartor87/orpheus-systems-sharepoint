@@ -1,4 +1,4 @@
-# X. SharePoint placement of the agent waits for the Agent Chat web part
+# 17. SharePoint placement of the agent waits for the Agent Chat web part
 
 ## Date: 2026-10-23
 
@@ -46,7 +46,7 @@ a licence, and the supported page placement is not released yet.
 4. **No Copilot licence is bought for this.** A licence enables Copilot in SharePoint, but that
    still cannot host this agent in the side pane.
 
-![SharePoint placement of the Contract Calendar agent](diagrams/XXXX-sharepoint-placement-waits-for-agent-chat-web-part-1.svg)
+![SharePoint placement of the Contract Calendar agent](diagrams/0017-sharepoint-placement-waits-for-agent-chat-web-part-1.svg)
 
 ```mermaid
 flowchart LR
