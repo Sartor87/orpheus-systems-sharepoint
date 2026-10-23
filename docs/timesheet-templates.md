@@ -96,7 +96,7 @@ inside attribute values (for example `style`).
 | `{{contract.startDate}}` | Starting date |
 | `{{contract.latestExecutionDate}}` | Latest execution date |
 | `{{contract.targetOnSite}}`, `{{contract.targetOffSite}}`, `{{contract.targetTotal}}` | Contracted consultant days (two decimals) |
-| `{{contract.remainingOnSite}}`, `{{contract.remainingOffSite}}`, `{{contract.remainingTotal}}` | Remaining days (two decimals) |
+| `{{contract.remainingOnSite}}`, `{{contract.remainingOffSite}}`, `{{contract.remainingTotal}}` | Remaining days as of the end of the selected period: the target minus all in-contract days up to that date (two decimals). Not today's figure, and not the whole contract's |
 | `{{contract.position}}` | Column `ConsultantPosition` |
 | `{{contract.vendor}}` (alias `{{contract.serviceProvider}}`) | Column `Vendor` |
 | `{{contract.lot}}` | Column `Lot` |

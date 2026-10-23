@@ -163,7 +163,9 @@ Client-side with pdfmake (ADR-004). Landscape A4, one page per 12 months.
   SC latest execution date · Consultant days on-site · off-site · total.
 - Row 2: SC days on-site · off-site · total · Remaining on-site · off-site ·
   total. "Consultant days" and "SC days" print the same numbers under two
-  labels — by design.
+  labels — by design. Remaining is as of the end of the selected period: the
+  target minus all in-contract days up to that date, including days before the
+  period.
 - Grid: one row per month in the period, columns 1–31, cell text is hours
   (`8.00` full, `4.00` half); fill blue `#9DC3E6` for on-site, yellow
   `#E8DB9C` for off-site, empty when not worked, grey for holidays/weekends;
@@ -286,8 +288,12 @@ holiday agent (RM-1 in Phase E) stays a separate item.
 ## 6. Security model (design §7)
 
 - Role derived at runtime: `Contractor` on ≥ 1 contract → contractor;
-  `ContractManager` → manager; site Owners group member → admin. Roles can
-  combine.
+  `ContractManager` on ≥ 1 contract, or a member of `Orpheus Contract
+  Managers` → manager; a site collection admin (`IsSiteAdmin`) or a member of
+  the associated Owners group → admin. Roles can combine. If any role read
+  fails, derivation rejects (fail closed): the header shows no role links, the
+  form allows no editing, the web part shows an error and the agent rejects
+  the request.
 - All visibility is filtered in the web part / data service: contractors get
   `Contractor eq me`, managers `ContractManager eq me`. Agreed sufficient for
   now (ADR-005).

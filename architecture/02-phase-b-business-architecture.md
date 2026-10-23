@@ -33,8 +33,11 @@ contract or are a member of the SharePoint group `Orpheus Contract Managers`
 manager. The owner manages the group's members; provisioning only creates it.
 
 Role derivation at runtime, in order: appears as `Contractor` on at least one
-contract → contractor; appears as `ContractManager` → manager; member of the
-site Owners group → admin. A user can hold more than one role.
+contract → contractor; appears as `ContractManager` on at least one contract,
+or is a member of `Orpheus Contract Managers` → manager; a site collection
+admin (`IsSiteAdmin`) or a member of the associated Owners group → admin. A
+user can hold more than one role. If any of these reads fails, derivation
+rejects (fail closed) and the user gets no role.
 
 > ⚠️ **Open:** Whether contractors get the **Generate timesheet** button is
 > left to the builder (design §9, recommended yes).

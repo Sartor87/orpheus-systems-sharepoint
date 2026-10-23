@@ -116,10 +116,10 @@ C4Context
 | R-BUILD-1 | Container-only build diverges from a developer's expectations (certificates, ports, volumes). | M | `compose.yml` services `shell`, `install`, `build`, `serve`, `package`; `.devcontainer` reuses the image; `heft trust-dev-cert` documented. |
 | R-PDF-1 | pdfmake bundle size exceeds SPFx guidance. | M | Fallback to jsPDF + autotable (ADR-004); left to the builder. |
 | R-DATA-1 | Duplicate calendar entries for one contractor on one date across overlapping contracts. | H | Service enforces one entry per contractor per date; overlap dialog moves the day (ADR-008). |
-| R-DATA-2 | `OnSiteUsedDays` / `OffSiteUsedDays` drift from the actual entries. | M | Service recalculates on every entry write, counting only entries inside the contract period; contractors need Contribute on Contracts for this. |
+| R-DATA-2 | `OnSiteUsedDays` / `OffSiteUsedDays` drift from the actual entries. | M | Service recalculates on every entry write, and the contract form on a period change, counting only entries inside the contract period; contractors need Contribute on Contracts for this. |
 | R-HYG-1 | Previous-employer fingerprints survive in history. | H | Fresh orphan branch (ADR-007); grep criterion applies to history. |
 | R-CFG-1 | A real organisation name leaks via labels. | H | Labels are web part properties with neutral defaults ("Client approval", "Service provider"). |
-| T-1 | The entry upsert deletes and re-adds the item, so SharePoint version history of a calendar entry is lost. | L | Accepted trade-off; the audit layers (ADR-014) record the agent's changes, and entries carry no content worth versioning. |
+| T-1 | The entry upsert deletes and re-adds the item, so SharePoint version history of a calendar entry is lost. | L | Accepted trade-off; entries carry no content worth versioning. The audit layers (ADR-014) record only the agent's writes; web part writes are not audited by the app, and an entry's Created/Author metadata reflects its last write. |
 | T-2 | Batched entry writes are not atomic: a failure part-way leaves earlier items written (see R-AGT-1). | M | Accepted trade-off; the used days are recalculated on the next write and self-correct. |
 | R-SCOPE-1 | Reference timesheet image contains real client identifiers. | H | Image is not committed; design §6.5 is the full layout description. |
 
