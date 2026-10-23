@@ -1,18 +1,36 @@
 // Structurizr DSL workspace for the Orpheus Systems Contract Calendar for SharePoint.
 //
 // Source of truth: architecture/00..10 (TOGAF ADM), architecture/adr/*.md and the code under
-// packages/, infra/ and compose.yml, read on 2026-10-23. Where the model and the TOGAF documents
+// packages/, infra/ and compose.yml, read on 2026-10-23 and re-checked the same day after the
+// provisioning (Plan 3), wave 2 role and CI changes. Where the model and the TOGAF documents
 // disagree, the model follows the code and the difference is listed in docs/02-model-notes.md.
 // Nothing here names a tenant, a user or a secret; placeholders only.
 //
-// Render: see docs/03-how-to-render.md (Structurizr Lite through compose.yml next to this file,
-// or the Structurizr CLI). Both run in Podman. The ADRs are imported from ../adr, the docs from ./docs.
+// Render: see docs/03-how-to-render.md (Structurizr local mode through compose.yml next to this
+// file, or the command line). Both run in Podman.
+//
+// Documentation: the workspace documentation is exactly the eleven TOGAF phase documents
+// ../00-preliminary.md to ../10-requirements-management.md, one !docs per file, in phase order.
+// A single !docs on ../ would also take README.md and could pick up adr/, principles/ and
+// structurizr/, so each file is named. The files stay where they are; nothing is copied. The
+// model notes in ./docs are the documentation of the Contract Calendar suite system. The ADRs are
+// imported from ../adr.
 
 workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite, the Copilot contract agent and the SharePoint site they share. TOGAF documents and ADRs live in architecture/." {
 
     !identifiers hierarchical
     !adrs ../adr
-    !docs docs
+    !docs ../00-preliminary.md
+    !docs ../01-phase-a-architecture-vision.md
+    !docs ../02-phase-b-business-architecture.md
+    !docs ../03-phase-c-data-architecture.md
+    !docs ../04-phase-c-application-architecture.md
+    !docs ../05-phase-d-technology-architecture.md
+    !docs ../06-phase-e-opportunities-and-solutions.md
+    !docs ../07-phase-f-migration-planning.md
+    !docs ../08-phase-g-implementation-governance.md
+    !docs ../09-phase-h-change-management.md
+    !docs ../10-requirements-management.md
 
     model {
 
@@ -25,9 +43,9 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
         // ------------------------------------------------------------------
 
         contractor = person "Contractor" "Consultant placed on one or more procurement contracts. Marks on-site and off-site days, full or half, and prints the timesheet. Books days through the Copilot agent too." "User"
-        manager = person "Contract manager" "Creates and edits the contracts they manage, watches used and remaining days, generates the timesheet. Read-only on calendar days. Reads contracts by vendor through the agent." "User"
-        admin = person "Site admin" "Member of the site Owners group. Edits any contract, maintains the Holidays list, configures the web part, runs the provisioning scripts." "User"
-        hr = person "HR" "Member of the SharePoint group named by HR_GROUP (default Orpheus HR). Exists only in the agent: sees all contracts grouped by vendor, read only." "User"
+        manager = person "Contract manager" "Manages at least one contract, or is a member of the Orpheus Contract Managers group (Contribute). May create contracts; edits only the contracts they manage. Watches used and remaining days, generates the timesheet. Read-only on calendar days. Reads the contracts they manage by vendor through the agent, read only." "User"
+        admin = person "Site admin" "Admin role: a site collection admin (IsSiteAdmin) or a member of the associated Owners group. Edits any contract, maintains the Holidays list, configures the web part, runs the provisioning scripts." "User"
+        hr = person "HR" "Member of the SharePoint group named by HR_GROUP (default Orpheus HR, Read). Exists only in the agent: sees all contracts grouped by vendor, read only; booking is refused." "User"
         approver = person "Approving organisation" "The client that signs the printed timesheet. Never named in code; a configurable label with the default Client approval." "External"
         developer = person "Owner / developer" "Orpheus Systems. Builds in the Podman container, packages the .sppkg files, provisions sites, hosts the agent demo, integrates branches." "Developer"
 
@@ -37,30 +55,33 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
 
         suite = softwareSystem "Contract Calendar suite" "SharePoint Framework 1.23.2 solution: one web part, three extensions and two shared libraries. Runs entirely in the browser inside SharePoint Online pages; no server component. Tracks on-site and off-site days against procurement contracts and prints the timesheet PDF." "Suite" {
 
-            core = container "shared-core" "Models, business rules (one entry per contractor per date, blocked weekends and holidays, recomputed used days), date handling, role derivation and the IDataService seam with a Local and a SharePoint implementation. Shared by every SPFx package and by the MCP server." "TypeScript library, npm workspace @orpheussystems/shared-core" "Library" {
+            // Notes on this model: overview, discrepancies with the documents, how to render.
+            !docs docs
+
+            core = container "shared-core" "Models, business rules (one entry per contractor per date, holidays always blocked and weekends unless switched off, used days counted inside the contract period only), date handling, role derivation and the IDataService seam with a Local and a SharePoint implementation. Shared by every SPFx package and by the MCP server." "TypeScript library, npm workspace @orpheussystems/shared-core" "Library" {
                 models = component "models" "Contract, CalendarEntry, Holiday, UserInfo, Role, EntryType and the other domain types." "TypeScript, src/models.ts"
-                rules = component "rules" "Business rules: weekend and holiday blocking, period checks, overlap detection, used-days totals, full = 1 and half = 0.5." "TypeScript, src/rules.ts"
+                rules = component "rules" "Business rules: holiday blocking (always) and weekend blocking (blockWeekends, default on), period checks, overlap detection, used-days totals of the entries inside the contract period only (computeUsedTotals), full = 1 and half = 0.5, canCreateContract (Admin or ContractManager), canEditContract (Admin or the contract's own manager), CONTRACT_MANAGERS_GROUP." "TypeScript, src/rules.ts"
                 dates = component "dates" "DateKey (yyyy-MM-dd) helpers, Monday-first month arithmetic, range iteration." "TypeScript, src/dates.ts"
                 links = component "links" "Deep links to the calendar page with the contractId query parameter." "TypeScript, src/links.ts"
                 templateData = component "templateData" "ContractTemplateData: the five optional template columns and demo values." "TypeScript, src/templateData.ts"
                 ids = component "IDataService" "The one data access seam: getMyContracts (role-filtered), getEntries, upsertEntry, deleteEntry, getHolidays, getCurrentUser." "TypeScript interface, src/data/IDataService.ts" "Interface"
                 local = component "LocalDataService" "In-memory implementation over bundled JSON fixtures (bridge contracts, half days, BG and * holidays, demo users). Used by the workbench, the unit tests and the MCP server in DATA_MODE=local." "TypeScript, src/data/LocalDataService.ts"
                 spds = component "SharePointDataService" "PnPjs v4 implementation against the three lists: CAML/OData filters on indexed columns, batched writes, moves an entry that exists on another contract of the same contractor, recomputes OnSiteUsedDays and OffSiteUsedDays." "TypeScript, src/data/SharePointDataService.ts, PnPjs 4"
-                spq = component "spQueries / spMappers / listLookup" "OData query builders, SP item to model mappers (CONTRACT_SELECT, CONTRACT_EXPAND), list id resolution by URL and deriveRolesForContracts." "TypeScript, src/data/*.ts"
+                spq = component "spQueries / spMappers / listLookup" "OData query builders, SP item to model mappers (CONTRACT_SELECT, CONTRACT_EXPAND), list id resolution by URL and deriveRolesForContracts: Contractor and ContractManager from the contracts, ContractManager also from Orpheus Contract Managers membership, Admin from IsSiteAdmin or the associated Owners group. Any failed read rejects, so no role is granted (fail closed)." "TypeScript, src/data/*.ts"
                 tdq = component "templateDataQuery" "getContractTemplateData: reads the five optional template columns of one contract tolerantly." "TypeScript, src/data/templateDataQuery.ts"
             }
 
             ui = container "shared-ui" "Design tokens and brand, the shared toast stack, the timesheet model and the PDF builders. The PDF code loads in a lazy chunk (orpheus-timesheet-pdf)." "TypeScript library, React 17, pdfmake, html-to-pdfmake 2.5, npm workspace @orpheussystems/shared-ui" "Library" {
                 tokens = component "theme tokens and brand" "Orpheus palette (amber #E0A83A, dark #0B0D10), font stack, brand strings and the attribution line." "TypeScript, src/theme, src/brand"
                 toast = component "toast" "One toast store and ToastHost shared by every component on the page." "React 17, src/toast"
-                tsModel = component "timesheetModel" "Builds the timesheet model from contract, entries and holidays: per-month rows, hours per cell (8.00 / 4.00), totals, remaining." "TypeScript, src/pdf/timesheetModel.ts"
-                tsDoc = component "timesheetDocument" "Built-in landscape A4 pdfmake doc definition: header rows, 1 to 31 grid, per-month and grand totals, three signature boxes. Guarded by a golden test." "TypeScript, pdfmake, src/pdf/timesheetDocument.ts"
+                tsModel = component "timesheetModel" "Builds the timesheet model from contract, entries and holidays: per-month rows, hours per cell (8.00 / 4.00), totals, and remaining as of the end of the selected period." "TypeScript, src/pdf/timesheetModel.ts"
+                tsDoc = component "timesheetDocument" "Built-in landscape A4 pdfmake doc definition: contract header repeated on every page, 1 to 31 grid, per-month and grand totals, three signature boxes. Guarded by a golden test." "TypeScript, pdfmake, src/pdf/timesheetDocument.ts"
                 tplDoc = component "templateDocument / fillTemplate / templateValues" "HTML template rendering (ADR 0010): fills placeholders, converts with html-to-pdfmake, swaps in the generated grid, totals, header and signature blocks, appends the attribution line." "TypeScript, html-to-pdfmake, src/pdf/*.ts"
                 dl = component "downloadPdf" "Creates the PDF with pdfmake in the browser and downloads Timesheet_<ContractCode>_<from>_<to>.pdf." "TypeScript, pdfmake, src/pdf/downloadPdf.ts"
             }
 
             wp = container "wp-contract-calendar" "The contract calendar web part: contract selector, month grids for the contract period, selection type picker, range drag, stats panel, overlap dialog and the timesheet dialog. Runs on demo data in a debug build." "SPFx web part, React 17, Fluent UI 8, npm workspace @orpheussystems/wp-contract-calendar" "SPFx" {
-                wpShell = component "ContractCalendarWebPart" "SPFx entry point and property pane: list pickers filtered by content type, useLocalData, demo user, months to show, weekend blocking, labels, timesheet template path. Reads the contractId query parameter." "SPFx BaseClientSideWebPart, ContractCalendarWebPart.ts"
+                wpShell = component "ContractCalendarWebPart" "SPFx entry point and property pane: list pickers filtered by content type, useLocalData, demo user, months to show, Block weekends (applies to the web part's writes; holidays are always blocked; other clients keep blocking weekends, known gap G-1), labels, timesheet template path. Reads the contractId query parameter." "SPFx BaseClientSideWebPart, ContractCalendarWebPart.ts"
                 createDs = component "createDataService" "Chooses LocalDataService or SharePointDataService once in onInit from the environment and the useLocalData property." "TypeScript, createDataService.ts"
                 dataCtx = component "DataContext" "React context that injects the IDataService into the component tree; no component talks to SharePoint directly." "React context, DataContext.tsx"
                 calendar = component "ContractCalendar" "Root component: header with contract metadata strip, selection type picker, month grids, stats panel; optimistic updates with rollback." "React, components/ContractCalendar.tsx, useCalendarState.ts"
@@ -72,11 +93,11 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
                 filterLists = component "filterListsByContentType" "Property pane list pickers offer only lists carrying the Orpheus content types." "TypeScript"
             }
 
-            appCust = container "ext-app-customizer" "Header and footer on every page: Orpheus mark and wordmark, role-aware menu (My calendar, Contracts, Holidays) that collapses below 640 px, footer with contact and solution version. Menu items and list URLs come from ClientSideComponentProperties written by provisioning." "SPFx application customizer, React 17, npm workspace @orpheussystems/ext-app-customizer" "SPFx"
+            appCust = container "ext-app-customizer" "Header and footer on every page: Orpheus mark and wordmark, role-aware menu (My calendar, Contracts, Holidays) that collapses below 640 px, footer with contact and solution version. Menu items and list URLs come from ClientSideComponentProperties written by provisioning. The package has no feature; the OrpheusChrome web custom action is registered by OrpheusSolutions.psm1. A failed role check shows a menu without role items." "SPFx application customizer, React 17, npm workspace @orpheussystems/ext-app-customizer" "SPFx"
 
             fieldCust = container "ext-field-customizer" "Remaining-days bars on the RemainingDays column of the Contracts list: on-site and off-site used against target, amber at 80 percent, red when over. Reads only the row's own columns; no extra query per row." "SPFx field customizer, React 17, npm workspace @orpheussystems/ext-field-customizer" "SPFx"
 
-            formCust = container "ext-form-customizer" "New, Edit and Display forms for the Contracts list: validation as you type, people and date pickers, overlap warning, Open calendar link. Only a site admin or the contract's manager can edit." "SPFx form customizer, React 17, Fluent UI 8, npm workspace @orpheussystems/ext-form-customizer" "SPFx"
+            formCust = container "ext-form-customizer" "New, Edit and Display forms for the Contracts list: validation as you type, people and date pickers, overlap warning, Open calendar link. New: Admin or ContractManager. Edit: Admin or the contract's own manager. If the role check fails, nobody edits (fail closed). When an edit changes the period, it recomputes the used days from the entries inside the new period in the same save and warns about booked days outside it." "SPFx form customizer, React 17, Fluent UI 8, npm workspace @orpheussystems/ext-form-customizer" "SPFx"
         }
 
         // ------------------------------------------------------------------
@@ -93,7 +114,7 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
                 obo = component "auth/obo" "On-behalf-of exchange with msal-node for SP_SCOPE. A consent or interaction error becomes 401 with WWW-Authenticate: Bearer so Copilot shows the sign-in prompt." "msal-node 3, src/auth/obo.ts"
                 ctxFactory = component "context/contextFactory" "Builds the per-request ToolContext: user (oid, upn, SharePoint id), roles, IDataService and contract directory. DATA_MODE=sharepoint creates an SPFI with the OBO token; DATA_MODE=local uses LocalDataService and fixtures." "TypeScript, src/context/*.ts"
                 mcpServer = component "mcp/createMcpServer" "Registers the six tools with zod input schemas and MCP annotations (readOnlyHint on the four read tools, destructiveHint false on book_days, true on remove_days). Wraps every call in runTool." "MCP TypeScript SDK, src/mcp/createMcpServer.ts"
-                tools = component "tools" "get_my_contracts, list_contracts, get_calendar, get_holidays, book_days, remove_days. Range orchestration (max 31 days per write, max 366 per read), needs_choice on an overlap day, per-day results booked / skipped / failed / removed / notFound, error codes not_found, forbidden, invalid_input, internal." "TypeScript, src/tools/*.ts"
+                tools = component "tools" "get_my_contracts, list_contracts, get_calendar, get_holidays, book_days, remove_days. Range orchestration (max 31 days per write, max 366 per read), needs_choice on an overlap day, weekends and holidays always skipped regardless of the web part setting (known gap G-1), per-day results booked / skipped / failed / removed / notFound, error codes not_found, forbidden, invalid_input, internal." "TypeScript, src/tools/*.ts"
                 viewer = component "domain/viewer + applyQuery" "canBook (contractors only), seesAll (HR and Admin), isVisible per contract, vendor and manager filters, grouping by vendor." "TypeScript, src/domain/*.ts"
                 directory = component "ContractDirectory" "Read side for the agent: SharePointContractDirectory (OData pre-filter plus in-memory re-check of every item, Vendor column) or InMemoryContractDirectory for fixtures." "TypeScript, src/sharepoint/SharePointContractDirectory.ts, src/domain/InMemoryContractDirectory.ts"
                 agentRoles = component "sharepoint/agentRoles + createSpfi" "deriveAgentRoles: the web part's role derivation plus the HR group membership; createSpfi builds the PnPjs instance with the delegated token." "TypeScript, PnPjs 4, @pnp/nodejs"
@@ -115,8 +136,9 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
         // Provisioning (PnP PowerShell on the host)
         // ------------------------------------------------------------------
 
-        provisioning = softwareSystem "Provisioning scripts" "PnP PowerShell 3 on PowerShell 7.4, run from the host, idempotent with -WhatIf, tested with Pester against faked cmdlets. No Node needed." "Scripts" {
-            provisionSite = container "Provision-OrpheusSite.ps1" "Wraps a PnP site template (template.xml): content types, the three lists with indexes, RemainingDays bound to the field customizer, the Orpheus Contract content type bound to the form customizer, the ContractCalendar.aspx page with the web part and lists preselected, starter holidays for -Country, application customizer registration with its properties." "PnP PowerShell 3, infra/provisioning" "Script"
+        provisioning = softwareSystem "Provisioning scripts" "PnP PowerShell 3 on PowerShell 7.4, run from the host, idempotent with -WhatIf (a re-run reports Unchanged on every step), tested with Pester against faked cmdlets. No Node needed." "Scripts" {
+            provisionSite = container "Provision-OrpheusSite.ps1" "Applies a PnP site template (template.xml): site columns, content types, the three lists with indexes, the RemainingDays column carrying the field customizer id, the Contracts list validation. -SeedDemoData upserts the demo contracts, entries and the holidays of -Country plus *. -InstallSolutions then hands over to OrpheusSolutions.psm1." "PnP PowerShell 3, infra/provisioning" "Script"
+            solutionsModule = container "OrpheusSolutions.psm1" "Invoke-OrpheusSolutionInstall, in order: installs the four .sppkg into the site collection App Catalog (-Scope Site) and checks every component manifest, with a clean reinstall behind its own -Confirm gate when one stays empty; registers the OrpheusChrome header custom action once; binds the field customizer to Contracts.RemainingDays; binds the form customizer to Orpheus Contract; creates the Orpheus Contract Managers group with Contribute; creates or updates SitePages/ContractCalendar.aspx with the web part wired to the three lists. Every write goes through ShouldProcess." "PowerShell module, PnP PowerShell 3, infra/provisioning" "Script"
             addTemplateCols = container "Add-TimesheetTemplateColumns.ps1" "Adds the five optional template columns (ConsultantPosition, Vendor, Lot, ApproverName, TemplateFields); -SeedDemoData fills the demo contract (ADR 0010)." "PnP PowerShell 3, infra/provisioning" "Script"
             setupAgent = container "Setup-AgentDemo.ps1" "Agent demo setup: Vendor column with the same fixed id as the template script, the HR SharePoint group with Read, 002xxx demo contracts and entries, recomputed used days (ADR 0013). UPNs are parameters, never committed." "PnP PowerShell 3, packages/mcp-contract-calendar/setup" "Script"
         }
@@ -131,14 +153,15 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
             holidays = container "Holidays list" "Public holidays per country (ISO alpha-2 or * for all), Source Manual or Agent (reserved for the future holiday agent)." "SharePoint list" "External,Data store"
             page = container "ContractCalendar.aspx" "Modern page created by provisioning that hosts the web part with the three lists preselected; honours the contractId query parameter. Also the place for a Button or Quick links web part that opens the agent's share link (ADR 0017)." "SharePoint modern page" "External"
             template = container "Timesheet HTML template" "Optional .html file uploaded by a site owner to a library only owners can edit; the web part property points at it (ADR 0010). Read with the viewer's permissions on every generation." "File in a document library" "External,Data store"
-            appCatalog = container "Site collection App Catalog" "Where the four .sppkg solutions are installed from." "SharePoint App Catalog" "External"
-            spGroups = container "Site groups" "Owners group (admin role) and the HR group named by HR_GROUP (agent-only HR role)." "SharePoint groups" "External"
+            appCatalog = container "Site collection App Catalog" "Where the four .sppkg solutions are installed from. Created once per site by a SharePoint administrator; filled by OrpheusSolutions.psm1." "SharePoint App Catalog" "External"
+            spGroups = container "Site groups" "Associated Owners group (Admin role, together with site collection admins), Orpheus Contract Managers with Contribute (ContractManager role, may create contracts; created by provisioning, members kept by the owner) and the HR group named by HR_GROUP, default Orpheus HR with Read (agent-only HR role)." "SharePoint groups" "External"
         }
 
         copilot = softwareSystem "Microsoft 365 Copilot Chat" "Hosts the declarative agent in Copilot Chat or Teams. Calls the MCP plugin from Microsoft's cloud over the public internet with an Entra SSO token. Works for unlicensed users through the share link (ADR 0017)." "External"
         entra = softwareSystem "Microsoft Entra ID" "Issues the SSO token for the server's Application ID URI and performs the on-behalf-of exchange for a delegated SharePoint token. The server has its own app registration, separate from the provisioning one." "External"
         purview = softwareSystem "Microsoft Purview Audit" "Records CopilotInteraction events (layer 1) and SharePoint ListItemCreated / Updated / Deleted events with the real user as actor (layer 2). Joined with the server's audit line on user and time (ADR 0014)." "External"
         tunnel = softwareSystem "Microsoft dev tunnel relay" "Persistent tunnel with a stable host name, anonymous at the relay because Copilot cannot sign in to it. Demo only, no SLA (ADR 0015)." "External,Demo"
+        github = softwareSystem "GitHub" "Hosts the public repository. GitHub Actions: ci.yml on push and pull request to main runs build.yml (hygiene scan, build, typecheck, production package and tests in docker.io/m365pnp/spfx:1.23.2, Pester on pwsh); release.yml attaches the four .sppkg to v* releases. Dependabot updates the GitHub Actions monthly. A ruleset protects main. Never deploys to a tenant." "External,CI"
         pnpSkills = softwareSystem "PnP sharepoint-skills catalog" "PROPOSED (ADR 0018). Source of the three MIT-licensed skills (invoice-po-reconciliation, project-health-check, metadata-completeness-auditor) that the oversight agent adapts with attribution." "External,Proposed"
         graphStore = softwareSystem "Graph store (GraphRAG)" "PROPOSED, LATER (ADR 0018). Only if questions need three or more hops across documents and relations. Neo4j by default, PostgreSQL + AGE only if PostgreSQL enters the stack, Cosmos DB for Gremlin excluded. Needs its own ADR." "External,Proposed"
 
@@ -161,8 +184,8 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
         admin -> suite.wp "Configures the web part: lists, labels, template path" "Browser, property pane"
         admin -> spo.holidays "Maintains holidays in the standard list UI" "Browser"
         admin -> spo.template "Uploads and edits the timesheet HTML template" "Browser"
-        admin -> spo.appCatalog "Installs the four .sppkg solutions" "Browser"
-        admin -> provisioning "Runs the provisioning scripts" "PowerShell 7.4"
+        admin -> spo.appCatalog "Has a SharePoint administrator create it once; inspects the installed apps" "Browser"
+        admin -> provisioning "Runs Provision-OrpheusSite.ps1 -InstallSolutions and the optional scripts" "PowerShell 7.4"
 
         hr -> copilot "Asks the agent for all contracts grouped by vendor (read only)" "Copilot Chat or Teams"
 
@@ -170,6 +193,10 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
         developer -> agent.mcp "Runs the mcp compose service and hosts the dev tunnel for the demo" "podman compose, devtunnel CLI"
         developer -> agent.da "Provisions and sideloads the agent package" "Microsoft 365 Agents Toolkit"
         developer -> provisioning "Runs the scripts against the dev tenant" "PowerShell 7.4"
+        developer -> github "Pushes branches and opens pull requests to the protected main" "git, HTTPS"
+        github -> suite "Builds, tests and packages the four .sppkg in the SPFx container" "GitHub Actions"
+        github -> agent.mcp "Typechecks and tests the MCP server" "GitHub Actions"
+        github -> provisioning "Runs the Pester tests against faked PnP cmdlets" "GitHub Actions, pwsh"
 
         // ------------------------------------------------------------------
         // Relationships: inside the suite
@@ -213,13 +240,13 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
         suite.core.spds -> spo.contracts "Reads role-filtered contracts, updates used days" "PnPjs 4 REST, OData on indexed columns"
         suite.core.spds -> spo.entries "Reads entries by contract and period, upserts and deletes, moves an entry between contracts" "PnPjs 4 REST, batched writes"
         suite.core.spds -> spo.holidays "Reads holidays for the contract's country and *" "PnPjs 4 REST"
-        suite.core.spq -> spo.spGroups "Checks Owners group membership for the admin role" "PnPjs 4 REST"
+        suite.core.spq -> spo.spGroups "Reads IsSiteAdmin, the associated Owners group and the user's groups (Orpheus Contract Managers) for the roles; fails closed" "PnPjs 4 REST"
         suite.core.tdq -> spo.contracts "Reads one contract's template columns tolerantly" "PnPjs 4 REST"
 
         suite.appCust -> suite.core "Role derivation (deriveRolesForContracts, resolveListIdByUrl), menu link helpers" "TypeScript import"
         suite.appCust -> suite.ui "Theme tokens, brand, toasts" "TypeScript import"
         suite.appCust -> spo.contracts "Reads the user's contracts to derive roles; fails open to a role-less menu" "PnPjs 4 REST"
-        suite.appCust -> spo.spGroups "Checks Owners group membership" "PnPjs 4 REST"
+        suite.appCust -> spo.spGroups "Role check through deriveRolesForContracts" "PnPjs 4 REST"
         suite.appCust -> spo.page "Links to the calendar page"
 
         suite.fieldCust -> suite.ui "Theme tokens" "TypeScript import"
@@ -228,7 +255,8 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
         suite.formCust -> suite.core "Models, mappers, overlap query, deriveRolesForContracts (fails closed)" "TypeScript import"
         suite.formCust -> suite.ui "Theme tokens, toasts" "TypeScript import"
         suite.formCust -> spo.contracts "Loads, validates and saves contracts; queries overlapping contracts of the same contractor" "PnPjs 4 REST"
-        suite.formCust -> spo.spGroups "Checks Owners group membership" "PnPjs 4 REST"
+        suite.formCust -> spo.spGroups "Role check through deriveRolesForContracts; fails closed" "PnPjs 4 REST"
+        suite.formCust -> spo.entries "Reads the contract's entries to recompute used days and count days outside a changed period" "PnPjs 4 REST"
         suite.formCust -> spo.page "Open calendar link with contractId"
 
         // ------------------------------------------------------------------
@@ -250,7 +278,7 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
         agent.mcp.obo -> entra "On-behalf-of exchange for a delegated SharePoint token (AllSites.Write)" "OAuth 2.0 OBO"
         agent.mcp.ctxFactory -> agent.mcp.agentRoles "Derives roles including HR; builds the SPFI"
         agent.mcp.agentRoles -> suite.core.spq "Reuses deriveRolesForContracts" "TypeScript import"
-        agent.mcp.agentRoles -> spo.spGroups "Checks the HR group and Owners group" "PnPjs 4 REST as the user"
+        agent.mcp.agentRoles -> spo.spGroups "Checks the HR group, Orpheus Contract Managers, IsSiteAdmin and the Owners group" "PnPjs 4 REST as the user"
         agent.mcp.ctxFactory -> suite.core.spds "Creates per request with the OBO token (DATA_MODE=sharepoint)" "TypeScript import"
         agent.mcp.ctxFactory -> suite.core.local "Uses fixtures in DATA_MODE=local and in tests" "TypeScript import"
         agent.mcp.ctxFactory -> agent.mcp.directory "Creates the contract directory"
@@ -281,12 +309,16 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
         // Relationships: provisioning
         // ------------------------------------------------------------------
 
-        provisioning.provisionSite -> spo.contracts "Creates content type, list, indexes, RemainingDays with the field customizer binding, Orpheus Contract bound to the form customizer" "PnP PowerShell, Invoke-PnPSiteTemplate"
-        provisioning.provisionSite -> spo.entries "Creates with indexes" "PnP PowerShell"
-        provisioning.provisionSite -> spo.holidays "Creates and seeds starter holidays for -Country" "PnP PowerShell"
-        provisioning.provisionSite -> spo.page "Creates ContractCalendar.aspx with the web part and lists preselected" "PnP PowerShell"
-        provisioning.provisionSite -> suite.appCust "Registers the application customizer with menu, list and page URLs in ClientSideComponentProperties" "PnP PowerShell, custom action"
-        provisioning.provisionSite -> spo.appCatalog "Needs the solutions installed first: binds by component id" "Dependency"
+        provisioning.provisionSite -> spo.contracts "Creates content type, list, indexes, RemainingDays, list validation; -SeedDemoData upserts demo contracts" "PnP PowerShell, Invoke-PnPSiteTemplate"
+        provisioning.provisionSite -> spo.entries "Creates with indexes; -SeedDemoData upserts demo entries" "PnP PowerShell"
+        provisioning.provisionSite -> spo.holidays "Creates; -SeedDemoData seeds the holidays of -Country and *" "PnP PowerShell"
+        provisioning.provisionSite -> provisioning.solutionsModule "-InstallSolutions: Invoke-OrpheusSolutionInstall after the lists" "PowerShell module import"
+        provisioning.solutionsModule -> spo.appCatalog "Installs or updates the four .sppkg (-Scope Site); clean reinstall when a manifest stays empty" "PnP PowerShell, Add-PnPApp / Install-PnPApp"
+        provisioning.solutionsModule -> suite.appCust "Registers the OrpheusChrome web custom action once, with list and page URLs in ClientSideComponentProperties" "PnP PowerShell, REST UserCustomActions"
+        provisioning.solutionsModule -> suite.fieldCust "Binds to Contracts.RemainingDays and adds the column to the default view" "PnP PowerShell"
+        provisioning.solutionsModule -> suite.formCust "Binds to the New, Edit and Display forms of Orpheus Contract" "PnP PowerShell"
+        provisioning.solutionsModule -> spo.spGroups "Creates Orpheus Contract Managers with Contribute when missing" "PnP PowerShell, New-PnPSiteGroup"
+        provisioning.solutionsModule -> spo.page "Creates or updates SitePages/ContractCalendar.aspx with the web part wired to the three lists" "PnP PowerShell"
         provisioning.addTemplateCols -> spo.contracts "Adds the five optional template columns; -SeedDemoData" "PnP PowerShell"
         provisioning.setupAgent -> spo.contracts "Adds Vendor (same fixed id), 002xxx demo contracts, recomputes used days" "PnP PowerShell"
         provisioning.setupAgent -> spo.entries "Seeds demo entries" "PnP PowerShell"
@@ -332,7 +364,7 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
             deploymentNode "Developer host" "Windows 11, Podman 6.1.4, no Node on the host." "Windows 11" {
                 infrastructureNode "devtunnel host" "Forwards the persistent tunnel to localhost:8787. Runs on the host OS, stopped when not demoing." "devtunnel CLI"
                 deploymentNode "Podman machine" "WSL VM; Node memory capped at 1536 MB for the server." "WSL 2" {
-                    deploymentNode "compose project orpheus-agent, service mcp" "Separate compose project name so it does not clash with the SPFx services. AUTH_MODE=entra, DATA_MODE=sharepoint; .env is gitignored." "docker.io/m365pnp/spfx:1.23.2, Node 22" {
+                    deploymentNode "default compose project, service mcp" "Runs from the main checkout's default compose project (root compose.yml). AUTH_MODE=entra, DATA_MODE=sharepoint; .env is gitignored." "docker.io/m365pnp/spfx:1.23.2, Node 22" {
                         containerInstance agent.mcp
                         containerInstance agent.auditSink
                     }
@@ -341,6 +373,18 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
                     containerInstance provisioning.setupAgent
                 }
             }
+        }
+
+        ci = deploymentEnvironment "CI (GitHub Actions)" {
+            gh = deploymentNode "GitHub" "Public repository; a ruleset protects main; Dependabot (GitHub Actions) monthly." "GitHub" {
+                softwareSystemInstance github
+                runner = deploymentNode "ubuntu-latest runner" "Called through build.yml by ci.yml (push and pull request to main) and release.yml (v* tags). permissions: contents read." "GitHub-hosted runner" {
+                    jobNode = infrastructureNode "Job node" "Hygiene scan (scripts/ci/hygiene.js), npm ci, build:shared, typecheck, package:solutions (production), test:all; uploads the sppkg artifact." "docker.io/m365pnp/spfx:1.23.2, Node 22"
+                    jobPester = infrastructureNode "Job powershell" "PnP.PowerShell 3 and Pester 5 from the Gallery; scripts/ci/run-pester.ps1 over infra/provisioning/tests and packages/*/setup. Every PnP cmdlet is faked." "pwsh"
+                    jobRelease = infrastructureNode "Job publish (release.yml)" "Creates the GitHub Release for a v* tag with the four .sppkg attached. Only job with contents write." "gh CLI"
+                }
+            }
+            ci.gh.runner.jobNode -> ci.gh.runner.jobRelease "sppkg artifact" "actions/upload-artifact"
         }
 
         azure = deploymentEnvironment "Agent Azure target (Proposed, ADR 0016)" {
@@ -438,11 +482,11 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
 
         dynamic suite "MarkADay" "Business process 4.1, mark a day: the contractor clicks a day inside an overlap window (TOGAF Phase B, ADR 0008)." {
             contractor -> suite.wp "Clicks a day with the selection type on-site full"
-            suite.wp -> suite.core "Weekend or holiday? Already holds the same type? Inside an overlap window?"
+            suite.wp -> suite.core "Holiday, or weekend with Block weekends on? Already holds the same type? Inside an overlap window?"
             suite.wp -> contractor "Overlap dialog: count against which contract?"
             suite.wp -> suite.core "upsertEntry(entry) through IDataService, optimistic UI with rollback"
             suite.core -> spo.entries "Deletes any entry on that date on the contractor's other contracts, adds the new one (batched)"
-            suite.core -> spo.contracts "Recomputes OnSiteUsedDays / OffSiteUsedDays on every affected contract"
+            suite.core -> spo.contracts "Recomputes OnSiteUsedDays / OffSiteUsedDays on every affected contract, counting only entries inside the contract period"
             suite.wp -> contractor "Stats panel refreshes: used, remaining, warning colour"
             autolayout lr
         }
@@ -484,6 +528,11 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
         }
 
         deployment * demo "AgentDemo" "The agent demo: Podman service mcp behind a persistent dev tunnel on the developer host; nothing in Azure (ADR 0015, Phase D section 3.2)." {
+            include *
+            autolayout lr
+        }
+
+        deployment * ci "ContinuousIntegration" "GitHub Actions: the reusable build.yml pipeline and the release job. Builds, tests and packages; never deploys to a tenant (docs/ci.md)." {
             include *
             autolayout lr
         }
@@ -557,6 +606,10 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
             element "Proposed" {
                 border dashed
                 opacity 60
+            }
+            element "CI" {
+                background #3A3A3A
+                color #ffffff
             }
             element "Demo" {
                 border dotted

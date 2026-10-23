@@ -1,13 +1,15 @@
 # Structurizr (local mode) for architecture/structurizr/workspace.dsl.
-# Own project name so it never collides with the SPFx services (root compose.yml) or the
-# agent demo (COMPOSE_PROJECT_NAME=orpheus-agent). See docs/03-how-to-render.md.
+# Own project name so it never collides with the SPFx services or the agent's mcp service in the
+# root compose.yml project. See docs/03-how-to-render.md.
 #
 #   podman compose -f architecture/structurizr/compose.yml up
 #   open http://localhost:8080
 #
 # The consolidated image replaces structurizr/lite and structurizr/cli. Its `local` command reads
-# workspace.dsl from /usr/local/structurizr, so this folder is the data directory and the ADR
-# folder is mounted next to it for `!adrs ../adr`.
+# workspace.dsl from /usr/local/structurizr, so this folder is the data directory. The DSL refers
+# to ../adr (decisions) and to the TOGAF documents in ../ (workspace documentation), so those are
+# mounted read-only next to it, file by file: mounting the whole architecture/ folder would hide
+# the data directory.
 name: orpheus-structurizr
 
 services:
@@ -17,6 +19,17 @@ services:
     volumes:
       - .:/usr/local/structurizr
       - ../adr:/usr/local/adr:ro
+      - ../00-preliminary.md:/usr/local/00-preliminary.md:ro
+      - ../01-phase-a-architecture-vision.md:/usr/local/01-phase-a-architecture-vision.md:ro
+      - ../02-phase-b-business-architecture.md:/usr/local/02-phase-b-business-architecture.md:ro
+      - ../03-phase-c-data-architecture.md:/usr/local/03-phase-c-data-architecture.md:ro
+      - ../04-phase-c-application-architecture.md:/usr/local/04-phase-c-application-architecture.md:ro
+      - ../05-phase-d-technology-architecture.md:/usr/local/05-phase-d-technology-architecture.md:ro
+      - ../06-phase-e-opportunities-and-solutions.md:/usr/local/06-phase-e-opportunities-and-solutions.md:ro
+      - ../07-phase-f-migration-planning.md:/usr/local/07-phase-f-migration-planning.md:ro
+      - ../08-phase-g-implementation-governance.md:/usr/local/08-phase-g-implementation-governance.md:ro
+      - ../09-phase-h-change-management.md:/usr/local/09-phase-h-change-management.md:ro
+      - ../10-requirements-management.md:/usr/local/10-requirements-management.md:ro
     environment:
       # The Podman machine has 2 GiB; keep the JVM small (see docs/03-how-to-render.md).
       - JAVA_TOOL_OPTIONS=-Xmx512m

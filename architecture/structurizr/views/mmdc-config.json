@@ -1,0 +1,6 @@
+{
+  "theme": "default",
+  "themeVariables": { "edgeLabelBackground": "#ffffff" },
+  "themeCSS": ".edgeLabel, .edgeLabel p, .edgeLabel div, .edgeLabel span { color: #333333 !important; background-color: #ffffff !important; fill: #333333 !important; } .edgeLabel rect { fill: #ffffff !important; opacity: 1 !important; }",
+  "flowchart": { "htmlLabels": true, "nodeSpacing": 40, "rankSpacing": 60 }
+}
