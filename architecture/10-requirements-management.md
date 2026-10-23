@@ -41,8 +41,8 @@ agent, recorded in its ADRs; "ADR-010" marks one recorded in that ADR.
 | FR-29 | Agent writes by anyone other than the contract's contractor are refused by the server (`forbidden`) | Owner | C-app | [ADR-012](adr/0012-declarative-agent-entra-sso-obo.md) | Confirmed |
 
 FR-24 and FR-25 are built and their ADR is Accepted. FR-26 to FR-29 and
-NFR-14 to NFR-16 are built; their ADRs stay Proposed until the live check on
-the dev tenant.
+NFR-14 to NFR-16 are built and verified live on the dev tenant (2026-10-23);
+their ADRs 0011–0015 are Accepted. ADR-016, the Azure production target, stays Proposed.
 
 ## 2. Non-functional and repository requirements
 

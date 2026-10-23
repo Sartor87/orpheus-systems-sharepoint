@@ -14,7 +14,8 @@ Copilot Chat ([ADR-011](adr/0011-custom-mcp-server-in-typescript.md),
 [ADR-012](adr/0012-declarative-agent-entra-sso-obo.md)). It imports
 `shared-core` and writes through the same `IDataService` implementation as
 the web part, so both channels enforce the same booking rules from the same
-code. ADR-011 to ADR-016 are Proposed until the live check on the dev tenant.
+code. ADR-011 to ADR-015 were accepted after the live check on the dev tenant
+(2026-10-23); ADR-016, the Azure production target, stays Proposed.
 
 ## 2. Package catalog (design §4)
 
