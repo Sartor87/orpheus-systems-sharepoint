@@ -639,6 +639,7 @@ function Show-SolutionPlan {
         Write-Host ("  {0,-22} {1,-9} {2}" -f $package.Name, $info.Version, $package.Path)
     }
     Write-Host '  Then: header custom action OrpheusChrome, RemainingDays field customizer, Orpheus Contract form customizer,'
+    Write-Host '  the Orpheus Contract Managers group (Contribute; members are added by hand),'
     Write-Host '  and SitePages/ContractCalendar.aspx with the web part pointed at the three lists (each only when it differs).'
 }
 
