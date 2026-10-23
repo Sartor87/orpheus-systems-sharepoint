@@ -60,9 +60,10 @@ The prompts and expected tool calls are in `prompt-set.md`.
 
 ## Start order
 
-Run from the repository root. Steps 3 and 4 each keep a terminal busy (the `mcp` service and
-`devtunnel host` run in the foreground), so give each its own terminal and use a third one for the
-remaining steps.
+Run from the repository root. Steps 3 and 4 run in the foreground on purpose, so you can see their
+output and stop them at any time: give each its own terminal (terminal A for the `mcp` service,
+terminal B for `devtunnel host`) and use a third one for the remaining steps. Nothing runs in the
+background; when both terminals are stopped, the server is unreachable.
 
 ### 1. Setup script
 
@@ -96,35 +97,54 @@ AUDIT_LOG_PATH=/usr/app/spfx/packages/mcp-contract-calendar/audit-demo.jsonl
 LOG_REQUEST_HEADERS=true
 ```
 
-### 3. Start the `mcp` service
+### 3. Start the `mcp` service (terminal A)
+
+Build once after every code change:
 
 ```powershell
 $env:COMPOSE_PROJECT_NAME = 'orpheus-agent'
-podman compose run --rm shell bash -c "npm run build:shared && npm run build -w @orpheussystems/mcp-contract-calendar"
-podman compose run --rm --service-ports mcp
+podman compose run --rm shell bash -c "export NODE_OPTIONS=--max-old-space-size=1536; npm run build:shared && npm run build -w @orpheussystems/mcp-contract-calendar"
+```
+
+Start:
+
+```powershell
+$env:COMPOSE_PROJECT_NAME = 'orpheus-agent'
+podman compose run --rm --service-ports -e NODE_OPTIONS=--max-old-space-size=1024 mcp
 ```
 
 Expect a `{"event":"listening","port":8787,"authMode":"entra","dataMode":"sharepoint"}` line.
 Check `http://localhost:8787/healthz`. A `POST /mcp` without a token must return 401.
 
-### 4. Host the dev tunnel
+Stop: `Ctrl+C` in terminal A. `--rm` removes the container. Restart (for example after changing
+`.env`): run the start command again.
 
-Once:
+### 4. Host the dev tunnel (terminal B)
+
+Once per machine and account (the tunnel is persistent, so the URL does not change):
 
 ```powershell
-devtunnel user login
+devtunnel user login -d
 devtunnel create <tunnel-id> --allow-anonymous
 devtunnel port create <tunnel-id> -p 8787 --protocol http
 ```
 
-Each session:
+`--allow-anonymous` lets anyone reach the URL; the server itself rejects every call without a valid
+Entra token (401), which is the check from step 3.
+
+Each demo session:
 
 ```powershell
 devtunnel host <tunnel-id>
 ```
 
-On the very first run open the "Connect via browser" URL once and select Continue. The public URL
-stays the same across sessions; its host name is `<tunnel-host>` below.
+It prints the public URL `https://<tunnel-id>-8787.<region>.devtunnels.ms`; its host name is
+`<tunnel-host>` below. On the very first run open the "Connect via browser" URL once and select
+Continue.
+
+Stop: `Ctrl+C` in terminal B. The tunnel and its URL remain; the next `devtunnel host` reuses them.
+A tunnel that is not hosted for 30 days expires (`devtunnel show <tunnel-id>` shows the expiry); then
+create it again and redo step 5 with the new host name.
 
 ### 5. Entra SSO registration for Copilot
 
@@ -160,8 +180,11 @@ Watch the server output and the audit file while prompting. Each tool call adds 
 - Remove days booked during the demo (prompt "remove …" as Alex, or delete the items in
   CalendarEntries) so the overlap window 2026-11-16 to 2026-11-30 is empty for the next run. The
   setup script does not delete anything.
-- Stop `devtunnel host` (Ctrl+C) and the `mcp` container. Delete the tunnel when the demo work is
-  finished (`devtunnel delete <tunnel-id>`).
+- Stop `devtunnel host` (`Ctrl+C` in terminal B) and the `mcp` service (`Ctrl+C` in terminal A).
+  Check that nothing is left: `podman ps` shows no `mcp` container and `devtunnel show <tunnel-id>`
+  shows `Host connections : 0`.
+- Delete the tunnel only when the demo work is finished for good (`devtunnel delete <tunnel-id>`);
+  a new tunnel has a new host name, so step 5 and the agent provisioning must be redone.
 - Keep `audit-demo.jsonl` as evidence for the verification log; it is gitignored.
 
 ## Verification log
