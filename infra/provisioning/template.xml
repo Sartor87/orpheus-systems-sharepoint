@@ -54,7 +54,7 @@
         <Field ID="{7482522e-b98e-477a-b655-683a119a2bc6}" Name="OffSiteUsedDays" StaticName="OffSiteUsedDays" DisplayName="Off-site used days" Type="Number" Decimals="1" Min="0" Group="Orpheus Systems">
           <Default>0</Default>
         </Field>
-        <Field ID="{9ab62480-95bb-4ea8-bff0-f74da70d4ff2}" Name="RemainingDays" StaticName="RemainingDays" DisplayName="Remaining days" Type="Number" Decimals="1" Group="Orpheus Systems" />
+        <Field ID="{9ab62480-95bb-4ea8-bff0-f74da70d4ff2}" Name="RemainingDays" StaticName="RemainingDays" DisplayName="Remaining days" Type="Number" Decimals="1" Group="Orpheus Systems" ClientSideComponentId="a7721b49-8c3e-48c7-ac67-69408fcc6a03" />
 
         <!-- CalendarEntries -->
         <Field ID="{1de91234-0b51-4789-bd5c-1d6e8cb126bf}" Name="EntryDate" StaticName="EntryDate" DisplayName="Entry date" Type="DateTime" Format="DateOnly" FriendlyDisplayFormat="Disabled" Required="TRUE" Indexed="TRUE" Group="Orpheus Systems" />

@@ -568,6 +568,17 @@ Describe 'Set-OrpheusAppCustomizer' {
     }
 }
 
+Describe 'template.xml RemainingDays site column' {
+    It 'carries the field customizer, so re-applying the template does not unbind it' {
+        # Live: each run applied the template, which reset the column without ClientSideComponentId,
+        # and the field step then bound it again ("Added" on every run).
+        [xml] $template = Get-Content -Raw (Join-Path $PSScriptRoot '..' 'template.xml')
+        $field = $template.SelectNodes('//*[local-name()="Field"]') | Where-Object { $_.GetAttribute('Name') -eq 'RemainingDays' } | Select-Object -First 1
+        $field | Should -Not -BeNullOrEmpty
+        $field.GetAttribute('ClientSideComponentId') | Should -BeExactly 'a7721b49-8c3e-48c7-ac67-69408fcc6a03'
+    }
+}
+
 Describe 'Set-OrpheusFieldCustomizer' {
     BeforeEach {
         New-PnPSafetyNet
