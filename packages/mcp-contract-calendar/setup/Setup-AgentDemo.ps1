@@ -158,7 +158,8 @@ try {
     # 2. FieldRef on the content type.
     if ($refs -contains 'Vendor') { $script:Summary['Content type FieldRef'] = 'unchanged' }
     else {
-        Add-PnPFieldToContentType -Field Vendor -ContentType $ContractTypeName -UpdateChildren
+        # PnP.PowerShell 3.x declares -UpdateChildren as [bool], not a switch.
+        Add-PnPFieldToContentType -Field Vendor -ContentType $ContractTypeName -UpdateChildren $true
         $script:Summary['Content type FieldRef'] = 'added'
     }
 
