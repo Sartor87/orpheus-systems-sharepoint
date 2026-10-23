@@ -6,6 +6,9 @@ export const orpheusTokens = {
   text: '#F2F2F2',
   textMuted: '#9AA0A6',
   border: '#262A31',
+  /** Status text on the dark card: 'remaining' within target, and over target (6.1:1 on bgElevated). */
+  okOnDark: '#5FD08C',
+  overOnDark: '#D9822B',
   pdfOnSite: '#9DC3E6',
   pdfOffSite: '#E8DB9C',
   pdfBlocked: '#EDEDED',

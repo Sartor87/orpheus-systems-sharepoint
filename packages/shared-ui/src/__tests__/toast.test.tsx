@@ -1,5 +1,6 @@
 /** @jest-environment jsdom */
 import { act } from 'react-dom/test-utils';
+import { orpheusBrand } from '../brand/brand';
 import {
   BRAND_TOAST_STORAGE_KEY, activeToasts, dismissToast, showBrandToastOnce, showToast, unmountToastHost
 } from '../toast';
@@ -7,7 +8,7 @@ import {
 type ToastModule = typeof import('../toast');
 
 const DAY = 24 * 60 * 60 * 1000;
-const BRAND_TITLE = 'Contract Calendar by Orpheus Systems';
+const BRAND_TITLE = orpheusBrand.name;
 
 const toastEls = (): HTMLElement[] => Array.from(document.body.querySelectorAll<HTMLElement>('[role="status"], [role="alert"]'));
 const show = (o: Partial<Parameters<typeof showToast>[0]> = {}, mod: ToastModule = { showToast } as ToastModule): string => {
@@ -170,9 +171,15 @@ describe('showBrandToastOnce', () => {
   const brandCount = (): number => toastEls().filter(e => (e.textContent || '').includes(BRAND_TITLE)).length;
   const brand = (mod: ToastModule = { showBrandToastOnce } as ToastModule): boolean => {
     let r = false;
-    act(() => { r = mod.showBrandToastOnce({ title: BRAND_TITLE }); });
+    act(() => { r = mod.showBrandToastOnce(); });
     return r;
   };
+
+  it('always titles the toast with the brand name, whichever component asks first', () => {
+    jest.setSystemTime(new Date(2026, 9, 22, 12));
+    expect(brand()).toBe(true);
+    expect(activeToasts().filter(t => t.kind === 'brand').map(t => t.title)).toEqual([orpheusBrand.name]);
+  });
 
   it('uses the site-wide key', () => {
     expect(BRAND_TOAST_STORAGE_KEY).toBe('orpheus.site.brandToastShownAt');
@@ -329,16 +336,16 @@ describe('store seeding and backfill', () => {
 
 describe('brand toast sharing', () => {
   it('passes dedupeKey orpheus.brand', () => {
-    act(() => { showBrandToastOnce({ title: BRAND_TITLE }); });
+    act(() => { showBrandToastOnce(); });
     expect(activeToasts()[0].dedupeKey).toBe('orpheus.brand');
   });
 
   it('is stopped by the shared per-page flag, not by storage or module state', () => {
     const b = isolated();
-    act(() => { showBrandToastOnce({ title: BRAND_TITLE }); });
+    act(() => { showBrandToastOnce(); });
     window.localStorage.clear(); // only the shared flag can stop B now
     let shown = true;
-    act(() => { shown = b.showBrandToastOnce({ title: BRAND_TITLE }); });
+    act(() => { shown = b.showBrandToastOnce(); });
     expect(shown).toBe(false);
     expect(win().__orpheusToasts_v1?.brandShown[BRAND_TOAST_STORAGE_KEY]).toBe(true);
     expect(toastEls().filter(e => (e.textContent || '').includes(BRAND_TITLE))).toHaveLength(1);

@@ -61,15 +61,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export interface BrandToastOptions {
   /** Defaults to BRAND_TOAST_STORAGE_KEY, shared by every Orpheus component. */
   storageKey?: string;
-  title: string;
   intervalDays?: number;
 }
 
 /**
- * The Orpheus Systems toast, at most once per browser per interval (default 7 days) and once per page, however
+ * The Orpheus Systems toast, titled with the brand name whichever component asks first, at most once per browser per interval (default 7 days) and once per page, however
  * many components ask. Without usable storage it shows once per page. Returns whether it was shown.
  */
-export function showBrandToastOnce(options: BrandToastOptions): boolean {
+export function showBrandToastOnce(options: BrandToastOptions = {}): boolean {
   const store = getStore();
   const key = options.storageKey || BRAND_TOAST_STORAGE_KEY;
   const intervalMs = (options.intervalDays === undefined ? 7 : options.intervalDays) * DAY_MS;
@@ -91,7 +90,7 @@ export function showBrandToastOnce(options: BrandToastOptions): boolean {
   try { window.localStorage.setItem(key, String(now)); } catch { /* storage unavailable */ }
   showToast({
     kind: 'brand',
-    title: options.title,
+    title: orpheusBrand.name,
     link: { href: orpheusBrand.url, label: orpheusBrand.url.replace(/^https?:\/\//, '').replace(/\/$/, '') },
     dedupeKey: BRAND_TOAST_DEDUPE_KEY
   });
