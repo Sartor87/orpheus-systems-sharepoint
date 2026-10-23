@@ -3,7 +3,7 @@
   "solution": {
     "name": "ext-app-customizer-client-side-solution",
     "id": "8c050d2e-26f4-4a5e-822c-414d9365314f",
-    "version": "1.0.2.0",
+    "version": "1.0.3.0",
     "includeClientSideAssets": true,
     "iconPath": "images/orpheus-icon-96.png",
     "skipFeatureDeployment": true,

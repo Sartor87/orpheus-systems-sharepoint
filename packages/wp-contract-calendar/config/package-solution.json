@@ -3,7 +3,7 @@
   "solution": {
     "name": "wp-contract-calendar-client-side-solution",
     "id": "326f6878-25b8-4117-93fb-ba9882352eaf",
-    "version": "1.0.3.0",
+    "version": "1.0.4.0",
     "includeClientSideAssets": true,
     "iconPath": "images/orpheus-icon-96.png",
     "skipFeatureDeployment": true,
@@ -31,7 +31,7 @@
         "title": "wp-contract-calendar Feature",
         "description": "The feature that activates elements of the wp-contract-calendar solution.",
         "id": "1200746d-2d50-40ae-9f33-21f153ccec28",
-        "version": "1.0.3.0"
+        "version": "1.0.4.0"
       }
     ]
   },

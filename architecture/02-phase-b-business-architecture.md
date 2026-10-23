@@ -22,6 +22,16 @@ contract.
 | Contract manager | Create and edit contracts they manage (form customizer); see only those; generate the PDF timesheet | Edit calendar days (read-only view) |
 | Site admin | Edit any contract; maintain the Holidays list through any SharePoint list UI; configure the web part (list selection, labels) | — |
 
+Admin rule: a site collection admin (`currentUser.IsSiteAdmin`) or a member of
+the associated Owners group is Admin. If the `IsSiteAdmin` read fails, role
+derivation rejects (fail closed) instead of falling back to a lower role.
+
+Managers group: a user is also ContractManager when they manage at least one
+contract or are a member of the SharePoint group `Orpheus Contract Managers`
+(exact title, case-sensitive). Members of that group can create contracts
+(`canCreateContract`). Editing stays limited to Admin and the contract's own
+manager. The owner manages the group's members; provisioning only creates it.
+
 Role derivation at runtime, in order: appears as `Contractor` on at least one
 contract → contractor; appears as `ContractManager` → manager; member of the
 site Owners group → admin. A user can hold more than one role.

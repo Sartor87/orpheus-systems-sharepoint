@@ -49,6 +49,12 @@ candidate decision.
 > should get its own ADR when picked up (Phase H). RM-4 has a Proposed design
 > (ADR-016) but nothing of it is built.
 
+## Known gaps
+
+| ID | Gap | Status | Possible future fix |
+|----|-----|--------|---------------------|
+| G-1 | "Block weekends" is a property of the web part only. The web part applies it to service writes and to the timesheet model; holidays are always blocked. The services default to blocking weekends, and the MCP agent and the other clients cannot see the web part setting, so they always block weekends. | Deliberate and visible (owner decision, wave 2). Tracked as OR-16. | Move the setting to a per-contract or site setting that every client reads. |
+
 ## 4. Build / buy / reuse
 
 | Capability | Decision | Note |

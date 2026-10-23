@@ -141,6 +141,7 @@ default (configurable per web part instance).
 |-------|------------------|------------|---------|
 | Site Owners | Full Control | SharePoint | Admin role in the web part ([ADR-005](adr/0005-web-part-filtering-over-item-level-permissions.md)) |
 | `Orpheus HR` | Read | `Setup-AgentDemo.ps1` | HR role for the contract agent: sees all contracts, read only. Name configurable (`HR_GROUP`); the server matches the group title exactly, case-sensitive ([ADR-013](adr/0013-vendor-column-and-hr-group-for-the-agent.md)) |
+| `Orpheus Contract Managers` | Contribute | `Provision-OrpheusSite.ps1` | Members get the ContractManager role and can create contracts. The owner maintains the members; provisioning never changes them. Exact title, case-sensitive |
 
 Contractor and manager roles are not groups; they are derived from the
 `Contractor` and `ContractManager` columns (ADR-005).

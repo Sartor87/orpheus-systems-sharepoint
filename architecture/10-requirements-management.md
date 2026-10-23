@@ -85,6 +85,7 @@ their ADRs 0011–0015 are Accepted. ADR-016, the Azure production target, stays
 | OR-13 | Guest contractors: guest access to declarative agents and Copilot Chat is not verified; it can block the agent channel for contractors who are guests (R-AGT-4) | Phase B, C-app; [ADR-012](adr/0012-declarative-agent-entra-sso-obo.md) |
 | OR-14 | Azure subscription for the agent's Azure target (R-AGT-11) | Phase D, E (RM-4); [ADR-016](adr/0016-azure-target-apim-container-apps-terraform.md) |
 | OR-15 | Audit retention target per layer, and whether tool calls must also land in Purview (`contentActivities`) | Phase D, G; [ADR-014](adr/0014-three-layer-audit-for-agent-actions.md) |
+| OR-16 | G-1: "Block weekends" is set per web part only; the MCP agent and other clients always block weekends. Deliberate gap; possible future fix: a per-contract or site setting | Phase B, C, E ([Known gaps](06-phase-e-opportunities-and-solutions.md)) |
 
 ## 4. Traceability summary
 
