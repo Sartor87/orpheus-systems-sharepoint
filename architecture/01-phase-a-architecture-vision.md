@@ -113,7 +113,7 @@ C4Context
 | ID | Risk | Impact | Mitigation / path |
 |----|------|--------|-------------------|
 | R-SEC-1 | Visibility is enforced only by filtering in the web part; contractors hold Contribute on all three lists, so a user with list UI access can read or edit other contractors' rows. | H | Accepted for this iteration (ADR-005). Hardening option recorded: per-item permission breaking on Contracts and CalendarEntries via provisioning-time event receiver or Power Automate, plus read-restricted views. Roadmap item in Phase E. |
-| R-BUILD-1 | Container-only build diverges from a developer's expectations (certificates, ports, volumes). | M | `podman-compose.yml` services `shell`, `install`, `build`, `serve`, `package`; `.devcontainer` reuses the image; `gulp trust-dev-cert` documented. |
+| R-BUILD-1 | Container-only build diverges from a developer's expectations (certificates, ports, volumes). | M | `compose.yml` services `shell`, `install`, `build`, `serve`, `package`; `.devcontainer` reuses the image; `heft trust-dev-cert` documented. |
 | R-PDF-1 | pdfmake bundle size exceeds SPFx guidance. | M | Fallback to jsPDF + autotable (ADR-004); left to the builder. |
 | R-DATA-1 | Duplicate calendar entries for one contractor on one date across overlapping contracts. | H | Service enforces one entry per contractor per date; overlap dialog moves the day (ADR-008). |
 | R-DATA-2 | `OnSiteUsedDays` / `OffSiteUsedDays` drift from the actual entries. | M | Service recalculates on every entry write; contractors need Contribute on Contracts for this. |

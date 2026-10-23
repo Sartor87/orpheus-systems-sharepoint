@@ -37,7 +37,7 @@
 | C17 | Unit tests exist for data services, period / overlap / totals logic and the PDF model builder | Design §9 | ☐ |
 | C18 | `ContractCalendar.aspx` honours `contractId`; Display form and header menu deep-link to it | Design §6.9 | ☐ |
 | C19 | Menu is My calendar · Contracts · Holidays; role-filtered | Design §6.9 | ☐ |
-| C20 | `.devcontainer` uses the same image as `podman-compose.yml` | ADR-002 | ☐ |
+| C20 | `.devcontainer` uses the same image as `compose.yml` | ADR-002 | ☐ |
 
 ## 3. Handling deviations
 
