@@ -73,6 +73,16 @@ Every component reports through one shared toast stack. The four SPFx solutions 
 
 ![The agent in Copilot Chat](docs/screenshots/15-agent-copilot.png)
 
+Role checks, verified live on the dev tenant (the contractor books with a confirmation; HR and a contract manager are read-only):
+
+| Contractor: agent restates the request | Contractor: Copilot confirmation card | Contractor: day booked |
+|---|---|---|
+| ![Agent restating date, type and contract](docs/screenshots/17-agent-book-restate.png) | ![Copilot confirmation card for book_days](docs/screenshots/18-agent-confirm-card.png) | ![Booking result with remaining days](docs/screenshots/19-agent-booked.png) |
+
+| HR: all contracts, read-only | HR: booking refused | Contract manager: booking for someone else refused |
+|---|---|---|
+| ![HR sees every contract](docs/screenshots/20-agent-hr-contracts.png) | ![HR booking refused](docs/screenshots/21-agent-hr-refused.png) | ![Manager booking refused](docs/screenshots/22-agent-manager-refused.png) |
+
 ## Architecture
 
 ```mermaid

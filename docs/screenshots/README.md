@@ -38,6 +38,12 @@ The root [README](../../README.md) and the package READMEs show the images below
 | 14 | `14-app-catalog.png` | App Catalog | The site collection App Catalog list, address bar included and blurred | The four apps (`wp-contract-calendar`, `ext-app-customizer`, `ext-field-customizer`, `ext-form-customizer`) with their versions, all deployed |
 | 15 | `15-agent-copilot.png` | Contract agent | Copilot Chat conversation | A booking conversation as Jane Doe: the request, the agent restating dates, type and contract, the confirmation and the per-day result |
 | 16 | `16-workbench-demo-data.png` | Web part in the hosted workbench | Workbench toolbar, web part and property pane, no address bar | **Use local demo data** on and **Demo user** set to Jane Doe, the calendar beside it |
+| 17 | `17-agent-book-restate.png` | Contract agent | Copilot Chat conversation | Contractor (Alex) asks to book Monday; the agent restates date, type and contract and asks to confirm |
+| 18 | `18-agent-confirm-card.png` | Contract agent | Copilot Chat conversation | Copilot's own confirmation card for `book_days` with the arguments |
+| 19 | `19-agent-booked.png` | Contract agent | Copilot Chat conversation | The booking result with the entry id and the remaining on-site and off-site days |
+| 20 | `20-agent-hr-contracts.png` | Contract agent | Copilot Chat conversation | HR (Emilia) lists contracts and sees every 002xxx contract across contractors (V10) |
+| 21 | `21-agent-hr-refused.png` | Contract agent | Copilot Chat conversation | HR asks to book a day and is refused as read-only (V9) |
+| 22 | `22-agent-manager-refused.png` | Contract agent | Copilot Chat conversation | The contract manager (Ivan) asks to book for Alex and is refused (V9) |
 
 ## After adding the files
 
