@@ -107,3 +107,6 @@ export function canEditContract(roles: Role[], contract: Pick<Contract, 'contrac
   if (roles.indexOf('Admin') >= 0) { return true; }
   return roles.indexOf('ContractManager') >= 0 && !!userId && contract.contractManager.id === userId;
 }
+
+/** Title of the SharePoint group whose members may create contracts (provisioned by the infra script). */
+export const CONTRACT_MANAGERS_GROUP = 'Orpheus Contract Managers';

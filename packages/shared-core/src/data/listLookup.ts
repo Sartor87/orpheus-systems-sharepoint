@@ -5,6 +5,7 @@ import '@pnp/sp/items';
 import '@pnp/sp/site-groups';
 import '@pnp/sp/site-users';
 import { Role } from '../models';
+import { CONTRACT_MANAGERS_GROUP } from '../rules';
 import { contractsOfContractorQuery } from './spQueries';
 import { normaliseWebRelativeUrl } from './webUrl';
 
@@ -25,14 +26,19 @@ export async function resolveListIdByUrl(sp: SPFI, webRelativeUrl: string): Prom
  * the Admin check reads the current user's own groups, which is always allowed).
  */
 export async function deriveRolesForContracts(sp: SPFI, contractsListId: string, userId: number): Promise<Role[]> {
-  const roles: Role[] = [];
   const contracts = sp.web.lists.getById(contractsListId);
   const asContractor = await contracts.items.filter(contractsOfContractorQuery(userId)).select('Id').top(1)();
-  if (asContractor.length > 0) { roles.push('Contractor'); }
   const asManager = await contracts.items.filter(`ContractManagerId eq ${userId}`).select('Id').top(1)();
-  if (asManager.length > 0) { roles.push('ContractManager'); }
-  const ownerGroup = await sp.web.associatedOwnerGroup.select('Id')();
-  const myGroups = await sp.web.currentUser.groups.select('Id')();
-  if (myGroups.some((g: { Id: number }) => g.Id === ownerGroup.Id)) { roles.push('Admin'); }
+  const me = await sp.web.currentUser.select('IsSiteAdmin')() as { IsSiteAdmin?: boolean };
+  const myGroups = await sp.web.currentUser.groups.select('Id', 'Title')() as Array<{ Id: number; Title: string }>;
+  let isOwner = false;
+  if (me.IsSiteAdmin !== true) {
+    const ownerGroup = await sp.web.associatedOwnerGroup.select('Id')();
+    isOwner = myGroups.some(g => g.Id === ownerGroup.Id);
+  }
+  const roles: Role[] = [];
+  if (asContractor.length > 0) { roles.push('Contractor'); }
+  if (asManager.length > 0 || myGroups.some(g => g.Title === CONTRACT_MANAGERS_GROUP)) { roles.push('ContractManager'); }
+  if (me.IsSiteAdmin === true || isOwner) { roles.push('Admin'); }
   return roles;
 }
