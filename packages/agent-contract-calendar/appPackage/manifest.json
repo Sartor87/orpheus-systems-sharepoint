@@ -1,13 +1,13 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.30/MicrosoftTeams.schema.json",
   "manifestVersion": "1.30",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "id": "${{TEAMS_APP_ID}}",
   "developer": {
     "name": "Orpheus Systems",
     "websiteUrl": "https://orpheussystems.com/",
-    "privacyUrl": "https://orpheussystems.com/privacy",
-    "termsOfUseUrl": "https://orpheussystems.com/terms"
+    "privacyUrl": "https://github.com/Sartor87/orpheus-systems-sharepoint/blob/main/packages/agent-contract-calendar/PRIVACY.md",
+    "termsOfUseUrl": "https://github.com/Sartor87/orpheus-systems-sharepoint/blob/main/packages/agent-contract-calendar/TERMS.md"
   },
   "icons": {
     "color": "color.png",

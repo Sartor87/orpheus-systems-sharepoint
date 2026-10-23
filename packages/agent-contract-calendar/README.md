@@ -68,3 +68,10 @@ These were written from the documentation without running the toolkit:
 - `manifest.json`: `manifestVersion` 1.30 (the page I read lists 1.30 as current); lower it if the installed toolkit rejects it.
 - `declarativeAgent.json`: `v1.8` was not fetched in full (v1.6 was); only fields common to both are used. The `$[file('instruction.txt')]` include is the toolkit syntax.
 - `ai-plugin.json`: the `RemoteMCPServer` runtime with dynamic discovery (no `functions`, so no per-function `security_info`) and the `capabilities.conversation_starters` block follow the 2.4 reference.
+
+## Privacy and terms URLs
+
+The Teams manifest requires `developer.privacyUrl` and `developer.termsOfUseUrl`. They point to
+[PRIVACY.md](PRIVACY.md) and [TERMS.md](TERMS.md) in this package on GitHub, so the links resolve
+only while the repository is public. An organisation that publishes the agent to its users should
+replace both with its own reviewed pages and raise `version` in `appPackage/manifest.json`.

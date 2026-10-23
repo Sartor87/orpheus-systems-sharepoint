@@ -11,6 +11,9 @@ function listFiles(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) return e.name === 'node_modules' || e.name === 'build' ? [] : listFiles(p);
+    // Local env files (env/.env.dev etc.) are gitignored and hold real tenant values on purpose;
+    // only the committed .sample is part of the package.
+    if (/^\.env\./.test(e.name) && !e.name.endsWith('.sample')) return [];
     return [p];
   });
 }
