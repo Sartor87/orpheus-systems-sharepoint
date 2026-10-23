@@ -21,6 +21,7 @@ import {
   loadContract,
   loadFormRoles,
   loadOthersOfContractor,
+  loadUsedDays,
   spErrorMessage,
   saveContract
 } from '../formService';
@@ -148,6 +149,14 @@ describe('formService', () => {
     expect(calls.find(c => c.name === 'add')).toBeUndefined();
   });
 
+  it('folds extra fields (the recomputed used days) into the same item update', async () => {
+    const { sp, calls } = fakeSpChain({});
+    await saveContract(sp, 'list-guid', draft, 7, { OnSiteUsedDays: 2, OffSiteUsedDays: 0.5 });
+    const updates = calls.filter(c => c.name === 'update');
+    expect(updates).toHaveLength(1);
+    expect(updates[0].args[0]).toMatchObject({ Title: '001200_2027', OnSiteUsedDays: 2, OffSiteUsedDays: 0.5 });
+  });
+
   it('rejects a failed save with the SharePoint message', async () => {
     const body = JSON.stringify({ 'odata.error': { message: { value: 'Bad value.' } } });
     const failing = { web: { lists: { getById: () => ({ items: {
@@ -198,3 +207,19 @@ describe('countEntriesOutsidePeriod', () => {
   });
 });
 
+
+describe('loadUsedDays', () => {
+  it('reads every entry of the contract and counts only those inside the period', async () => {
+    const { sp, calls } = fakeSpChain([
+      { EntryDate: '2026-02-05T22:00:00Z', EntryType: 'OnSiteFull' }, // 6 Feb 2026: inside
+      { EntryDate: '2026-03-02T00:00:00Z', EntryType: 'OffSiteHalf' }, // inside
+      { EntryDate: '2026-12-31T00:00:00Z', EntryType: 'OffSiteFull' }, // the last day: inside
+      { EntryDate: '2027-01-10T22:00:00Z', EntryType: 'OnSiteFull' } // after the new end: outside
+    ]);
+    const used = await loadUsedDays(sp, 'entries-guid', 7, { startDate: '2026-02-06', latestExecutionDate: '2026-12-31' });
+    expect(used).toEqual({ OnSiteUsedDays: 1, OffSiteUsedDays: 1.5 });
+    expect(calls.find(c => c.name === 'getById')?.args).toEqual(['entries-guid']);
+    expect(calls.find(c => c.name === 'filter')?.args).toEqual(['ContractId eq 7']);
+    expect(calls.find(c => c.name === 'top')?.args).toEqual([5000]);
+  });
+});

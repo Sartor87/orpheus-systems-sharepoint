@@ -6,6 +6,7 @@ export interface IContractCalendarWebPartProps {
   holidaysListId: string;
   /** 0 = full contract span, capped at 12 months. */
   monthsToShow: number;
+  /** Weekends are blocked for writes. Unset (never saved on the page) counts as true. */
   blockWeekends: boolean;
   approvingOrgLabel: string;
   serviceProviderLabel: string;

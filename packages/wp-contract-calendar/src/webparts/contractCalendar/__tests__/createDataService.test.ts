@@ -64,6 +64,15 @@ describe('createDataService blockWeekends', () => {
     await expect(local.getMyContracts()).resolves.toBeDefined();
     await expect(local.upsertEntry({ contractId: 1, date: '2026-06-06', type: 'OnSiteFull' })).resolves.toBeDefined();
   });
+
+  it('treats an unset blockWeekends (never saved on the page) as blocking, on both services', async () => {
+    const unset = { blockWeekends: undefined as unknown as boolean };
+    const spSvc = createDataService({ ...sharePoint, ...unset }, sp, false, user) as unknown as { options: unknown };
+    expect(spSvc.options).toEqual({ blockWeekends: true });
+    const local = createDataService({ ...base, useLocalData: true, ...unset }, undefined, false);
+    // 2026-06-06 is a Saturday inside demo contract 1.
+    await expect(local.upsertEntry({ contractId: 1, date: '2026-06-06', type: 'OnSiteFull' })).rejects.toThrow(/blocked/i);
+  });
 });
 
 describe('shipped default (no useLocalData, not debug, no lists)', () => {

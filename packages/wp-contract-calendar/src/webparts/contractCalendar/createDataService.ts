@@ -15,7 +15,7 @@ export function createDataService(
   currentUser?: UserInfo
 ): IDataService {
   if (isLocalData(props, isDebug)) {
-    return new LocalDataService({ demoUserId: props.demoUserId, blockWeekends: !!props.blockWeekends });
+    return new LocalDataService({ demoUserId: props.demoUserId, blockWeekends: props.blockWeekends !== false });
   }
   if (!props.contractsListId || !props.entriesListId || !props.holidaysListId) {
     throw new Error('Select the Contracts, Calendar entries and Holidays lists in the property pane');
@@ -31,7 +31,7 @@ export function createDataService(
       holidaysListId: props.holidaysListId
     },
     currentUser,
-    { blockWeekends: !!props.blockWeekends }
+    { blockWeekends: props.blockWeekends !== false }
   );
 }
 

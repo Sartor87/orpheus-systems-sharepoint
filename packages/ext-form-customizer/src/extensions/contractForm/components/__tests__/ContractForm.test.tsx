@@ -4,6 +4,7 @@ jest.mock('../../formService', () => ({
   countEntriesOutsidePeriod: jest.fn(),
   resolveEntriesListId: jest.fn(),
   loadFormRoles: jest.fn(),
+  loadUsedDays: jest.fn(),
   saveContract: jest.fn()
 }));
 jest.mock('@orpheussystems/shared-ui/toast', () => ({ showToast: jest.fn() }));
@@ -39,7 +40,7 @@ import { act } from 'react-dom/test-utils';
 import type { SPFI } from '@pnp/sp';
 import type { Contract } from '@orpheussystems/shared-core';
 import { showToast } from '@orpheussystems/shared-ui/toast';
-import { countEntriesOutsidePeriod, loadContract, loadFormRoles, loadOthersOfContractor, resolveEntriesListId, saveContract } from '../../formService';
+import { countEntriesOutsidePeriod, loadContract, loadFormRoles, loadOthersOfContractor, loadUsedDays, resolveEntriesListId, saveContract } from '../../formService';
 import ContractForm, { IContractFormProps } from '../ContractForm';
 
 const loadMock = loadContract as jest.MockedFunction<typeof loadContract>;
@@ -48,6 +49,7 @@ const countMock = countEntriesOutsidePeriod as jest.MockedFunction<typeof countE
 const entriesIdMock = resolveEntriesListId as jest.MockedFunction<typeof resolveEntriesListId>;
 const saveMock = saveContract as jest.MockedFunction<typeof saveContract>;
 const rolesMock = loadFormRoles as jest.MockedFunction<typeof loadFormRoles>;
+const usedMock = loadUsedDays as jest.MockedFunction<typeof loadUsedDays>;
 const toastMock = showToast as jest.MockedFunction<typeof showToast>;
 
 const WEB = 'https://contoso.example/sites/s';
@@ -90,6 +92,7 @@ beforeEach(() => {
   countMock.mockReset().mockResolvedValue(0);
   entriesIdMock.mockReset().mockResolvedValue('entries-guid');
   toastMock.mockReset();
+  usedMock.mockReset().mockResolvedValue({ OnSiteUsedDays: 0, OffSiteUsedDays: 0 });
   // Most tests run as a site admin; the role gate has its own tests below.
   rolesMock.mockReset().mockResolvedValue(['Admin']);
 });
@@ -286,6 +289,9 @@ describe('ContractForm — new, save', () => {
     expect(itemId).toBeUndefined();
     expect(draft).toMatchObject({ title: '001200_2027', contractorId: 11, contractManagerId: 12, startDate: '2027-01-15', latestExecutionDate: '2027-06-30' });
     expect(onSaved).toHaveBeenCalledTimes(1);
+    // New mode: no stored used days to correct, so no entries read.
+    expect(usedMock).not.toHaveBeenCalled();
+    expect(saveMock.mock.calls[0][4]).toBeUndefined();
   });
 
   it('unlocks the form when the check finds an overlap, so Save anyway / editing work again', async () => {
@@ -593,5 +599,54 @@ describe('ContractForm — outside-period warning', () => {
     }
     await settle();
     expect(countMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('ContractForm — used days on a period change', () => {
+  beforeEach(() => {
+    loadMock.mockResolvedValue(c7);
+    saveMock.mockResolvedValue(7);
+  });
+
+  async function shortenAndSave(): Promise<void> {
+    await render({ mode: 'edit', itemId: 7 });
+    type(input('Latest execution date'), '2026-12-31');
+    blur(input('Latest execution date'));
+    await settle();
+    await act(async () => { button('Save').click(); });
+    await flush();
+  }
+
+  it('shortening the end date saves the used days recomputed for the new period in the same update', async () => {
+    usedMock.mockResolvedValue({ OnSiteUsedDays: 4, OffSiteUsedDays: 2.5 });
+    await shortenAndSave();
+    expect(usedMock).toHaveBeenCalledWith(sp, 'entries-guid', 7, { startDate: '2026-02-06', latestExecutionDate: '2026-12-31' });
+    expect(saveMock).toHaveBeenCalledTimes(1);
+    const [, , draft, itemId, extra] = saveMock.mock.calls[0];
+    expect(itemId).toBe(7);
+    expect(draft).toMatchObject({ latestExecutionDate: '2026-12-31' });
+    expect(extra).toEqual({ OnSiteUsedDays: 4, OffSiteUsedDays: 2.5 });
+    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
+    expect(onSaved).toHaveBeenCalledTimes(1);
+  });
+
+  it('an unchanged period does not read the entries and saves no used days', async () => {
+    await render({ mode: 'edit', itemId: 7 });
+    await settle();
+    await act(async () => { button('Save').click(); });
+    await flush();
+    expect(usedMock).not.toHaveBeenCalled();
+    expect(saveMock).toHaveBeenCalledTimes(1);
+    expect(saveMock.mock.calls[0][4]).toBeUndefined();
+  });
+
+  it('when the entries cannot be read, still saves (old used days kept) and warns that they were not recalculated', async () => {
+    usedMock.mockRejectedValue(new Error('403'));
+    await shortenAndSave();
+    expect(saveMock).toHaveBeenCalledTimes(1);
+    expect(saveMock.mock.calls[0][4]).toBeUndefined();
+    expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
+    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ title: expect.stringMatching(/used days were not recalculated/i) }));
   });
 });

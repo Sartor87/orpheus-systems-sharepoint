@@ -121,6 +121,16 @@ describe('useCalendarState', () => {
     expect((await service.getEntries(1, '2026-02-09', '2026-02-09')).length).toBe(1);
   });
 
+  it('blocks a Saturday in the UI when blockWeekends is unset (undefined means block)', async () => {
+    const { result, service } = await loaded(1, { blockWeekends: undefined as unknown as boolean });
+    expect(result.current.isDayBlocked('2026-02-07')).toBe(true);
+    await act(() => result.current.clickDay('2026-02-07'));
+    expect(result.current.entries['2026-02-07']).toBeUndefined();
+    // Blocked in the UI: no write was attempted, so no service error.
+    expect(errorToasts()).toHaveLength(0);
+    expect(await service.getEntries(1, '2026-02-07', '2026-02-07')).toEqual([]);
+  });
+
   it('is read-only for a contract manager', async () => {
     const { result, service } = await loaded(3);
     expect(result.current.readOnly).toBe(true);

@@ -307,7 +307,7 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
   const isDayBlocked = React.useCallback((date: DateKey): boolean => {
     if (!selected) { return true; }
     if (!isWithin(date, selected.startDate, selected.latestExecutionDate)) { return true; }
-    return isBlocked(date, holidays, selected.country, !!props.blockWeekends);
+    return isBlocked(date, holidays, selected.country, props.blockWeekends !== false);
   }, [selected, holidays, props.blockWeekends]);
 
   /**
@@ -547,7 +547,7 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
       const model = buildTimesheetModel(contract, list, hols, period, {
         approvingOrg: props.approvingOrgLabel || 'Client approval',
         serviceProvider: props.serviceProviderLabel || 'Service provider'
-      }, { blockWeekends: !!props.blockWeekends });
+      }, { blockWeekends: props.blockWeekends !== false });
       const pdf = await loadPdfRef.current();
       const fileName = timesheetFileName(contract, period.from, period.to);
       if (source && template) {

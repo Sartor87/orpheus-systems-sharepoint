@@ -12,13 +12,13 @@ import {
 import type { SPFI } from '@pnp/sp';
 import type { IPeoplePickerContext } from '@pnp/spfx-controls-react/lib/PeoplePicker';
 import { canCreateContract, canEditContract } from '@orpheussystems/shared-core';
-import type { Contract, Role } from '@orpheussystems/shared-core';
+import type { Contract, DateKey, Role } from '@orpheussystems/shared-core';
 import { showToast } from '@orpheussystems/shared-ui/toast';
 import { orpheusBrand, orpheusMarkFrame, orpheusMarkPoints, orpheusMarkStrokeWidth, orpheusMarkViewBox } from '@orpheussystems/shared-ui/brand';
 import { orpheusTokens } from '@orpheussystems/shared-ui/tokens';
 
 import { FieldErrors, findOverlaps, overlapNotice, validateContract } from '../formModel';
-import { countEntriesOutsidePeriod, loadContract, loadFormRoles, loadOthersOfContractor, resolveEntriesListId, saveContract } from '../formService';
+import { UsedDaysFields, countEntriesOutsidePeriod, loadContract, loadFormRoles, loadOthersOfContractor, loadUsedDays, resolveEntriesListId, saveContract } from '../formService';
 import { calendarLink } from '../links';
 import {
   ContractFormFields,
@@ -254,8 +254,35 @@ const ContractForm: React.FC<IContractFormProps> = props => {
           return;
         }
       }
-      await saveContract(sp, listId, snapshot, itemId);
+      // Edit with a changed period: the stored used days must follow the new period (in the same update).
+      let used: UsedDaysFields | undefined;
+      let usedFailed = false;
+      if (mode === 'edit' && itemId !== undefined && loaded
+        && (snapshot.startDate !== loaded.startDate || snapshot.latestExecutionDate !== loaded.latestExecutionDate)) {
+        const listIdPromise = entriesListId.current || resolveEntriesListId(sp, entriesListUrl);
+        entriesListId.current = listIdPromise;
+        const period = { startDate: snapshot.startDate as DateKey, latestExecutionDate: snapshot.latestExecutionDate as DateKey };
+        used = await listIdPromise
+          .then(id => loadUsedDays(sp, id, itemId, period))
+          .catch((e: unknown) => {
+            // The contract is still saved, with the old used days kept; the user is warned below.
+            console.warn('Contract form: could not recalculate the used days.', e);
+            if (entriesListId.current === listIdPromise) { entriesListId.current = undefined; }
+            usedFailed = true;
+            return undefined;
+          });
+        if (!mounted.current) { return; }
+      }
+      await saveContract(sp, listId, snapshot, itemId, used);
       showToast({ kind: 'success', title: `Contract ${snapshot.title.trim()} saved` });
+      if (usedFailed) {
+        // No warning kind in the toast API: info carries the amber (warning) accent.
+        showToast({
+          kind: 'info',
+          title: 'Used days were not recalculated',
+          text: 'The calendar entries could not be read, so the used days still count the old period. They are corrected on the next calendar change.'
+        });
+      }
       keepLocked = true;
       onSaved();
     } catch (e) {

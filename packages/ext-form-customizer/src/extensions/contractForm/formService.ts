@@ -3,7 +3,8 @@ import '@pnp/sp/webs';
 import '@pnp/sp/lists';
 import '@pnp/sp/items';
 import type { IItems } from '@pnp/sp/items';
-import type { Contract, DateKey, Role, UserRef } from '@orpheussystems/shared-core';
+import { computeUsedTotals } from '@orpheussystems/shared-core';
+import type { CalendarEntry, Contract, DateKey, EntryType, Role, UserRef } from '@orpheussystems/shared-core';
 import {
   CONTRACT_EXPAND,
   CONTRACT_SELECT,
@@ -11,6 +12,7 @@ import {
   contractsOfContractorQuery,
   deriveRolesForContracts,
   entriesOfContractFilter,
+  isoToDateKey,
   mapContract,
   resolveListIdByUrl,
   spDayEnd,
@@ -58,6 +60,27 @@ export async function countEntriesOutsidePeriod(
     .filter(`${entriesOfContractFilter(contractId)} and (EntryDate lt ${spDayStart(start)} or EntryDate ge ${spDayEnd(end)})`)
     .select('Id').top(500)();
   return (rows as unknown[]).length;
+}
+
+/** The stored used-days columns of a contract. */
+export interface UsedDaysFields {
+  OnSiteUsedDays: number;
+  OffSiteUsedDays: number;
+}
+
+/**
+ * The used days of the contract for `period`: every entry of the contract is read (top 5000, like the services),
+ * and only those inside the period count (shared-core computeUsedTotals). Rejects on failure.
+ */
+export async function loadUsedDays(
+  sp: SPFI, entriesListId: string, contractId: number, period: Pick<Contract, 'startDate' | 'latestExecutionDate'>
+): Promise<UsedDaysFields> {
+  const rows = (await items(sp, entriesListId)
+    .filter(entriesOfContractFilter(contractId))
+    .select('Id', 'EntryDate', 'EntryType').top(5000)()) as Array<{ Id: number; EntryDate: string; EntryType: string }>;
+  const entries: CalendarEntry[] = rows.map(r => ({ id: r.Id, contractId, date: isoToDateKey(r.EntryDate), type: r.EntryType as EntryType }));
+  const totals = computeUsedTotals(period, entries);
+  return { OnSiteUsedDays: totals.onSiteDays, OffSiteUsedDays: totals.offSiteDays };
 }
 
 /**
@@ -109,9 +132,14 @@ export function spErrorMessage(e: unknown): string {
   return message;
 }
 
-/** Adds or updates the item; resolves its id. Rejects with the SharePoint message. */
-export async function saveContract(sp: SPFI, listId: string, draft: ContractDraft, itemId?: number): Promise<number> {
-  const fields = draftToItem(draft);
+/**
+ * Adds or updates the item; resolves its id. `extra` (the recomputed used days) goes into the same write.
+ * Rejects with the SharePoint message.
+ */
+export async function saveContract(
+  sp: SPFI, listId: string, draft: ContractDraft, itemId?: number, extra?: UsedDaysFields
+): Promise<number> {
+  const fields = { ...draftToItem(draft), ...extra };
   try {
     if (itemId !== undefined) {
       await items(sp, listId).getById(itemId).update(fields);
