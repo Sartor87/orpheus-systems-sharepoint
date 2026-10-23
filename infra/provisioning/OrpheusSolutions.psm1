@@ -434,5 +434,111 @@ function Set-OrpheusFormCustomizer {
 
 #endregion
 
+#region Calendar page
+
+function Set-OrpheusCalendarPage {
+    <#
+    .SYNOPSIS
+        Creates the ContractCalendar page with the contract calendar web part wired to the three lists.
+    .DESCRIPTION
+        The list ids come from Get-PnPList (Lists/Contracts, Lists/CalendarEntries, Lists/Holidays) as
+        lowercase GUID strings without braces. It throws when a list is missing.
+
+        A missing page is created (Article layout) with the web part and published. On an existing
+        page, the first instance of the web part is kept. When it lacks or has other values for
+        contractsListId, entriesListId, holidaysListId or useLocalData (or for a label passed in
+        -Labels), those keys are set, the other required keys are added only when missing, every other
+        key (for example timesheetTemplateUrl, or a monthsToShow the owner changed) is kept, and the
+        page is published. A page without the web part gets it added and is published.
+    .PARAMETER Labels
+        approvingOrgLabel and serviceProviderLabel. Defaults: 'Client approval' and 'Service provider'.
+    .OUTPUTS
+        'Created', 'Updated' or 'Unchanged'.
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    [OutputType([string])]
+    param([hashtable] $Labels = @{})
+
+    $pageName = 'ContractCalendar'
+    $labelKeys = 'approvingOrgLabel', 'serviceProviderLabel'
+    foreach ($key in $Labels.Keys) {
+        if ($key -notin $labelKeys) { throw "Unknown label '$key'. Use $($labelKeys -join ' or ')." }
+    }
+
+    # The keys that wire the web part to this site. They are always enforced.
+    $wiring = [ordered]@{ useLocalData = $false }
+    foreach ($entry in @(
+            @{ Key = 'contractsListId'; Url = 'Lists/Contracts' }
+            @{ Key = 'entriesListId'; Url = 'Lists/CalendarEntries' }
+            @{ Key = 'holidaysListId'; Url = 'Lists/Holidays' })) {
+        $list = Get-PnPList -Identity $entry.Url
+        if (-not $list) { throw "List $($entry.Url) not found: run list provisioning first." }
+        $wiring[$entry.Key] = ConvertTo-NormalizedId ([string] $list.Id)
+    }
+    foreach ($key in $Labels.Keys) { $wiring[$key] = [string] $Labels[$key] }
+
+    # The other required keys. On an existing web part they are added only when missing.
+    $defaults = [ordered]@{
+        monthsToShow         = 0
+        blockWeekends        = $true
+        demoUserId           = 1
+        approvingOrgLabel    = 'Client approval'
+        serviceProviderLabel = 'Service provider'
+    }
+
+    $required = [ordered]@{}
+    foreach ($key in $defaults.Keys) { $required[$key] = $defaults[$key] }
+    foreach ($key in $wiring.Keys) { $required[$key] = $wiring[$key] }
+
+    $files = @((Invoke-OrpheusRest -Url "/_api/web/getfolderbyserverrelativeurl('SitePages')/files?`$select=Name").value)
+    $pageExists = @($files | Where-Object { $null -ne $_ -and [string] $_.Name -eq "$pageName.aspx" }).Count -gt 0
+
+    if (-not $pageExists) {
+        if ($PSCmdlet.ShouldProcess("SitePages/$pageName.aspx", 'Create the page with the contract calendar web part and publish it')) {
+            $null = Add-PnPPage -Name $pageName -Title 'Contract calendar' -LayoutType Article
+            $null = Add-PnPPageWebPart -Page $pageName -Component $script:WebPartId -WebPartProperties ([hashtable] $required)
+            $null = Set-PnPPage -Identity $pageName -Publish
+        }
+        return 'Created'
+    }
+
+    $instances = @(Get-PnPPageComponent -Page $pageName | Where-Object {
+            $null -ne $_ -and $_.PSObject.Properties['WebPartId'] -and (Test-SameId ([string] $_.WebPartId) $script:WebPartId)
+        })
+    if ($instances.Count -eq 0) {
+        if ($PSCmdlet.ShouldProcess("SitePages/$pageName.aspx", 'Add the contract calendar web part and publish the page')) {
+            $null = Add-PnPPageWebPart -Page $pageName -Component $script:WebPartId -WebPartProperties ([hashtable] $required)
+            $null = Set-PnPPage -Identity $pageName -Publish
+        }
+        return 'Updated'
+    }
+    if ($instances.Count -gt 1) { Write-Warning "SitePages/$pageName.aspx has $($instances.Count) contract calendar web parts; only the first is checked." }
+
+    $webPart = $instances[0]
+    $current = [ordered]@{}
+    if (-not [string]::IsNullOrWhiteSpace([string] $webPart.PropertiesJson)) {
+        $parsed = [string] $webPart.PropertiesJson | ConvertFrom-Json -AsHashtable
+        foreach ($key in $parsed.Keys) { $current[$key] = $parsed[$key] }
+    }
+
+    $stale = @($wiring.Keys | Where-Object {
+            -not $current.Contains($_) -or $null -eq $current[$_] -or
+            $current[$_].GetType() -ne $wiring[$_].GetType() -or $current[$_] -cne $wiring[$_]
+        })
+    if (-not $stale.Count) { return 'Unchanged' }
+
+    foreach ($key in $wiring.Keys) { $current[$key] = $wiring[$key] }
+    foreach ($key in $defaults.Keys) { if (-not $current.Contains($key)) { $current[$key] = $defaults[$key] } }
+    [string] $json = $current | ConvertTo-Json -Compress -Depth 20
+
+    if ($PSCmdlet.ShouldProcess("SitePages/$pageName.aspx web part $($webPart.InstanceId)", "Set $($stale -join ', ') and publish the page")) {
+        $null = Set-PnPPageWebPart -Page $pageName -Identity ([guid] $webPart.InstanceId) -PropertiesJson $json
+        $null = Set-PnPPage -Identity $pageName -Publish
+    }
+    return 'Updated'
+}
+
+#endregion
+
 Export-ModuleMember -Function Read-SppkgInfo, Get-MissingManifests, Install-OrpheusSolution,
-    Set-OrpheusAppCustomizer, Set-OrpheusFieldCustomizer, Set-OrpheusFormCustomizer
+    Set-OrpheusAppCustomizer, Set-OrpheusFieldCustomizer, Set-OrpheusFormCustomizer, Set-OrpheusCalendarPage

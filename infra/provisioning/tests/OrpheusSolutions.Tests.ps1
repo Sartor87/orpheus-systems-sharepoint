@@ -571,3 +571,151 @@ Describe 'Set-OrpheusFormCustomizer' {
 }
 
 #endregion
+
+#region Task 4: calendar page with the web part
+
+Describe 'Set-OrpheusCalendarPage' {
+    BeforeAll {
+        $script:ListIds = @{
+            'Lists/Contracts'       = [guid] 'C0000000-0000-0000-0000-00000000000A'
+            'Lists/CalendarEntries' = [guid] 'E0000000-0000-0000-0000-00000000000B'
+            'Lists/Holidays'        = [guid] 'D0000000-0000-0000-0000-00000000000C'
+        }
+        $script:InstanceId = [guid] 'f0000000-0000-0000-0000-000000000001'
+
+        function New-CorrectProperties {
+            [ordered]@{
+                useLocalData         = $false
+                contractsListId      = 'c0000000-0000-0000-0000-00000000000a'
+                entriesListId        = 'e0000000-0000-0000-0000-00000000000b'
+                holidaysListId       = 'd0000000-0000-0000-0000-00000000000c'
+                monthsToShow         = 0
+                blockWeekends        = $true
+                demoUserId           = 1
+                approvingOrgLabel    = 'Client approval'
+                serviceProviderLabel = 'Service provider'
+            }
+        }
+    }
+
+    BeforeEach {
+        New-PnPSafetyNet
+        $script:Pages = @('Home.aspx', 'ContractCalendar.aspx')
+        $script:Components = @()
+        $script:MissingList = $null
+
+        Mock -ModuleName OrpheusSolutions Get-PnPList {
+            $name = Get-BindValue $Identity '_name'
+            if ($name -eq $script:MissingList) { return $null }
+            [pscustomobject]@{ Id = $script:ListIds[$name]; Title = ($name -split '/')[-1] }
+        }
+        Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter {
+            $Method -eq 'Get' -and $Url -like "/_api/web/getfolderbyserverrelativeurl('SitePages')/files*"
+        } -MockWith { [pscustomobject]@{ value = @($script:Pages | ForEach-Object { [pscustomobject]@{ Name = $_ } }) } }
+        Mock -ModuleName OrpheusSolutions Get-PnPPageComponent { $script:Components }
+        Mock -ModuleName OrpheusSolutions Add-PnPPage { }
+        Mock -ModuleName OrpheusSolutions Add-PnPPageWebPart { }
+        Mock -ModuleName OrpheusSolutions Set-PnPPageWebPart { }
+        Mock -ModuleName OrpheusSolutions Set-PnPPage { }
+    }
+
+    It 'creates the page with the web part wired to the three lists when it is missing' {
+        $script:Pages = @('Home.aspx')
+
+        Set-OrpheusCalendarPage | Should -BeExactly 'Created'
+
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPPage -Times 1 -Exactly -ParameterFilter {
+            $Name -eq 'ContractCalendar' -and $Title -eq 'Contract calendar' -and $LayoutType -eq 'Article'
+        }
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPPageWebPart -Times 1 -Exactly -ParameterFilter {
+            $p = Get-BindValue $WebPartProperties '_hashtable'
+            $Page.Name -eq 'ContractCalendar.aspx' -and (Get-BindValue $Component '_id') -eq [guid] $script:WebPartId -and
+            $p.contractsListId -ceq 'c0000000-0000-0000-0000-00000000000a' -and
+            $p.entriesListId -ceq 'e0000000-0000-0000-0000-00000000000b' -and
+            $p.holidaysListId -ceq 'd0000000-0000-0000-0000-00000000000c' -and
+            $p.useLocalData -eq $false -and $p.monthsToShow -eq 0 -and $p.blockWeekends -eq $true -and $p.demoUserId -eq 1 -and
+            $p.approvingOrgLabel -eq 'Client approval' -and $p.serviceProviderLabel -eq 'Service provider'
+        }
+        Should -Invoke -ModuleName OrpheusSolutions Set-PnPPage -Times 1 -Exactly -ParameterFilter { $Identity.Name -eq 'ContractCalendar.aspx' -and $Publish }
+    }
+
+    It 'uses the labels it is given' {
+        $script:Pages = @()
+
+        Set-OrpheusCalendarPage -Labels @{ approvingOrgLabel = 'Approver'; serviceProviderLabel = 'Vendor' } | Should -BeExactly 'Created'
+
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPPageWebPart -Times 1 -Exactly -ParameterFilter {
+            $p = Get-BindValue $WebPartProperties '_hashtable'
+            $p.approvingOrgLabel -eq 'Approver' -and $p.serviceProviderLabel -eq 'Vendor'
+        }
+    }
+
+    It 'reports Unchanged when the page has a correctly wired web part' {
+        $script:Components = @(
+            [pscustomobject]@{ InstanceId = [guid] 'f0000000-0000-0000-0000-000000000009'; Text = '<p>Intro</p>' }
+            [pscustomobject]@{ InstanceId = $script:InstanceId; WebPartId = $script:WebPartId; PropertiesJson = (New-CorrectProperties | ConvertTo-Json -Compress) }
+        )
+
+        Set-OrpheusCalendarPage | Should -BeExactly 'Unchanged'
+
+        foreach ($name in 'Add-PnPPage', 'Add-PnPPageWebPart', 'Set-PnPPageWebPart', 'Set-PnPPage') {
+            Should -Invoke -ModuleName OrpheusSolutions $name -Times 0 -Exactly
+        }
+    }
+
+    It 'sets the list ids on a web part without lists and keeps the other keys' {
+        # The state the owner created by hand: the web part is on the page but has no lists.
+        $script:Components = @(
+            [pscustomobject]@{ InstanceId = $script:InstanceId; WebPartId = "{$($script:WebPartId.ToUpperInvariant())}"; PropertiesJson = '{"useLocalData":true,"monthsToShow":3,"timesheetTemplateUrl":"x"}' }
+        )
+
+        Set-OrpheusCalendarPage | Should -BeExactly 'Updated'
+
+        Should -Invoke -ModuleName OrpheusSolutions Set-PnPPageWebPart -Times 1 -Exactly -ParameterFilter {
+            $p = $PropertiesJson | ConvertFrom-Json
+            $Page.Name -eq 'ContractCalendar.aspx' -and $Identity.InstanceId -eq $script:InstanceId -and
+            $p.timesheetTemplateUrl -eq 'x' -and $p.monthsToShow -eq 3 -and $p.useLocalData -eq $false -and
+            $p.contractsListId -ceq 'c0000000-0000-0000-0000-00000000000a' -and
+            $p.entriesListId -ceq 'e0000000-0000-0000-0000-00000000000b' -and
+            $p.holidaysListId -ceq 'd0000000-0000-0000-0000-00000000000c' -and
+            $p.blockWeekends -eq $true -and $p.demoUserId -eq 1 -and $p.approvingOrgLabel -eq 'Client approval'
+        }
+        Should -Invoke -ModuleName OrpheusSolutions Set-PnPPage -Times 1 -Exactly -ParameterFilter { $Publish }
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPPage -Times 0 -Exactly
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPPageWebPart -Times 0 -Exactly
+    }
+
+    It 'adds the web part to an existing page that lacks it' {
+        $script:Components = @([pscustomobject]@{ InstanceId = [guid] 'f0000000-0000-0000-0000-000000000009'; Text = '<p>Intro</p>' })
+
+        Set-OrpheusCalendarPage | Should -BeExactly 'Updated'
+
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPPageWebPart -Times 1 -Exactly -ParameterFilter {
+            (Get-BindValue $WebPartProperties '_hashtable').holidaysListId -ceq 'd0000000-0000-0000-0000-00000000000c'
+        }
+        Should -Invoke -ModuleName OrpheusSolutions Set-PnPPage -Times 1 -Exactly -ParameterFilter { $Publish }
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPPage -Times 0 -Exactly
+    }
+
+    It 'throws when a list is missing' {
+        $script:MissingList = 'Lists/Holidays'
+
+        { Set-OrpheusCalendarPage } | Should -Throw '*run list provisioning first*'
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPPage -Times 0 -Exactly
+    }
+
+    It 'makes no write call with -WhatIf' {
+        $script:Pages = @()
+        Set-OrpheusCalendarPage -WhatIf | Should -BeExactly 'Created'
+
+        $script:Pages = @('ContractCalendar.aspx')
+        $script:Components = @([pscustomobject]@{ InstanceId = $script:InstanceId; WebPartId = $script:WebPartId; PropertiesJson = '{}' })
+        Set-OrpheusCalendarPage -WhatIf | Should -BeExactly 'Updated'
+
+        foreach ($name in 'Add-PnPPage', 'Add-PnPPageWebPart', 'Set-PnPPageWebPart', 'Set-PnPPage') {
+            Should -Invoke -ModuleName OrpheusSolutions $name -Times 0 -Exactly
+        }
+    }
+}
+
+#endregion
