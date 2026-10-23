@@ -18,7 +18,7 @@ import { orpheusBrand, orpheusMarkFrame, orpheusMarkPoints, orpheusMarkStrokeWid
 import { orpheusTokens } from '@orpheussystems/shared-ui/tokens';
 
 import { FieldErrors, findOverlaps, overlapNotice, validateContract } from '../formModel';
-import { loadContract, loadFormRoles, loadOthersOfContractor, saveContract } from '../formService';
+import { countEntriesOutsidePeriod, loadContract, loadFormRoles, loadOthersOfContractor, resolveEntriesListId, saveContract } from '../formService';
 import { calendarLink } from '../links';
 import {
   ContractFormFields,
@@ -39,6 +39,8 @@ export interface IContractFormProps {
   sp: SPFI;
   listId: string;
   itemId?: number;
+  /** Calendar entries list (web-relative URL), for the outside-period warning. */
+  entriesListUrl: string;
   codePattern: string;
   defaultCountry: string;
   webUrl: string;
@@ -85,7 +87,7 @@ const Mark: React.FC = () => (
 );
 
 const ContractForm: React.FC<IContractFormProps> = props => {
-  const { mode, sp, listId, itemId, codePattern, defaultCountry, webUrl, calendarPageUrl, peoplePickerContext, userId, onSaved, onClosed } = props;
+  const { mode, sp, listId, itemId, entriesListUrl, codePattern, defaultCountry, webUrl, calendarPageUrl, peoplePickerContext, userId, onSaved, onClosed } = props;
   const [ids] = React.useState(() => ({ prefix: getId('orpheus-contract'), heading: getId('orpheus-contract-heading') }));
   const [load, setLoad] = React.useState<Load>(() =>
     mode === 'new' ? { state: 'ready' }
@@ -181,6 +183,31 @@ const ContractForm: React.FC<IContractFormProps> = props => {
   const noticeText = overlapNotice(overlaps);
   const noticeKey = noticeText && `${overlaps.map(o => o.id).join(',')}|${draft.startDate}|${draft.latestExecutionDate}`;
   const noticeVisible = !!noticeText && dismissedNotice !== noticeKey;
+
+  // Edit: days left outside a changed period (advisory; debounced like the overlap check).
+  const [outsideCount, setOutsideCount] = React.useState(0);
+  const entriesListId = React.useRef<Promise<string> | undefined>();
+  const loadedStart = loaded && loaded.startDate;
+  const loadedEnd = loaded && loaded.latestExecutionDate;
+  const periodValid = !allErrors.startDate && !allErrors.latestExecutionDate;
+  const periodChanged = !!startDate && !!latestExecutionDate && (startDate !== loadedStart || latestExecutionDate !== loadedEnd);
+  const checkOutside = mode === 'edit' && editing && itemId !== undefined && periodValid && periodChanged;
+  React.useEffect(() => {
+    if (!checkOutside) { setOutsideCount(0); return; }
+    let cancelled = false;
+    const t = setTimeout(() => {
+      if (!entriesListId.current) { entriesListId.current = resolveEntriesListId(sp, entriesListUrl); }
+      entriesListId.current
+        .then(id => countEntriesOutsidePeriod(sp, id, itemId as number, startDate as string, latestExecutionDate as string))
+        .then(n => { if (!cancelled && mounted.current) { setOutsideCount(n); } })
+        .catch((e: unknown) => {
+          console.warn('Contract form: could not check days outside the period.', e);
+          entriesListId.current = undefined;
+          if (!cancelled && mounted.current) { setOutsideCount(0); }
+        });
+    }, OVERLAP_DEBOUNCE_MS);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [checkOutside, sp, entriesListUrl, itemId, startDate, latestExecutionDate]);
 
   // After a save attempt on an invalid form: move focus to the first field with an error.
   React.useEffect(() => {
@@ -300,6 +327,11 @@ const ContractForm: React.FC<IContractFormProps> = props => {
               {noticeText}
             </MessageBar>
           </div>
+        )}
+        {checkOutside && outsideCount > 0 && (
+          <MessageBar messageBarType={MessageBarType.warning} isMultiline className={styles.notice}>
+            {`${outsideCount} day(s) are outside the new period and no longer count towards the used days.`}
+          </MessageBar>
         )}
         <ContractFormFields
           idPrefix={ids.prefix}

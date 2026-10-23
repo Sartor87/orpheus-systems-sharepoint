@@ -18,11 +18,14 @@ export interface IContractFormFormCustomizerProperties {
   defaultCountry?: string;
   /** Calendar page (web-relative, server-relative or absolute); default 'SitePages/ContractCalendar.aspx'. */
   calendarPageUrl?: string;
+  /** Calendar entries list (web-relative); default 'Lists/CalendarEntries'. */
+  entriesListUrl?: string;
 }
 
 const LOG_SOURCE: string = 'ContractFormFormCustomizer';
 const DEFAULT_CODE_PATTERN = '^\\d{4}-[A-Za-z]+(-[A-Za-z]+)*$';
 const DEFAULT_COUNTRY = 'BG';
+const DEFAULT_ENTRIES_LIST_URL = 'Lists/CalendarEntries';
 
 function toMode(m: FormDisplayMode): ContractFormMode {
   if (m === FormDisplayMode.New) { return 'new'; }
@@ -49,6 +52,7 @@ export default class ContractFormFormCustomizer
       sp: this._sp as SPFI,
       listId: this.context.list.guid.toString(),
       itemId: this.context.itemId,
+      entriesListUrl: p.entriesListUrl || DEFAULT_ENTRIES_LIST_URL,
       codePattern: p.codePattern || DEFAULT_CODE_PATTERN,
       defaultCountry: p.defaultCountry || DEFAULT_COUNTRY,
       webUrl: web.absoluteUrl,

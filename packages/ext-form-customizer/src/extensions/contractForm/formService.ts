@@ -3,14 +3,18 @@ import '@pnp/sp/webs';
 import '@pnp/sp/lists';
 import '@pnp/sp/items';
 import type { IItems } from '@pnp/sp/items';
-import type { Contract, Role, UserRef } from '@orpheussystems/shared-core';
+import type { Contract, DateKey, Role, UserRef } from '@orpheussystems/shared-core';
 import {
   CONTRACT_EXPAND,
   CONTRACT_SELECT,
   type SPContractItem,
   contractsOfContractorQuery,
   deriveRolesForContracts,
+  entriesOfContractFilter,
   mapContract,
+  resolveListIdByUrl,
+  spDayEnd,
+  spDayStart,
   toContractItem
 } from '@orpheussystems/shared-core/sharepoint';
 import type { ContractDraft } from './formModel';
@@ -36,6 +40,24 @@ export async function loadOthersOfContractor(sp: SPFI, listId: string, contracto
     .filter(contractsOfContractorQuery(contractorId))
     .select(...CONTRACT_SELECT).expand(...CONTRACT_EXPAND).top(500)()) as SPContractItem[];
   return rows.map(mapContract);
+}
+
+/** The entries list's GUID from its web-relative URL. */
+export function resolveEntriesListId(sp: SPFI, webRelativeUrl: string): Promise<string> {
+  return resolveListIdByUrl(sp, webRelativeUrl);
+}
+
+/**
+ * How many entries of the contract lie outside [start, end] (capped at 500 rows). Rejects on failure; the form
+ * treats the warning as advisory.
+ */
+export async function countEntriesOutsidePeriod(
+  sp: SPFI, entriesListId: string, contractId: number, start: DateKey, end: DateKey
+): Promise<number> {
+  const rows = await items(sp, entriesListId)
+    .filter(`${entriesOfContractFilter(contractId)} and (EntryDate lt ${spDayStart(start)} or EntryDate ge ${spDayEnd(end)})`)
+    .select('Id').top(500)();
+  return (rows as unknown[]).length;
 }
 
 /**

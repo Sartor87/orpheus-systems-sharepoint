@@ -16,6 +16,7 @@ import type { SPFI } from '@pnp/sp';
 import { deriveRolesForContracts, type SPContractItem } from '@orpheussystems/shared-core/sharepoint';
 import type { ContractDraft } from '../formModel';
 import {
+  countEntriesOutsidePeriod,
   draftToItem,
   loadContract,
   loadFormRoles,
@@ -183,3 +184,17 @@ describe('loadFormRoles', () => {
     await expect(loadFormRoles({} as SPFI, 'list-guid', 0)).rejects.toThrow();
   });
 });
+
+describe('countEntriesOutsidePeriod', () => {
+  it('builds the outside-window filter for the contract', async () => {
+    const { sp, calls } = fakeSpChain([{ Id: 1 }, { Id: 2 }, { Id: 3 }]);
+    const n = await countEntriesOutsidePeriod(sp, 'entries-guid', 7, '2026-03-01', '2026-06-30');
+    expect(n).toBe(3);
+    expect(calls.find(c => c.name === 'getById')?.args).toEqual(['entries-guid']);
+    expect(calls.find(c => c.name === 'filter')?.args).toEqual([
+      "ContractId eq 7 and (EntryDate lt datetime'2026-02-28T12:00:00Z' or EntryDate ge datetime'2026-06-30T12:00:00Z')"
+    ]);
+    expect(calls.find(c => c.name === 'top')?.args).toEqual([500]);
+  });
+});
+

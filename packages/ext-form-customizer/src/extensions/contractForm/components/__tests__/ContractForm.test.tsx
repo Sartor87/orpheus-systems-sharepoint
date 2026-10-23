@@ -1,6 +1,8 @@
 jest.mock('../../formService', () => ({
   loadContract: jest.fn(),
   loadOthersOfContractor: jest.fn(),
+  countEntriesOutsidePeriod: jest.fn(),
+  resolveEntriesListId: jest.fn(),
   loadFormRoles: jest.fn(),
   saveContract: jest.fn()
 }));
@@ -37,11 +39,13 @@ import { act } from 'react-dom/test-utils';
 import type { SPFI } from '@pnp/sp';
 import type { Contract } from '@orpheussystems/shared-core';
 import { showToast } from '@orpheussystems/shared-ui/toast';
-import { loadContract, loadFormRoles, loadOthersOfContractor, saveContract } from '../../formService';
+import { countEntriesOutsidePeriod, loadContract, loadFormRoles, loadOthersOfContractor, resolveEntriesListId, saveContract } from '../../formService';
 import ContractForm, { IContractFormProps } from '../ContractForm';
 
 const loadMock = loadContract as jest.MockedFunction<typeof loadContract>;
 const othersMock = loadOthersOfContractor as jest.MockedFunction<typeof loadOthersOfContractor>;
+const countMock = countEntriesOutsidePeriod as jest.MockedFunction<typeof countEntriesOutsidePeriod>;
+const entriesIdMock = resolveEntriesListId as jest.MockedFunction<typeof resolveEntriesListId>;
 const saveMock = saveContract as jest.MockedFunction<typeof saveContract>;
 const rolesMock = loadFormRoles as jest.MockedFunction<typeof loadFormRoles>;
 const toastMock = showToast as jest.MockedFunction<typeof showToast>;
@@ -83,6 +87,8 @@ beforeEach(() => {
   loadMock.mockReset();
   othersMock.mockReset().mockResolvedValue([]);
   saveMock.mockReset();
+  countMock.mockReset().mockResolvedValue(0);
+  entriesIdMock.mockReset().mockResolvedValue('entries-guid');
   toastMock.mockReset();
   // Most tests run as a site admin; the role gate has its own tests below.
   rolesMock.mockReset().mockResolvedValue(['Admin']);
@@ -108,6 +114,7 @@ async function render(props: Partial<IContractFormProps>): Promise<void> {
     mode: 'new',
     sp,
     listId: 'list-guid',
+    entriesListUrl: 'Lists/CalendarEntries',
     codePattern: '^\\d{4}-[A-Za-z]+(-[A-Za-z]+)*$',
     defaultCountry: 'BG',
     webUrl: WEB,
@@ -541,5 +548,50 @@ describe('ContractForm — who may create or edit', () => {
     expect(rolesMock).not.toHaveBeenCalled();
     expect(host.textContent).not.toContain(DENIED);
     expect(host.textContent).toContain('1185-Iliev');
+  });
+});
+
+describe('ContractForm — outside-period warning', () => {
+  const outside = (): HTMLElement | undefined =>
+    Array.from(host.querySelectorAll<HTMLElement>('.ms-MessageBar')).find(m => /outside the new period/.test(m.textContent || ''));
+
+  beforeEach(() => { loadMock.mockResolvedValue(c7); });
+
+  it('shortening the end date shows the outside-period warning with the count', async () => {
+    countMock.mockResolvedValue(3);
+    await render({ mode: 'edit', itemId: 7 });
+    type(input('Latest execution date'), '2026-12-31');
+    blur(input('Latest execution date'));
+    await settle();
+    expect(entriesIdMock).toHaveBeenCalledWith(sp, 'Lists/CalendarEntries');
+    expect(countMock).toHaveBeenLastCalledWith(sp, 'entries-guid', 7, '2026-02-06', '2026-12-31');
+    expect(outside()!.textContent).toContain('3 day(s) are outside the new period and no longer count towards the used days.');
+    expect(isDisabled(button('Save'))).toBe(false);
+  });
+
+  it('shows nothing when no day is outside', async () => {
+    await render({ mode: 'edit', itemId: 7 });
+    type(input('Latest execution date'), '2026-12-31');
+    blur(input('Latest execution date'));
+    await settle();
+    expect(countMock).toHaveBeenCalled();
+    expect(outside()).toBeUndefined();
+  });
+
+  it('unchanged dates do not query', async () => {
+    await render({ mode: 'edit', itemId: 7 });
+    await settle();
+    expect(countMock).not.toHaveBeenCalled();
+    expect(outside()).toBeUndefined();
+  });
+
+  it('New mode never queries', async () => {
+    await render({ mode: 'new' });
+    for (const [label, value] of [['Start date', '2027-01-15'], ['Latest execution date', '2027-06-30']]) {
+      type(input(label), value);
+      blur(input(label));
+    }
+    await settle();
+    expect(countMock).not.toHaveBeenCalled();
   });
 });
