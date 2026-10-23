@@ -101,7 +101,7 @@ workspace "Orpheus Contract Calendar for SharePoint" "C4 model of the SPFx suite
                 errLog = component "log/errorLog" "One error line per internal failure with the correlation id; bearer tokens, JWT-shaped strings and cookies redacted." "TypeScript, src/log/errorLog.ts"
                 config = component "config" "AUTH_MODE (entra default, none), DATA_MODE (sharepoint default, local), tenant and site values, list URLs, HR_GROUP, AUDIT_LOG_PATH. Rejects none with sharepoint at start-up." "TypeScript, src/config.ts"
 
-                // Proposed in ADR 0018 (not yet committed on public-main when this model was written)
+                // Proposed in ADR 0018 (decision level only; no implementation planned)
                 oversightEndpoint = component "/mcp/oversight endpoint" "PROPOSED (ADR 0018). Second MCP endpoint for the Contract Oversight agent: the four read tools plus reconcile_contract_days, get_contract_health, audit_contract_data and the one write tool save_reconciliation. Never registers book_days or remove_days." "Express route, planned" "Proposed"
                 oversightDomain = component "domain: reconcile / health / audit" "PROPOSED (ADR 0018). Pure, unit-tested functions for used days against targets, burn rate, runway, health status and completeness score. Thresholds come from configuration after the business agrees them." "TypeScript, planned" "Proposed"
             }
