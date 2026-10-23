@@ -188,3 +188,25 @@ describe('SharePointDataService write serialization', () => {
     await expect(next).resolves.toMatchObject({ contractId: 2 });
   });
 });
+
+describe('SharePointDataService used days', () => {
+  it('upsert recomputes OnSiteUsedDays from in-period entries only', async () => {
+    const { sp } = routedSp({
+      contracts: [base],
+      entries: [
+        { Id: 50, Contract: { Id: 1 }, EntryDate: '2026-01-30T00:00:00Z', EntryType: 'OnSiteFull' },   // before StartDate
+        { Id: 51, Contract: { Id: 1 }, EntryDate: '2027-03-01T00:00:00Z', EntryType: 'OnSiteFull' },   // after the end
+        { Id: 52, Contract: { Id: 1 }, EntryDate: '2026-03-03T00:00:00Z', EntryType: 'OnSiteFull' },
+        { Id: 53, Contract: { Id: 1 }, EntryDate: '2026-03-04T00:00:00Z', EntryType: 'OffSiteFull' }
+      ]
+    });
+    const updates: unknown[] = [];
+    const ok = (): Promise<unknown> => Promise.resolve({ Id: 99 });
+    const item = { delete: ok, update: (payload: unknown) => { updates.push(payload); return ok(); } };
+    const batchSp = { web: { lists: { getById: () => ({ items: { getById: () => item, add: ok } }) } } };
+    (sp as unknown as { batched: jest.Mock }).batched = jest.fn(() => [batchSp, () => Promise.resolve()]);
+
+    await new SharePointDataService(sp, lists, jane).upsertEntry({ contractId: 1, date: monday, type: 'OnSiteFull' });
+    expect(updates).toEqual([{ OnSiteUsedDays: 2, OffSiteUsedDays: 1 }]);
+  });
+});

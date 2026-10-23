@@ -110,3 +110,12 @@ export function canEditContract(roles: Role[], contract: Pick<Contract, 'contrac
 
 /** Title of the SharePoint group whose members may create contracts (provisioned by the infra script). */
 export const CONTRACT_MANAGERS_GROUP = 'Orpheus Contract Managers';
+
+/**
+ * Totals of the entries inside the contract period only. An entry left over outside it (the period was
+ * shortened later) is not a used day. A contract without a period covers no day, so its totals are zero.
+ */
+export function computeUsedTotals(contract: Pick<Contract, 'startDate' | 'latestExecutionDate'>, entries: CalendarEntry[]): Totals {
+  if (!hasContractPeriod(contract)) { return computeTotals([]); }
+  return computeTotals(entries.filter(x => isWithin(x.date, contract.startDate, contract.latestExecutionDate)));
+}

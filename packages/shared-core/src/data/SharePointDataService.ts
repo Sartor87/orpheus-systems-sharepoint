@@ -6,13 +6,15 @@ import '@pnp/sp/site-users';
 import '@pnp/sp/site-groups';
 import '@pnp/sp/batching';
 import { CalendarEntry, Contract, DateKey, Holiday, Role, UserInfo } from '../models';
+
+type SiblingContract = Pick<Contract, 'id' | 'title' | 'status' | 'startDate' | 'latestExecutionDate'>;
 import { compareKeys, isWithin } from '../dates';
-import { assertCanWriteDays, assertNotClosedSibling, computeTotals, hasContractPeriod, isBlocked } from '../rules';
+import { assertCanWriteDays, assertNotClosedSibling, computeUsedTotals, hasContractPeriod, isBlocked } from '../rules';
 import { IDataService } from './IDataService';
 import { deriveRolesForContracts } from './listLookup';
 import {
   CONTRACT_EXPAND, CONTRACT_SELECT, ENTRY_EXPAND, ENTRY_SELECT, HOLIDAY_SELECT,
-  mapContract, mapEntries, mapHoliday, SPContractItem, SPEntryItem, SPHolidayItem, toEntryItem
+  isoToDateKey, mapContract, mapEntries, mapHoliday, SPContractItem, SPEntryItem, SPHolidayItem, toEntryItem
 } from './spMappers';
 import {
   contractsFilter, contractsOfContractorFilter, entriesFilter, entriesOfContractFilter, entriesOnDateFilter, holidaysFilter
@@ -109,10 +111,12 @@ export class SharePointDataService implements IDataService {
     const affectedIds = new Set<number>([contract.id]);
     existing.forEach(x => affectedIds.add(x.contractId));
     const finalEntries = new Map<number, CalendarEntry[]>();
+    const periods = new Map<number, SiblingContract>();
     for (const id of Array.from(affectedIds)) {
       const kept = (await this.allEntries(id)).filter(x => x.date !== entry.date);
       if (id === contract.id) { kept.push(entry); }
       finalEntries.set(id, kept);
+      periods.set(id, id === contract.id ? contract : siblings.filter(s => s.id === id)[0]);
     }
 
     const [batched, execute] = this.sp.batched();
@@ -120,7 +124,7 @@ export class SharePointDataService implements IDataService {
     const pending: Array<Promise<unknown>> = existing.map(old => entries.items.getById(old.id as number).delete());
     const added = entries.items.add(toEntryItem(entry, contract.contractCode));
     pending.push(added);
-    pending.push(...this.queueTotalsUpdates(batched, finalEntries));
+    pending.push(...this.queueTotalsUpdates(batched, finalEntries, periods));
     await execute();
     // execute() does not reject for individual sub-request failures; their own promises do.
     await Promise.all(pending);
@@ -129,26 +133,29 @@ export class SharePointDataService implements IDataService {
   }
 
   private async doDelete(contractId: number, date: DateKey): Promise<void> {
-    assertCanWriteDays(await this.loadContract(contractId), this.currentUser.id);
+    const contract = await this.loadContract(contractId);
+    assertCanWriteDays(contract, this.currentUser.id);
     const existing = await this.entriesOnDate([contractId], date);
     if (existing.length === 0) { return; }
     const finalEntries = new Map<number, CalendarEntry[]>();
+    const periods = new Map<number, SiblingContract>();
     finalEntries.set(contractId, (await this.allEntries(contractId)).filter(x => x.date !== date));
+    periods.set(contractId, contract);
 
     const [batched, execute] = this.sp.batched();
     const entries = batched.web.lists.getById(this.lists.entriesListId);
     const pending: Array<Promise<unknown>> = existing.map(old => entries.items.getById(old.id as number).delete());
-    pending.push(...this.queueTotalsUpdates(batched, finalEntries));
+    pending.push(...this.queueTotalsUpdates(batched, finalEntries, periods));
     await execute();
     // execute() does not reject for individual sub-request failures; their own promises do.
     await Promise.all(pending);
   }
 
-  private queueTotalsUpdates(batched: SPFI, finalEntries: Map<number, CalendarEntry[]>): Array<Promise<unknown>> {
+  private queueTotalsUpdates(batched: SPFI, finalEntries: Map<number, CalendarEntry[]>, periods: Map<number, SiblingContract>): Array<Promise<unknown>> {
     const contracts = batched.web.lists.getById(this.lists.contractsListId);
     const promises: Array<Promise<unknown>> = [];
     finalEntries.forEach((list, contractId) => {
-      const totals = computeTotals(list);
+      const totals = computeUsedTotals(periods.get(contractId) as SiblingContract, list);
       promises.push(contracts.items.getById(contractId).update({ OnSiteUsedDays: totals.onSiteDays, OffSiteUsedDays: totals.offSiteDays }));
     });
     return promises;
@@ -165,11 +172,14 @@ export class SharePointDataService implements IDataService {
   }
 
   /** Every contract of the same contractor (including `contract`), with what the Closed check needs. */
-  private async siblingContracts(contract: Contract): Promise<Array<{ id: number; title: string; status: Contract['status'] }>> {
+  private async siblingContracts(contract: Contract): Promise<SiblingContract[]> {
     const items = (await this.contractsList().items
-      .filter(contractsOfContractorFilter(contract.contractor.id)).select('Id', 'Title', 'Status').top(5000)()) as Array<{ Id: number; Title: string; Status: string }>;
-    const list = items.map(i => ({ id: i.Id, title: i.Title, status: i.Status as Contract['status'] }));
-    return list.some(s => s.id === contract.id) ? list : list.concat({ id: contract.id, title: contract.title, status: contract.status });
+      .filter(contractsOfContractorFilter(contract.contractor.id)).select('Id', 'Title', 'Status', 'StartDate', 'LatestExecutionDate').top(5000)()) as Array<{ Id: number; Title: string; Status: string; StartDate: string | null; LatestExecutionDate: string | null }>;
+    const list: SiblingContract[] = items.map(i => ({
+      id: i.Id, title: i.Title, status: i.Status as Contract['status'],
+      startDate: isoToDateKey(i.StartDate), latestExecutionDate: isoToDateKey(i.LatestExecutionDate)
+    }));
+    return list.some(s => s.id === contract.id) ? list : list.concat({ id: contract.id, title: contract.title, status: contract.status, startDate: contract.startDate, latestExecutionDate: contract.latestExecutionDate });
   }
 
   private async entriesOnDate(contractIds: number[], date: DateKey): Promise<CalendarEntry[]> {

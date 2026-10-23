@@ -1,4 +1,4 @@
-import { canCreateContract, canEditContract, computeRemaining, computeTotals, contractsCoveringDate, dayValue, hasContractPeriod, holidayApplies, hoursFor, isBlocked, isOnSite, usageRatio } from '../rules';
+import { canCreateContract, canEditContract, computeRemaining, computeTotals, computeUsedTotals, contractsCoveringDate, dayValue, hasContractPeriod, holidayApplies, hoursFor, isBlocked, isOnSite, usageRatio } from '../rules';
 import { contract, e, hol } from './fixtures';
 
 test('computeTotals counts halves as 0.5', () => {
@@ -70,4 +70,22 @@ test("canEditContract: Admin, or the contract's own manager", () => {
   expect(canEditContract(['Contractor'], c, c.contractor.id)).toBe(false);
   expect(canEditContract([], c, managerId)).toBe(false);
   expect(canEditContract(['ContractManager'], contract({ contractManager: { ...c.contractManager, id: 0 } }), 0)).toBe(false);
+});
+
+describe('computeUsedTotals', () => {
+  const period = { startDate: '2026-03-02', latestExecutionDate: '2026-03-31' };
+  it('ignores entries outside the period', () => {
+    const totals = computeUsedTotals(period, [
+      e('OnSiteFull', '2026-03-01'),
+      e('OnSiteFull', '2026-03-10'),
+      e('OnSiteFull', '2026-04-01')
+    ]);
+    expect(totals.onSiteDays).toBe(1);
+    expect(totals.totalDays).toBe(1);
+  });
+  it('returns zeros for a contract without a period', () => {
+    const totals = computeUsedTotals({ startDate: '', latestExecutionDate: '' }, [e('OnSiteFull', '2026-03-10')]);
+    expect(totals.totalDays).toBe(0);
+    expect(totals.onSiteDays).toBe(0);
+  });
 });
