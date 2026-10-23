@@ -27,6 +27,30 @@ day counts against ("Count against 001185_2026 or 001186_2027?"); choosing a
 contract **moves** the entry to it; it never duplicates it. `EntryDate` and
 `Contract` are indexed; `Title` is `<ContractCode> <yyyy-MM-dd>`.
 
+![Write path when a day falls in an overlap](diagrams/0008-one-calendar-entry-per-contractor-per-date-1.svg)
+
+```mermaid
+sequenceDiagram
+  actor C as Contractor
+  participant WP as Calendar web part
+  participant DS as Data service upsertEntry
+  participant L as SharePoint lists
+  C->>WP: Click a day inside an overlap window
+  WP->>C: Count against 001185_2026 or 001186_2027?
+  C->>WP: Choose a contract
+  WP->>DS: upsertEntry for the chosen contract
+  DS->>L: Read all contracts of this contractor
+  DS->>L: Read CalendarEntries on that EntryDate across them
+  Note over DS: Final entries and used days<br/>of every affected contract, in memory
+  rect rgb(235, 242, 250)
+    Note over DS,L: One batch
+    DS->>L: Delete the entry on the sibling contract
+    DS->>L: Add the entry for the chosen contract
+    DS->>L: Update OnSiteUsedDays and OffSiteUsedDays
+  end
+  DS-->>WP: The day has moved, never duplicated
+```
+
 ---
 
 ## Considered Options

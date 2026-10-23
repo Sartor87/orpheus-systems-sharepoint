@@ -29,6 +29,23 @@ clean-room pass removes every prior-employer fingerprint before the first
 public commit; `LICENSE` was initially MIT © 2026 Orpheus Systems (superseded by ADR-009: Apache-2.0 with NOTICE) and `package.json`
 `author`, `repository`, `homepage` are set accordingly.
 
+![From the private history to the public repository](diagrams/0007-fresh-orphan-branch-for-public-repo-1.svg)
+
+```mermaid
+flowchart TB
+  subgraph PRIV["Private repository"]
+    H["Three existing commits<br/>with prior-employer naming"]
+    WT["Working tree"]
+  end
+  WT --> CR["Clean-room pass<br/>removes every<br/>fingerprint"]
+  CR --> G{"Hygiene grep<br/>design §8, gate G-2<br/>any hits?"}
+  G -->|"yes"| CR
+  G -->|"no"| O["Fresh orphan branch<br/>no parent commit<br/>repo-local author"]
+  O --> PUB["Public repository<br/>orpheussystems/sharepoint"]
+  H -.-x|"not carried over,<br/>stays private"| PUB
+  PUB --> GATE["Hygiene grep also<br/>passes on git log -p"]
+```
+
 ---
 
 ## Considered Options

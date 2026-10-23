@@ -33,6 +33,21 @@ registration with the Contracts list and calendar page URLs.
 Feature Framework (`elements.xml` inside the `.sppkg`) is **not** used for
 lists.
 
+![Provisioning steps of the idempotent script](diagrams/0006-idempotent-pnp-powershell-provisioning-1.svg)
+
+```mermaid
+flowchart TB
+  RUN["Provision-<br/>OrpheusSite.ps1<br/>idempotent<br/>PowerShell 7 on the host<br/>no Node<br/>-SiteUrl -Country -WhatIf"] --> TPL["PnP site template<br/>Invoke-PnPSiteTemplate"]
+  TPL --> S1["Step 1<br/>content types,<br/>the three lists, indexes"]
+  S1 --> S2["Step 2<br/>RemainingDays<br/>bound to the<br/>field customizer"]
+  S2 --> S3["Step 3<br/>content type bound to<br/>the form customizer"]
+  S3 --> S4["Step 4<br/>ContractCalendar.aspx,<br/>web part with the lists<br/>preselected"]
+  S4 --> S5["Step 5<br/>starter holidays<br/>for the country"]
+  S5 --> S6["Step 6<br/>application customizer,<br/>Contracts list and<br/>calendar page URLs"]
+  S6 -.->|"re-run"| RUN
+  FF["Feature Framework<br/>elements.xml in .sppkg"] -.-x|"not used for lists"| S1
+```
+
 ---
 
 ## Considered Options

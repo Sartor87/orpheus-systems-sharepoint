@@ -33,6 +33,31 @@ references: `shared-core` → `shared-ui` → the four SPFx packages. Top-level
 scripts: `build`, `serve:<pkg>`, `package` (all `.sppkg` with `--ship`),
 `clean`, `provision`. Packages are named `@orpheussystems/<name>`.
 
+![Workspace packages and build order](diagrams/0001-spfx-1-23-2-npm-workspaces-monorepo-1.svg)
+
+```mermaid
+flowchart TB
+  ROOT["Root package.json<br/>npm workspaces<br/>scripts: build,<br/>serve:#lt;pkg#gt;, package,<br/>clean, provision"]
+  TSB["tsconfig.base.json<br/>path mapping"]
+  CORE["@orpheussystems/<br/>shared-core"]
+  SUI["@orpheussystems/<br/>shared-ui"]
+  subgraph SPFX["SPFx 1.23.2 packages"]
+    WP["wp-contract-calendar"]
+    APP["ext-app-customizer"]
+    FLD["ext-field-customizer"]
+    FRM["ext-form-customizer"]
+  end
+  SPPKG["One .sppkg per package<br/>package --ship"]
+  ROOT -.->|"workspace symlinks"| CORE
+  TSB -.->|"resolves imports"| CORE
+  CORE -->|"project reference<br/>builds first"| SUI
+  SUI -->|"project references<br/>build second"| WP
+  SUI --> APP
+  SUI --> FLD
+  SUI --> FRM
+  WP & APP & FLD & FRM --> SPPKG
+```
+
 ---
 
 ## Considered Options

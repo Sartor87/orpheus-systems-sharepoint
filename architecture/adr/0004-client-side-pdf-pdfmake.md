@@ -28,6 +28,25 @@ bundle size exceeds SPFx guidance. Output is downloaded as
 span and can be trimmed. Saving to a document library is a documented
 extension point, not built now.
 
+![Browser PDF pipeline in the lazy chunk](diagrams/0004-client-side-pdf-pdfmake-1.svg)
+
+```mermaid
+flowchart TB
+  DATA["IDataService<br/>contract, entries,<br/>holidays"] --> WP
+  U["User downloads<br/>the timesheet"] --> WP
+  WP["Calendar web part<br/>main bundle"] -->|"dynamic import<br/>on demand"| M
+  subgraph CH["Lazy chunk"]
+    M["orpheus-timesheet-pdf<br/>shared-ui/pdf"]
+    MB["Timesheet model builder<br/>pure logic, unit-tested"]
+    DD["pdfmake doc definition<br/>A4 landscape<br/>month x day grid, totals,<br/>three signature boxes"]
+    PM["pdfmake in the browser<br/>vector text, no canvas"]
+    M --> MB --> DD --> PM
+  end
+  PM --> F["Download<br/>Timesheet_ContractCode<br/>_from_to.pdf<br/>period: contract span,<br/>can be trimmed"]
+  PM -.->|"recorded fallback<br/>if bundle too large"| JS["jsPDF + autotable"]
+  F -.->|"extension point,<br/>not built"| LIB["Save to a<br/>document library"]
+```
+
 ---
 
 ## Considered Options

@@ -114,7 +114,7 @@ flowchart TB
   MCP -->|"on-behalf-of, shared-core rules"| LISTS
 ```
 
-The web part, the extensions and the MCP server all go through one data layer, `IDataService` in `shared-core`, with a SharePoint implementation and a local one for demo data and tests. The business rules (one entry per contractor per date, blocked weekends and holidays, recomputed used days) live there once.
+The web part and the MCP server read and write through one data layer, `IDataService` in `shared-core`, with a SharePoint implementation and a local one for demo data and tests. The business rules (one entry per contractor per date, blocked weekends and holidays, recomputed used days) live there once. The extensions use the same package's models, rules, role lookup and link helpers directly.
 
 The full TOGAF documentation and the 16 architecture decision records are in [`architecture/`](architecture/README.md). Start with the [ADR index](architecture/adr/0000-index.md).
 

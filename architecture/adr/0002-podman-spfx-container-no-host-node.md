@@ -30,6 +30,29 @@ certificate (`gulp trust-dev-cert`) is created once inside the container and
 documented. CI (GitHub Actions) uses the same image. No Node is required on
 the host.
 
+![Host, Podman and the SPFx container](diagrams/0002-podman-spfx-container-no-host-node-1.svg)
+
+```mermaid
+flowchart LR
+  subgraph HOST["Host: no Node"]
+    REPO["Repository clone"]
+    CMD["podman compose run"]
+    BR["Browser<br/>hosted workbench"]
+  end
+  subgraph CTR["Container: m365pnp/spfx:1.23.2"]
+    APP["Repo at<br/>/usr/app/spfx"]
+    SVC["Services: shell, install,<br/>build, serve, package"]
+    CERT["Dev certificate<br/>gulp trust-dev-cert, once"]
+  end
+  CMD -->|"Podman"| SVC
+  REPO <-->|"bind mount"| APP
+  VOL[("Named volume<br/>npm cache")] <--> SVC
+  BR -->|"ports 4321, 35729<br/>serve, PKG picks package"| SVC
+  SVC -->|"HTTPS for serve"| CERT
+  DEV["VS Code devcontainer"] -.->|"same image"| SVC
+  CI["CI: GitHub Actions"] -.->|"same image"| SVC
+```
+
 ---
 
 ## Considered Options

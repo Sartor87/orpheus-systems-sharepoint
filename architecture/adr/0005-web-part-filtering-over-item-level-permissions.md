@@ -34,6 +34,33 @@ breaking on Contracts and CalendarEntries via a provisioning-time event
 receiver or Power Automate, plus a read-restricted view for the lists. Tracked
 as risk R-SEC-1 and roadmap item RM-2.
 
+![Role-based filtering instead of item-level permissions](diagrams/0005-web-part-filtering-over-item-level-permissions-1.svg)
+
+```mermaid
+flowchart TB
+  U["Signed-in user"] --> R{"Derive roles<br/>at runtime,<br/>roles combine"}
+  subgraph CHOSEN["Chosen: filtering"]
+    C["Contractor<br/>filter:<br/>Contractor eq me"]
+    M["Manager<br/>filter:<br/>ContractManager eq me"]
+    A["Admin<br/>no role filter"]
+    FORM["Form customizer<br/>keeps contractors out<br/>of contract editing"]
+  end
+  R -->|"Contractor<br/>on a contract"| C
+  R -->|"ContractManager<br/>on a contract"| M
+  R -->|"in the site<br/>Owners group"| A
+  C --> L
+  M --> L
+  A --> L
+  FORM --> L
+  L[("Contracts, CalendarEntries,<br/>Holidays<br/>site-default<br/>permissions; contractors<br/>hold Contribute<br/>on Contracts")]
+  subgraph ALT["Not built: R-SEC-1, RM-2"]
+    IP["Per-item permissions on<br/>Contracts, CalendarEntries<br/>event receiver or<br/>Power Automate"]
+    RV["Read-restricted<br/>views"]
+  end
+  IP -.->|"hardening option"| L
+  RV -.-> L
+```
+
 ---
 
 ## Considered Options

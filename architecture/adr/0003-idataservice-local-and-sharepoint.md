@@ -46,6 +46,25 @@ with two implementations:
 The service is chosen once in the web part's `onInit` and injected into the
 React tree via context. No component talks to SharePoint directly.
 
+![IDataService, its two implementations and its consumers](diagrams/0003-idataservice-local-and-sharepoint-1.svg)
+
+```mermaid
+flowchart TB
+  WP["Calendar web part<br/>onInit picks one service,<br/>React context injects it"]
+  MCP["MCP server<br/>ADR 0011"]
+  IDS[["IDataService<br/>shared-core<br/>getMyContracts, getCurrentUser<br/>getEntries, getHolidays<br/>upsertEntry, deleteEntry"]]
+  LDS["LocalDataService"]
+  SPDS["SharePointDataService"]
+  FIX[("Bundled JSON fixtures<br/>in-memory writes")]
+  LISTS[("Three lists chosen<br/>in the property pane<br/>used-days kept current")]
+  WP -->|"components never<br/>call SharePoint directly"| IDS
+  MCP -.->|"same interface"| IDS
+  IDS -->|"Local environment<br/>or useLocalData on"| LDS
+  IDS -->|"otherwise"| SPDS
+  LDS --> FIX
+  SPDS -->|"PnPjs v4<br/>CAML/OData filters<br/>batched writes"| LISTS
+```
+
 ---
 
 ## Considered Options

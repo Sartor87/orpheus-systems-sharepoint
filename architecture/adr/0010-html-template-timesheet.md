@@ -36,6 +36,25 @@ and render it **client-side with html-to-pdfmake** into the same pdfmake pipelin
 
 Authoring guide: `docs/timesheet-templates.md`.
 
+![Template rendering into the pdfmake pipeline](diagrams/0010-html-template-timesheet-1.svg)
+
+```mermaid
+flowchart TB
+  P["Web part property<br/>Timesheet template<br/>(optional)"] --> Q{"Path set?"}
+  Q -->|"site- or<br/>server-relative path"| F["Fetch the HTML file<br/>from the site<br/>on every generation,<br/>no cache"]
+  Q -->|"empty"| BI["Built-in layout<br/>ADR 0004 doc definition,<br/>unchanged"]
+  F --> PH["Fill placeholders<br/>contract, contractor,<br/>period, totals, labels,<br/>generatedOn, custom"]
+  PH --> H2P["html-to-pdfmake<br/>HTML to pdfmake nodes"]
+  H2P --> SW["Swap in generated<br/>blocks: grid, grid.days,<br/>totals, header, signatures"]
+  GEN["Block builders<br/>same code as the<br/>built-in PDF"] --> SW
+  GEN --> BI
+  SW --> ATT["Append the Orpheus<br/>attribution line"]
+  SW -.->|"broken template"| ERR["Error list shown<br/>nothing downloaded<br/>no fallback"]
+  ATT --> PM["pdfmake<br/>in the browser"]
+  BI --> PM
+  PM --> DL["Download PDF"]
+```
+
 ---
 
 ## Alternatives considered
