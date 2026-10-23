@@ -142,3 +142,161 @@ Describe 'Get-MissingManifests' {
 }
 
 #endregion
+
+#region Task 2: install with self-healing reinstall
+
+Describe 'Install-OrpheusSolution' {
+    BeforeAll {
+        $script:SolutionId = '8c050d2e-26f4-4a5e-822c-414d9365314f'
+        $script:Package = New-Sppkg -Path (Join-Path $TestDrive 'ext-app-customizer.sppkg') -ProductId $script:SolutionId -Version '1.0.1.0' `
+            -Entries "$script:AppCustomizerId/Extension_$script:AppCustomizerId.xml"
+    }
+
+    BeforeEach {
+        New-PnPSafetyNet
+        & (Get-Module OrpheusSolutions) { $script:PollIntervalSeconds = 0 }
+
+        # A fake site collection App Catalog. Catalog = $null means the app is not in the catalog.
+        # Installs and updates finish at once; set $script:Catalog.Stuck to keep InstalledVersion.
+        $script:Catalog = @{ Present = $false; AppCatalogVersion = $null; InstalledVersion = $null; Stuck = $false }
+        $script:Calls = [System.Collections.Generic.List[string]]::new()
+        # Manifest answers for successive GetClientSideComponentsById calls; the last one repeats.
+        $script:ManifestAnswers = [System.Collections.Generic.List[string]]::new()
+        $script:ManifestAnswers.Add('{"id":"30930118"}')
+        $script:ManifestCalls = 0
+
+        Mock -ModuleName OrpheusSolutions Get-PnPApp {
+            if (-not $script:Catalog.Present) { return }
+            [pscustomobject]@{
+                Id                = [guid] $script:SolutionId
+                Title             = 'ext-app-customizer-client-side-solution'
+                AppCatalogVersion = $script:Catalog.AppCatalogVersion
+                InstalledVersion  = $script:Catalog.InstalledVersion
+            }
+        }
+        Mock -ModuleName OrpheusSolutions Add-PnPApp {
+            $script:Calls.Add('Add')
+            $script:Catalog.Present = $true
+            $script:Catalog.AppCatalogVersion = [version] '1.0.1.0'
+        }
+        Mock -ModuleName OrpheusSolutions Install-PnPApp {
+            $script:Calls.Add('Install')
+            if (-not $script:Catalog.Stuck) { $script:Catalog.InstalledVersion = $script:Catalog.AppCatalogVersion }
+        }
+        Mock -ModuleName OrpheusSolutions Update-PnPApp {
+            $script:Calls.Add('Update')
+            if (-not $script:Catalog.Stuck) { $script:Catalog.InstalledVersion = $script:Catalog.AppCatalogVersion }
+        }
+        Mock -ModuleName OrpheusSolutions Uninstall-PnPApp {
+            $script:Calls.Add('Uninstall')
+            $script:Catalog.InstalledVersion = $null
+        }
+        Mock -ModuleName OrpheusSolutions Remove-PnPApp {
+            $script:Calls.Add('Remove')
+            $script:Catalog.Present = $false
+            $script:Catalog.AppCatalogVersion = $null
+        }
+        Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Url -eq '/_api/web/GetClientSideComponentsById' } -MockWith {
+            $index = [Math]::Min($script:ManifestCalls, $script:ManifestAnswers.Count - 1)
+            $script:ManifestCalls++
+            New-ComponentsResponse @{ $script:AppCustomizerId = $script:ManifestAnswers[$index] }
+        }
+    }
+
+    It 'installs a solution that is not in the catalog' {
+        $result = Install-OrpheusSolution -Path $script:Package
+
+        $result.Action | Should -BeExactly 'Installed'
+        $result.Version | Should -BeExactly '1.0.1.0'
+        $result.Title | Should -BeExactly 'ext-app-customizer-client-side-solution'
+        $script:Calls -join ',' | Should -BeExactly 'Add,Install'
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPApp -Times 1 -Exactly -ParameterFilter {
+            $Scope -eq 'Site' -and $Publish -and $Overwrite -and $Path -eq $script:Package
+        }
+        Should -Invoke -ModuleName OrpheusSolutions Install-PnPApp -Times 1 -Exactly -ParameterFilter { $Scope -eq 'Site' }
+    }
+
+    It 'reports Unchanged when the installed version matches and the manifests are present' {
+        $script:Catalog.Present = $true
+        $script:Catalog.AppCatalogVersion = [version] '1.0.1.0'
+        $script:Catalog.InstalledVersion = [version] '1.0.1.0'
+
+        $result = Install-OrpheusSolution -Path $script:Package
+
+        $result.Action | Should -BeExactly 'Unchanged'
+        $script:Calls -join ',' | Should -BeExactly 'Add'
+        Should -Invoke -ModuleName OrpheusSolutions Install-PnPApp -Times 0 -Exactly
+        Should -Invoke -ModuleName OrpheusSolutions Update-PnPApp -Times 0 -Exactly
+    }
+
+    It 'updates an older installed version' {
+        $script:Catalog.Present = $true
+        $script:Catalog.AppCatalogVersion = [version] '1.0.0.0'
+        $script:Catalog.InstalledVersion = [version] '1.0.0.0'
+
+        $result = Install-OrpheusSolution -Path $script:Package
+
+        $result.Action | Should -BeExactly 'Updated'
+        $script:Calls -join ',' | Should -BeExactly 'Add,Update'
+    }
+
+    It 'reinstalls cleanly when a manifest is empty after the update' {
+        $script:Catalog.Present = $true
+        $script:Catalog.AppCatalogVersion = [version] '1.0.0.0'
+        $script:Catalog.InstalledVersion = [version] '1.0.0.0'
+        $script:ManifestAnswers.Insert(0, '')
+
+        $result = Install-OrpheusSolution -Path $script:Package
+
+        $result.Action | Should -BeExactly 'Reinstalled'
+        $script:Calls -join ',' | Should -BeExactly 'Add,Update,Uninstall,Remove,Add,Install'
+        $script:ManifestCalls | Should -Be 2
+    }
+
+    It 'throws with the component id when the manifest is still empty after the reinstall' {
+        $script:Catalog.Present = $true
+        $script:Catalog.AppCatalogVersion = [version] '1.0.1.0'
+        $script:Catalog.InstalledVersion = [version] '1.0.1.0'
+        $script:ManifestAnswers[0] = ''
+
+        { Install-OrpheusSolution -Path $script:Package } | Should -Throw "*$script:AppCustomizerId*"
+        $script:Calls -join ',' | Should -BeExactly 'Add,Uninstall,Remove,Add,Install'
+    }
+
+    It 'throws when an install does not finish within the timeout' {
+        $script:Catalog.Stuck = $true
+
+        { Install-OrpheusSolution -Path $script:Package -TimeoutSeconds 1 } | Should -Throw '*Timed out*'
+    }
+
+    It 'makes no write call with -WhatIf' {
+        $result = Install-OrpheusSolution -Path $script:Package -WhatIf
+
+        $result.Action | Should -BeExactly 'Installed'
+        foreach ($name in 'Add-PnPApp', 'Install-PnPApp', 'Update-PnPApp', 'Uninstall-PnPApp', 'Remove-PnPApp') {
+            Should -Invoke -ModuleName OrpheusSolutions $name -Times 0 -Exactly
+        }
+    }
+
+    It 'makes no write call with -WhatIf when the installed solution is outdated' {
+        $script:Catalog.Present = $true
+        $script:Catalog.AppCatalogVersion = [version] '1.0.0.0'
+        $script:Catalog.InstalledVersion = [version] '1.0.0.0'
+
+        (Install-OrpheusSolution -Path $script:Package -WhatIf).Action | Should -BeExactly 'Updated'
+        $script:Calls.Count | Should -Be 0
+    }
+
+    It 'plans a reinstall with -WhatIf when a manifest is empty, using only the read-only POST' {
+        $script:Catalog.Present = $true
+        $script:Catalog.AppCatalogVersion = [version] '1.0.1.0'
+        $script:Catalog.InstalledVersion = [version] '1.0.1.0'
+        $script:ManifestAnswers[0] = ''
+
+        (Install-OrpheusSolution -Path $script:Package -WhatIf).Action | Should -BeExactly 'Reinstalled'
+        $script:Calls.Count | Should -Be 0
+        Should -Invoke -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -Times 1 -Exactly
+    }
+}
+
+#endregion

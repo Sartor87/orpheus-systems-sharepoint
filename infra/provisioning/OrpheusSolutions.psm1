@@ -133,4 +133,131 @@ function Get-MissingManifests {
 
 #endregion
 
-Export-ModuleMember -Function Read-SppkgInfo, Get-MissingManifests
+#region App Catalog
+
+function Wait-OrpheusCondition {
+    # Polls $Condition every $script:PollIntervalSeconds until it returns $true, or throws after
+    # $TimeoutSeconds. The condition is always evaluated at least once.
+    param(
+        [Parameter(Mandatory)] [string] $Description,
+        [Parameter(Mandatory)] [scriptblock] $Condition,
+        [Parameter(Mandatory)] [int] $TimeoutSeconds
+    )
+    $clock = [System.Diagnostics.Stopwatch]::StartNew()
+    while (-not (& $Condition)) {
+        if ($clock.Elapsed.TotalSeconds -ge $TimeoutSeconds) {
+            throw "Timed out after $TimeoutSeconds s waiting for $Description."
+        }
+        Start-Sleep -Seconds $script:PollIntervalSeconds
+    }
+}
+
+function Get-OrpheusApp {
+    # The site collection App Catalog entry for a solution id, or $null. Get-PnPApp -Identity throws
+    # for a missing app, so list the catalog and filter.
+    param([Parameter(Mandatory)] [string] $SolutionId)
+    return @(Get-PnPApp -Scope Site) | Where-Object { $null -ne $_ -and (ConvertTo-NormalizedId ([string] $_.Id)) -eq $SolutionId } | Select-Object -First 1
+}
+
+function Test-AppInstalled {
+    # True when the app is installed at the version in the catalog.
+    param($App)
+    return $null -ne $App -and -not [string]::IsNullOrEmpty([string] $App.InstalledVersion) -and
+        ([string] $App.InstalledVersion) -eq ([string] $App.AppCatalogVersion)
+}
+
+function Install-OrpheusSolution {
+    <#
+    .SYNOPSIS
+        Installs or updates one .sppkg in the site collection App Catalog and checks its manifests.
+    .DESCRIPTION
+        1. Uploads the package (Add-PnPApp -Scope Site -Publish -Overwrite). The upload always
+           happens, because the catalog copy is the only way to compare versions.
+        2. Installs it when it is not installed, updates it when the installed version differs from
+           the catalog version, and otherwise does nothing.
+        3. Waits until the installed version matches the catalog version.
+        4. Checks the client-side manifests. When one is empty, it does a clean reinstall:
+           uninstall, wait, remove from the catalog, upload, install, wait, and checks again. It
+           throws with the component ids when a manifest is still empty.
+        With -WhatIf it only reads the catalog and the manifests and returns the planned action.
+    .OUTPUTS
+        [pscustomobject] with Title, Version and Action ('Unchanged', 'Installed', 'Updated' or
+        'Reinstalled').
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    [OutputType([pscustomobject])]
+    param(
+        [Parameter(Mandatory)] [string] $Path,
+        [ValidateRange(1, 86400)] [int] $TimeoutSeconds = 300
+    )
+
+    $info = Read-SppkgInfo -Path $Path
+    $id = $info.SolutionId
+    $app = Get-OrpheusApp -SolutionId $id
+    $title = if ($app) { [string] $app.Title } else { [System.IO.Path]::GetFileNameWithoutExtension($Path) }
+
+    # The plan from the current state. The catalog copy is replaced by the upload, so an installed
+    # app counts as current when its installed version equals the package version.
+    $installed = $null -ne $app -and -not [string]::IsNullOrEmpty([string] $app.InstalledVersion)
+    $action = if (-not $installed) { 'Installed' } elseif ([string] $app.InstalledVersion -ne $info.Version) { 'Updated' } else { 'Unchanged' }
+    # Under -WhatIf the manifests are checked here (a read-only POST) so the plan shows a reinstall.
+    # A real run checks them after the upload instead.
+    if ($WhatIfPreference -and $action -eq 'Unchanged' -and @(Get-MissingManifests -ComponentIds $info.ComponentIds).Count) { $action = 'Reinstalled' }
+    $result = [pscustomobject]@{ Title = $title; Version = $info.Version; Action = $action }
+
+    $verb = @{ Installed = 'install'; Updated = 'update to'; Unchanged = 'keep'; Reinstalled = 'reinstall' }[$action]
+    if (-not $PSCmdlet.ShouldProcess("$title $($info.Version) ($id)", "Upload to the site collection App Catalog and $verb")) {
+        return $result
+    }
+
+    $waitInstalled = {
+        Wait-OrpheusCondition -Description "$title to be installed at the catalog version" -TimeoutSeconds $TimeoutSeconds -Condition {
+            Test-AppInstalled (Get-OrpheusApp -SolutionId $id)
+        }
+    }
+
+    $null = Add-PnPApp -Path $Path -Scope Site -Publish -Overwrite
+    $app = Get-OrpheusApp -SolutionId $id
+    if (-not $app) { throw "$title ($id) is not in the site collection App Catalog after the upload." }
+    if ($app.Title) { $result.Title = $title = [string] $app.Title }
+
+    if ([string]::IsNullOrEmpty([string] $app.InstalledVersion)) {
+        Install-PnPApp -Identity ([guid] $id) -Scope Site
+        $result.Action = 'Installed'
+    }
+    elseif ([string] $app.InstalledVersion -ne [string] $app.AppCatalogVersion) {
+        Update-PnPApp -Identity ([guid] $id) -Scope Site
+        $result.Action = 'Updated'
+    }
+    else {
+        $result.Action = 'Unchanged'
+    }
+    & $waitInstalled
+
+    $missing = @(Get-MissingManifests -ComponentIds $info.ComponentIds)
+    if ($missing.Count) {
+        # The live failure: the app reports installed, but a component has no manifest. Only a clean
+        # reinstall fixed it.
+        Write-Warning "$title`: no active manifest for $($missing -join ', '); reinstalling cleanly."
+        Uninstall-PnPApp -Identity ([guid] $id) -Scope Site
+        Wait-OrpheusCondition -Description "$title to be uninstalled" -TimeoutSeconds $TimeoutSeconds -Condition {
+            $current = Get-OrpheusApp -SolutionId $id
+            $null -eq $current -or [string]::IsNullOrEmpty([string] $current.InstalledVersion)
+        }
+        Remove-PnPApp -Identity ([guid] $id) -Scope Site -Force
+        $null = Add-PnPApp -Path $Path -Scope Site -Publish
+        Install-PnPApp -Identity ([guid] $id) -Scope Site
+        & $waitInstalled
+        $result.Action = 'Reinstalled'
+
+        $missing = @(Get-MissingManifests -ComponentIds $info.ComponentIds)
+        if ($missing.Count) {
+            throw "$title $($info.Version) ($id): no active manifest for component(s) $($missing -join ', ') even after a clean reinstall. Check the package and the App Catalog."
+        }
+    }
+    return $result
+}
+
+#endregion
+
+Export-ModuleMember -Function Read-SppkgInfo, Get-MissingManifests, Install-OrpheusSolution
