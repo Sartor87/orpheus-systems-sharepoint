@@ -138,7 +138,8 @@ Each demo session:
 devtunnel host <tunnel-id>
 ```
 
-It prints the public URL `https://<tunnel-id>-8787.<region>.devtunnels.ms`; its host name is
+It prints the public URL `https://<generated-id>-8787.<region>.devtunnels.ms` (the generated id is
+not the tunnel name, but it stays the same for a persistent tunnel); its host name is
 `<tunnel-host>` below. On the very first run open the "Connect via browser" URL once and select
 Continue.
 
@@ -166,6 +167,18 @@ Needs the tunnel host from step 4, so it comes after it. Once per tunnel:
 In `packages/agent-contract-calendar`, copy `env/.env.dev.sample` to `env/.env.dev`, set
 `MCP_SERVER_URL=https://<tunnel-host>/mcp` and `MCP_AUTH_REFERENCE_ID` (from step 5). Then Agents
 Toolkit, Lifecycle, Provision. The owner approves each provision run.
+
+Without Agents Toolkit (for example in an editor that cannot install it), build the package and
+sideload it by hand:
+
+```powershell
+./packages/agent-contract-calendar/scripts/Build-AppPackage.ps1
+```
+
+It resolves the placeholders from `env/.env.dev` (generating `TEAMS_APP_ID` on the first run),
+checks the JSON and writes `appPackage/build/appPackage.dev.zip`. In Teams: Apps, Manage your apps,
+Upload an app, Upload a custom app, then pick the zip. To update an uploaded app, raise `version` in
+`appPackage/manifest.json` and upload again.
 
 ### 7. Copilot Chat
 
