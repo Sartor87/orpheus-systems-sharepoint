@@ -1,4 +1,3 @@
-import { orpheusBrand } from '@orpheussystems/shared-ui/brand';
 import { showBrandToastOnce } from '@orpheussystems/shared-ui/toast';
 
 /**
@@ -6,5 +5,5 @@ import { showBrandToastOnce } from '@orpheussystems/shared-ui/toast';
  * so a page with the header and the web part shows one toast per 7 days. Returns whether it was shown.
  */
 export function announceOrpheus(): boolean {
-  return showBrandToastOnce({ title: orpheusBrand.name });
+  return showBrandToastOnce();
 }

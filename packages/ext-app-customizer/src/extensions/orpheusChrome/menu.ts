@@ -1,3 +1,4 @@
+import { DEFAULT_CALENDAR_PAGE_URL, resolveWebLink } from '@orpheussystems/shared-core/links';
 import type { Role } from '@orpheussystems/shared-core';
 import { orpheusBrand } from '@orpheussystems/shared-ui/brand';
 import type { IOrpheusChromeProperties, MenuItem } from './IOrpheusChromeProperties';
@@ -5,7 +6,6 @@ import type { IOrpheusChromeProperties, MenuItem } from './IOrpheusChromePropert
 export type { IOrpheusChromeProperties, MenuItem } from './IOrpheusChromeProperties';
 
 const DEFAULT_CONTRACTS_LIST_URL = 'Lists/Contracts';
-const DEFAULT_CALENDAR_PAGE_URL = 'SitePages/ContractCalendar.aspx';
 
 export const DEFAULT_MENU: MenuItem[] = [
   { label: 'My calendar', url: '{calendarPageUrl}' },
@@ -13,9 +13,9 @@ export const DEFAULT_MENU: MenuItem[] = [
   { label: 'Holidays', url: 'Lists/Holidays', roles: ['Admin'] }
 ];
 
+/** Same rule as the form's calendar link (shared resolveWebLink); anything not http(s) falls back to the web. */
 function toAbsolute(url: string, webUrl: string): string {
-  if (/^https?:\/\//i.test(url)) return url;
-  return `${webUrl.replace(/\/+$/, '')}/${url.replace(/^\/+/, '')}`;
+  return resolveWebLink(webUrl, url) || webUrl;
 }
 
 /** Fills {calendarPageUrl}/{contractsListUrl} tokens and makes every URL absolute against the web. */

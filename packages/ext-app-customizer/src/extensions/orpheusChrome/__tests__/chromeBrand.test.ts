@@ -23,7 +23,7 @@ describe('announceOrpheus', () => {
   it('shares the key with the web part: a page with both shows one brand toast', () => {
     announceOrpheus();
     // The web part calls the same API with the default (site-wide) key.
-    expect(showBrandToastOnce({ title: 'Contract Calendar by Orpheus Systems' })).toBe(false);
+    expect(showBrandToastOnce()).toBe(false);
     expect(activeToasts().filter(t => t.kind === 'brand')).toHaveLength(1);
   });
 
