@@ -15,6 +15,7 @@
         Set-OrpheusAppCustomizer    the OrpheusChrome header custom action, exactly once
         Set-OrpheusFieldCustomizer  the RemainingDays field customizer and its default view column
         Set-OrpheusFormCustomizer   the Orpheus Contract form customizer on the Contracts list
+        Set-OrpheusContractManagersGroup  the Orpheus Contract Managers group (Contribute), created once
         Set-OrpheusCalendarPage     the ContractCalendar page with the web part pointed at the lists
         Get-OrpheusPackagePaths     the four .sppkg files, checked before anything touches the site
         Invoke-OrpheusSolutionInstall  all of the above in order (Provision-OrpheusSite.ps1 -InstallSolutions)
@@ -539,6 +540,40 @@ function Set-OrpheusFormCustomizer {
 
 #endregion
 
+#region Contract managers group
+
+function Set-OrpheusContractManagersGroup {
+    <#
+    .SYNOPSIS
+        Creates the SharePoint group "Orpheus Contract Managers" with the Contribute permission level.
+    .DESCRIPTION
+        A group that already exists is left alone. Members are never added or removed: the site owner
+        manages membership. Get-PnPGroup may throw for a missing group; a message containing "not found"
+        or "does not exist" counts as missing, any other error is rethrown.
+    .OUTPUTS
+        'Added', 'Unchanged' or 'Skipped'.
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    [OutputType([string])]
+    param()
+
+    $groupName = 'Orpheus Contract Managers'
+    $existing = $null
+    try { $existing = Get-PnPGroup -Identity $groupName -ErrorAction Stop }
+    catch {
+        if ($_.Exception.Message -notmatch 'not found|does not exist') { throw }
+    }
+    if ($existing) { return 'Unchanged' }
+
+    if (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "SharePoint group $groupName" -Action 'Create the group with the Contribute permission level') {
+        $null = New-PnPSiteGroup -Name $groupName -PermissionLevels 'Contribute'
+    }
+    elseif (-not $WhatIfPreference) { return 'Skipped' }
+    return 'Added'
+}
+
+#endregion
+
 #region Calendar page
 
 function Get-OrpheusCalendarWebPartComponent {
@@ -763,7 +798,7 @@ function Invoke-OrpheusSolutionInstall {
         3. Install-OrpheusSolution for wp-contract-calendar, ext-app-customizer, ext-field-customizer
            and ext-form-customizer.
         4. Set-OrpheusAppCustomizer, Set-OrpheusFieldCustomizer, Set-OrpheusFormCustomizer,
-           Set-OrpheusCalendarPage.
+           Set-OrpheusContractManagersGroup, Set-OrpheusCalendarPage.
         -WhatIf and -Confirm are passed on explicitly to every step. The first error stops the run,
         after a row 'Failed: <message>' for the step that failed.
     .PARAMETER ForceUpload
@@ -798,6 +833,7 @@ function Invoke-OrpheusSolutionInstall {
     Invoke-OrpheusStep -Component "Header custom action ($script:ChromeName)" -Step { Set-OrpheusAppCustomizer @gate }
     Invoke-OrpheusStep -Component "Field customizer ($script:ContractsListTitle.$script:RemainingDaysField)" -Step { Set-OrpheusFieldCustomizer @gate }
     Invoke-OrpheusStep -Component 'Form customizer (Orpheus Contract)' -Step { Set-OrpheusFormCustomizer @gate }
+    Invoke-OrpheusStep -Component 'Contract managers group (Orpheus Contract Managers)' -Step { Set-OrpheusContractManagersGroup @gate }
     Invoke-OrpheusStep -Component 'Calendar page (SitePages/ContractCalendar.aspx)' -Step { Set-OrpheusCalendarPage -Labels $Labels @gate }
 }
 
@@ -819,5 +855,5 @@ function Invoke-OrpheusStep {
 #endregion
 
 Export-ModuleMember -Function Read-SppkgInfo, Get-MissingManifests, Install-OrpheusSolution,
-    Set-OrpheusAppCustomizer, Set-OrpheusFieldCustomizer, Set-OrpheusFormCustomizer, Set-OrpheusCalendarPage,
+    Set-OrpheusAppCustomizer, Set-OrpheusFieldCustomizer, Set-OrpheusFormCustomizer, Set-OrpheusContractManagersGroup, Set-OrpheusCalendarPage,
     Get-OrpheusPackagePaths, Assert-OrpheusSiteAppCatalog, Invoke-OrpheusSolutionInstall

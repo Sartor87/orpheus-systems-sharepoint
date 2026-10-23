@@ -734,6 +734,7 @@ Describe 'Set-OrpheusFormCustomizer' {
 Describe 'Binding functions under -Confirm and with chatty cmdlets' {
     BeforeEach {
         New-PnPSafetyNet
+        Mock -ModuleName OrpheusSolutions Get-PnPGroup { }
         Mock -ModuleName OrpheusSolutions Get-PnPField { [pscustomobject]@{ InternalName = 'RemainingDays'; ClientSideComponentId = [guid]::Empty } }
         Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Method -eq 'Get' } -MockWith {
             switch -Wildcard ($Url) {
@@ -979,7 +980,7 @@ Describe 'Set-OrpheusCalendarPage' {
         $script:Components = @([pscustomobject]@{ InstanceId = $script:InstanceId; WebPartId = $script:WebPartId; PropertiesJson = '{}' })
         Set-OrpheusCalendarPage -WhatIf | Should -BeExactly 'Updated'
 
-        foreach ($name in 'Add-PnPPage', 'Add-PnPPageWebPart', 'Set-PnPPageWebPart', 'Set-PnPPage', 'Remove-PnPPageComponent') {
+        foreach ($name in 'Add-PnPPage', 'Add-PnPPageWebPart', 'Set-PnPPageWebPart', 'Set-PnPPage', 'Remove-PnPPageComponent', 'New-PnPSiteGroup') {
             Should -Invoke -ModuleName OrpheusSolutions $name -Times 0 -Exactly
         }
     }
@@ -1078,6 +1079,70 @@ Describe 'Assert-OrpheusSiteAppCatalog' {
     }
 }
 
+Describe 'Set-OrpheusContractManagersGroup' {
+    BeforeEach {
+        New-PnPSafetyNet
+        $script:GroupExists = $false
+        Mock -ModuleName OrpheusSolutions Get-PnPGroup {
+            if ($script:GroupExists) { return [pscustomobject]@{ Title = 'Orpheus Contract Managers' } }
+            return $null
+        }
+        Mock -ModuleName OrpheusSolutions New-PnPSiteGroup { }
+    }
+
+    It 'adds the group with Contribute when missing' {
+        Set-OrpheusContractManagersGroup | Should -BeExactly 'Added'
+
+        Should -Invoke -ModuleName OrpheusSolutions New-PnPSiteGroup -Times 1 -Exactly -ParameterFilter {
+            $Name -eq 'Orpheus Contract Managers' -and "$PermissionLevels" -eq 'Contribute'
+        }
+    }
+
+    It 'is Unchanged when it exists, with no New-PnPSiteGroup' {
+        $script:GroupExists = $true
+
+        Set-OrpheusContractManagersGroup | Should -BeExactly 'Unchanged'
+        Should -Invoke -ModuleName OrpheusSolutions New-PnPSiteGroup -Times 0 -Exactly
+    }
+
+    It 'treats a "not found" or "does not exist" throw as missing' {
+        foreach ($message in 'Group cannot be found. not found', 'The group does not exist or is not valid.') {
+            Mock -ModuleName OrpheusSolutions Get-PnPGroup -MockWith ({ throw $message }.GetNewClosure())
+
+            Set-OrpheusContractManagersGroup | Should -BeExactly 'Added'
+        }
+        Should -Invoke -ModuleName OrpheusSolutions New-PnPSiteGroup -Times 2 -Exactly
+    }
+
+    It 'rethrows any other Get-PnPGroup error and writes nothing' {
+        Mock -ModuleName OrpheusSolutions Get-PnPGroup { throw 'Access denied (403).' }
+
+        { Set-OrpheusContractManagersGroup } | Should -Throw '*Access denied*'
+        Should -Invoke -ModuleName OrpheusSolutions New-PnPSiteGroup -Times 0 -Exactly
+    }
+
+    It 'makes no write call with -WhatIf' {
+        Set-OrpheusContractManagersGroup -WhatIf | Should -BeExactly 'Added'
+        Should -Invoke -ModuleName OrpheusSolutions New-PnPSiteGroup -Times 0 -Exactly
+    }
+
+    It 'reports Skipped and writes nothing when the creation is declined' {
+        Mock -ModuleName OrpheusSolutions Test-OrpheusShouldProcess { $false }
+
+        Set-OrpheusContractManagersGroup | Should -BeExactly 'Skipped'
+        Should -Invoke -ModuleName OrpheusSolutions New-PnPSiteGroup -Times 0 -Exactly
+    }
+
+    It 'returns a single string when New-PnPSiteGroup emits an object' {
+        Mock -ModuleName OrpheusSolutions New-PnPSiteGroup { [pscustomobject]@{ Title = 'Orpheus Contract Managers' } }
+
+        $result = @(Set-OrpheusContractManagersGroup)
+
+        $result.Count | Should -Be 1
+        $result[0] | Should -BeExactly 'Added'
+    }
+}
+
 Describe 'Invoke-OrpheusSolutionInstall' {
     BeforeAll {
         $script:Flat = New-Item -ItemType Directory -Force -Path (Join-Path $TestDrive 'solutions')
@@ -1098,6 +1163,7 @@ Describe 'Invoke-OrpheusSolutionInstall' {
         Mock -ModuleName OrpheusSolutions Set-OrpheusAppCustomizer { $script:Order.Add('AppCustomizer'); 'Added' }
         Mock -ModuleName OrpheusSolutions Set-OrpheusFieldCustomizer { $script:Order.Add('FieldCustomizer'); 'Added' }
         Mock -ModuleName OrpheusSolutions Set-OrpheusFormCustomizer { $script:Order.Add('FormCustomizer'); 'Unchanged' }
+        Mock -ModuleName OrpheusSolutions Set-OrpheusContractManagersGroup { $script:Order.Add('ManagersGroup'); 'Added' }
         Mock -ModuleName OrpheusSolutions Set-OrpheusCalendarPage { $script:Order.Add('CalendarPage'); 'Created' }
     }
 
@@ -1105,11 +1171,12 @@ Describe 'Invoke-OrpheusSolutionInstall' {
         $rows = Invoke-OrpheusSolutionInstall -SolutionsPath $script:Flat
 
         $script:Order -join ',' | Should -BeExactly ('Probe,Install:wp-contract-calendar,Install:ext-app-customizer,Install:ext-field-customizer,' +
-            'Install:ext-form-customizer,AppCustomizer,FieldCustomizer,FormCustomizer,CalendarPage')
-        $rows.Count | Should -Be 8
+            'Install:ext-form-customizer,AppCustomizer,FieldCustomizer,FormCustomizer,ManagersGroup,CalendarPage')
+        $rows.Count | Should -Be 9
         $rows[0].Component | Should -BeLike '*wp-contract-calendar*'
         $rows[0].Action | Should -BeExactly 'Installed'
-        ($rows | Select-Object -Last 4).Action -join ',' | Should -BeExactly 'Added,Added,Unchanged,Created'
+        ($rows | Select-Object -Last 5).Action -join ',' | Should -BeExactly 'Added,Added,Unchanged,Added,Created'
+        $rows[-2].Component | Should -BeExactly 'Contract managers group (Orpheus Contract Managers)'
     }
 
     It 'throws on a missing package before reading or writing anything on the site' {
@@ -1172,7 +1239,7 @@ Describe 'Invoke-OrpheusSolutionInstall' {
     It 'passes -WhatIf explicitly to every step' {
         $null = Invoke-OrpheusSolutionInstall -SolutionsPath $script:Flat -WhatIf
 
-        foreach ($name in 'Install-OrpheusSolution', 'Set-OrpheusAppCustomizer', 'Set-OrpheusFieldCustomizer', 'Set-OrpheusFormCustomizer', 'Set-OrpheusCalendarPage') {
+        foreach ($name in 'Install-OrpheusSolution', 'Set-OrpheusAppCustomizer', 'Set-OrpheusFieldCustomizer', 'Set-OrpheusFormCustomizer', 'Set-OrpheusContractManagersGroup', 'Set-OrpheusCalendarPage') {
             Should -Invoke -ModuleName OrpheusSolutions $name -Times 0 -Exactly -ParameterFilter { -not $WhatIf }
         }
         Should -Invoke -ModuleName OrpheusSolutions Install-OrpheusSolution -Times 4 -Exactly -ParameterFilter { $WhatIf }
@@ -1199,6 +1266,7 @@ Describe 'Invoke-OrpheusSolutionInstall -WhatIf on a fresh site' {
         New-PnPSafetyNet
         Mock -ModuleName OrpheusSolutions Get-PnPApp { }
         Mock -ModuleName OrpheusSolutions Get-PnPList { [pscustomobject]@{ Id = [guid]::NewGuid() } }
+        Mock -ModuleName OrpheusSolutions Get-PnPGroup { }
         Mock -ModuleName OrpheusSolutions Get-PnPField { [pscustomobject]@{ InternalName = 'RemainingDays'; ClientSideComponentId = [guid]::Empty } }
         Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Method -eq 'Get' } -MockWith {
             switch -Wildcard ($Url) {
@@ -1215,11 +1283,11 @@ Describe 'Invoke-OrpheusSolutionInstall -WhatIf on a fresh site' {
     It 'plans every step and makes no write call' {
         $rows = Invoke-OrpheusSolutionInstall -SolutionsPath $script:Fresh -WhatIf
 
-        $rows.Action -join ',' | Should -BeExactly 'Installed,Installed,Installed,Installed,Added,Added,Added,Created'
+        $rows.Action -join ',' | Should -BeExactly 'Installed,Installed,Installed,Installed,Added,Added,Added,Added,Created'
         Should -Invoke -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -Times 0 -Exactly -ParameterFilter { $Method -ne 'Get' }
         foreach ($name in 'Add-PnPApp', 'Install-PnPApp', 'Update-PnPApp', 'Uninstall-PnPApp', 'Remove-PnPApp', 'Add-PnPCustomAction',
             'Remove-PnPCustomAction', 'Set-PnPField', 'Get-PnPContentType', 'Invoke-PnPQuery', 'Add-PnPPage', 'Add-PnPPageWebPart',
-            'Set-PnPPageWebPart', 'Set-PnPPage', 'Remove-PnPPageComponent') {
+            'Set-PnPPageWebPart', 'Set-PnPPage', 'Remove-PnPPageComponent', 'New-PnPSiteGroup') {
             Should -Invoke -ModuleName OrpheusSolutions $name -Times 0 -Exactly
         }
     }
