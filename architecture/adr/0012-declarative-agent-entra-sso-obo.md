@@ -129,7 +129,8 @@ has to be rebuilt from our own log alone.
 ## Related
 
 - Related ADRs: ADR 0003, ADR 0005, `0011-custom-mcp-server-in-typescript.md`,
-  `0014-three-layer-audit-for-agent-actions.md`, `0015-dev-tunnel-for-the-agent-demo.md`
+  `0014-three-layer-audit-for-agent-actions.md`, `0015-dev-tunnel-for-the-agent-demo.md`,
+  `XXXX-sharepoint-placement-waits-for-agent-chat-web-part.md` (why the agent is not in the SharePoint side pane)
 - Related documents: `docs/superpowers/specs/2026-10-22-contract-agent-design.md` (sections 4, 5
   "Identity"), `docs/research/2026-10-22-sharepoint-contract-agent.md` ("Identity and
   permissions", decisions D3 and D4), `packages/agent-contract-calendar/README.md`

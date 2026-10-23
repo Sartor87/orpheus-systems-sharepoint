@@ -188,6 +188,14 @@ The first call per user may show a sign-in or consent prompt; that is the 401 pa
 
 Watch the server output and the audit file while prompting. Each tool call adds one line.
 
+### 8. On the SharePoint page (optional)
+
+The agent cannot run in the SharePoint side chat pane: that pane hosts only Copilot in SharePoint
+(Copilot licence) and `.agent` files. Until the Agent Chat web part is released, add a Button or
+Quick links web part next to the Contract Calendar web part that opens the agent's share link
+(Copilot Chat, agent menu, Share, Copy link). See
+`architecture/adr/XXXX-sharepoint-placement-waits-for-agent-chat-web-part.md`.
+
 ## After the demo
 
 - Remove days booked during the demo (prompt "remove …" as Alex, or delete the items in
