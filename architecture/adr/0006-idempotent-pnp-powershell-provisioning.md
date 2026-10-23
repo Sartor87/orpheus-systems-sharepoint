@@ -37,14 +37,15 @@ lists.
 
 ```mermaid
 flowchart TB
-  RUN["Provision-<br/>OrpheusSite.ps1<br/>idempotent<br/>PowerShell 7 on the host<br/>no Node<br/>-SiteUrl -Country -WhatIf"] --> TPL["PnP site template<br/>Invoke-PnPSiteTemplate"]
-  TPL --> S1["Step 1<br/>content types,<br/>the three lists, indexes"]
-  S1 --> S2["Step 2<br/>RemainingDays<br/>bound to the<br/>field customizer"]
-  S2 --> S3["Step 3<br/>content type bound to<br/>the form customizer"]
-  S3 --> S4["Step 4<br/>ContractCalendar.aspx,<br/>web part with the lists<br/>preselected"]
-  S4 --> S5["Step 5<br/>starter holidays<br/>for the country"]
-  S5 --> S6["Step 6<br/>application customizer,<br/>Contracts list and<br/>calendar page URLs"]
-  S6 -.->|"re-run"| RUN
+  RUN["Provision-<br/>OrpheusSite.ps1<br/>idempotent<br/>PowerShell 7 on the host<br/>no Node<br/>-SiteUrl -ClientId -WhatIf"] --> TPL["PnP site template<br/>Invoke-PnPSiteTemplate"]
+  TPL --> S1["Step 1, built<br/>content types,<br/>the three lists, indexes,<br/>list validation"]
+  S1 --> S5["Starter data, built<br/>-SeedDemoData -Country:<br/>contracts, entries, holidays"]
+  S1 -.-> S2["Step 2, not built yet<br/>RemainingDays bound to<br/>the field customizer"]
+  S1 -.-> S3["Step 3, not built yet<br/>content type bound to<br/>the form customizer"]
+  S1 -.-> S4["Step 4, not built yet<br/>ContractCalendar.aspx<br/>with the web part"]
+  S1 -.-> S6["Step 6, not built yet<br/>application customizer<br/>registration"]
+  S2 & S3 & S4 & S6 -.-> MAN["Manual until built<br/>docs/deployment.md"]
+  S5 -.->|"re-run"| RUN
   FF["Feature Framework<br/>elements.xml in .sppkg"] -.-x|"not used for lists"| S1
 ```
 
@@ -78,6 +79,28 @@ flowchart TB
 |---------|-------------|------------------|------------|
 | R1 | Script run before solutions are in the app catalog fails to bind customizers | M | Documented order in Phase F; `-WhatIf` |
 | R2 | Destructive schema changes not handled by re-run | M | Open item OR-09; treat column removals as manual steps |
+
+---
+
+## Amendments
+
+**2026-10-23** — The decision stands; it is **partly implemented**.
+
+- Built: `Provision-OrpheusSite.ps1` applies `template.xml` and creates the
+  site columns, the three content types, the three lists and their indexes,
+  sets the Contracts list validation, and with `-SeedDemoData` seeds the demo
+  contracts, entries and the holidays of `-Country` plus the `*` ones. It also
+  needs `-ClientId` (an app registration of your own; PnP PowerShell no longer
+  ships a shared one).
+- Not built yet: binding the field customizer to `RemainingDays`, binding the
+  form customizer to `Orpheus Contract`, the `ContractCalendar.aspx` page with
+  the web part, and the application customizer registration. Until they are,
+  these are manual steps in `docs/deployment.md`.
+- Starter holidays come only with `-SeedDemoData`; there is no separate
+  holiday step.
+- Optional schema for timesheet templates is a second idempotent script,
+  `Add-TimesheetTemplateColumns.ps1` (ADR-010); the agent's `Vendor` column and
+  HR group come from its own setup script (ADR-013).
 
 ---
 

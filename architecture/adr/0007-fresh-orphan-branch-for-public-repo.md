@@ -41,9 +41,9 @@ flowchart TB
   CR --> G{"Hygiene grep<br/>design §8, gate G-2<br/>any hits?"}
   G -->|"yes"| CR
   G -->|"no"| O["Fresh orphan branch<br/>no parent commit<br/>repo-local author"]
-  O --> PUB["Public repository<br/>orpheussystems/sharepoint"]
+  O --> PUB["Public repository<br/>orpheussystems/sharepoint<br/>private until published"]
   H -.-x|"not carried over,<br/>stays private"| PUB
-  PUB --> GATE["Hygiene grep also<br/>passes on git log -p"]
+  PUB --> GATE["Hygiene grep also<br/>passes on git log -p<br/>and runs in CI"]
 ```
 
 ---
@@ -70,6 +70,22 @@ flowchart TB
 | Risk ID | Description | Impact (E/H/M/L) | Mitigation |
 |---------|-------------|------------------|------------|
 | R-HYG-1 | A fingerprint survives in the working tree at the time of the orphan commit | H | Gate G-2 grep before the first public commit |
+
+---
+
+## Amendments
+
+**2026-10-23** — The decision is unchanged.
+
+- The repository is prepared as a private repository on the owner's account
+  first, and moves to the `orpheussystems` organisation as
+  `orpheussystems/sharepoint` before it is made public. Documentation uses
+  relative links, so the move needs no edits.
+- The public branch's history was rewritten once more on 2026-10-22, before
+  publication, so that no local-only plan or spec file ever appears in it.
+- The hygiene criterion is now a CI step: `npm run hygiene`
+  (`scripts/ci/hygiene.js`) fails the build on tenant hosts, tracked `.env`
+  files, local-only paths, banned names and tokens. See `docs/ci.md`.
 
 ---
 

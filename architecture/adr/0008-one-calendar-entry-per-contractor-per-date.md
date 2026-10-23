@@ -24,7 +24,9 @@ The data service enforces **one `CalendarEntries` row per contractor per
 `EntryDate` across all of that contractor's contracts**. When the contractor
 clicks a day inside an overlap window the web part asks which contract the
 day counts against ("Count against 001185_2026 or 001186_2027?"); choosing a
-contract **moves** the entry to it; it never duplicates it. `EntryDate` and
+contract **moves** the day to it: in one batch the service deletes the entry
+on the sibling contract, adds the entry on the chosen one and updates the used
+days of both, so the day is never duplicated. `EntryDate` and
 `Contract` are indexed; `Title` is `<ContractCode> <yyyy-MM-dd>`.
 
 ![Write path when a day falls in an overlap](diagrams/0008-one-calendar-entry-per-contractor-per-date-1.svg)
@@ -48,7 +50,7 @@ sequenceDiagram
     DS->>L: Add the entry for the chosen contract
     DS->>L: Update OnSiteUsedDays and OffSiteUsedDays
   end
-  DS-->>WP: The day has moved, never duplicated
+  DS-->>WP: The day is on the chosen contract only
 ```
 
 ---
@@ -79,6 +81,27 @@ sequenceDiagram
 | Risk ID | Description | Impact (E/H/M/L) | Mitigation |
 |---------|-------------|------------------|------------|
 | R-DATA-1 | Duplicate rows created outside the web part | M | Service de-duplicates on read as a safeguard; RM-2 hardening; optional later validation |
+
+---
+
+## Amendments
+
+**2026-10-23** — The decision is unchanged; the write path is described as the
+code does it, and three guards were added:
+
+- "Moves" is a delete of the sibling entry plus an add on the chosen contract,
+  with the used days of both recomputed, all in one SharePoint batch.
+- **Risk R-AGT-1:** a SharePoint batch is not transactional. If the delete
+  succeeds and the add fails, the day is left empty on both contracts. The web
+  part shows an error and the agent reports the day as `failed`; the user
+  records it again. A fix (add first, or verify and restore) belongs in
+  `shared-core`.
+- Writes from one `SharePointDataService` run one at a time, so the used-days
+  recompute of one write cannot miss a concurrent write's day.
+- A day held by a **Closed** sibling contract is not moved: the write is
+  refused. Writes to a Closed contract, by anyone other than the contract's
+  contractor, or to a contract without a period are refused too (both data
+  services, so the web part and the agent behave alike).
 
 ---
 
