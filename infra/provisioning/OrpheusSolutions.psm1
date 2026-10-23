@@ -129,7 +129,7 @@ function ConvertTo-SortedValue {
 function Read-SppkgInfo {
     <#
     .SYNOPSIS
-        Reads the solution id, the version and the component ids from a .sppkg file.
+        Reads the solution id, name, version and component ids from a .sppkg file.
     .DESCRIPTION
         The solution id and version come from the App element of AppManifest.xml. A component id
         comes from each entry named <folder>/WebPart_<id>.xml or <folder>/Extension_<id>.xml. The
@@ -149,8 +149,9 @@ function Read-SppkgInfo {
         try { [xml] $manifest = $reader.ReadToEnd() } finally { $reader.Dispose() }
         $app = $manifest.DocumentElement
         $productId = $app.GetAttribute('ProductID')
+        $name = $app.GetAttribute('Name')
         $version = $app.GetAttribute('Version')
-        if (-not $productId -or -not $version) { throw "AppManifest.xml in $Path has no ProductID or Version." }
+        if (-not $productId -or -not $version -or -not $name) { throw "AppManifest.xml in $Path has no ProductID, Name or Version." }
 
         $pattern = '^[^/]+/(?:WebPart|Extension)_([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\.xml$'
         $componentIds = @($zip.Entries | ForEach-Object {
@@ -164,6 +165,7 @@ function Read-SppkgInfo {
 
     return [pscustomobject]@{
         SolutionId   = ConvertTo-NormalizedId $productId
+        Name         = $name
         Version      = $version
         ComponentIds = [string[]] $componentIds
     }
@@ -245,10 +247,12 @@ function Resolve-StepResult {
 }
 
 function Get-OrpheusApp {
-    # The site collection App Catalog entry for a solution id, or $null. Get-PnPApp -Identity throws
-    # for a missing app, so list the catalog and filter.
-    param([Parameter(Mandatory)] [string] $SolutionId)
-    return @(Get-PnPApp -Scope Site) | Where-Object { $null -ne $_ -and (ConvertTo-NormalizedId ([string] $_.Id)) -eq $SolutionId } | Select-Object -First 1
+    # The site collection App Catalog entry for a solution, or $null. Get-PnPApp's Id is the catalog
+    # list item's id, not the package ProductID (found live), so match on the solution name, which the
+    # catalog shows as Title. Every later Install/Update/Uninstall/Remove uses the entry's own Id.
+    # Get-PnPApp -Identity throws for a missing app, so list the catalog and filter.
+    param([Parameter(Mandatory)] [string] $Name)
+    return @(Get-PnPApp -Scope Site) | Where-Object { $null -ne $_ -and [string] $_.Title -eq $Name } | Select-Object -First 1
 }
 
 function Test-AppInstalled {
@@ -305,7 +309,7 @@ function Install-OrpheusSolution {
     $info = Read-SppkgInfo -Path $Path
     if (-not $info.ComponentIds.Count) { throw "$Path`: no WebPart_/Extension_ component entries found, so the manifests cannot be checked." }
     $id = $info.SolutionId
-    $app = Get-OrpheusApp -SolutionId $id
+    $app = Get-OrpheusApp -Name $info.Name
     $title = if ($app) { [string] $app.Title } else { [System.IO.Path]::GetFileNameWithoutExtension($Path) }
     if ($app) {
         foreach ($existing in @([string] $app.InstalledVersion, [string] $app.AppCatalogVersion)) {
@@ -330,7 +334,7 @@ function Install-OrpheusSolution {
 
     $waitInstalled = {
         Wait-OrpheusCondition -Description "$title to be installed at the catalog version" -TimeoutSeconds $TimeoutSeconds -Condition {
-            Test-AppInstalled (Get-OrpheusApp -SolutionId $id)
+            Test-AppInstalled (Get-OrpheusApp -Name $info.Name)
         }
     }
 
@@ -342,16 +346,16 @@ function Install-OrpheusSolution {
         }
 
         $null = Add-PnPApp -Path $Path -Scope Site -Publish -Overwrite
-        $app = Get-OrpheusApp -SolutionId $id
+        $app = Get-OrpheusApp -Name $info.Name
         if (-not $app) { throw "$title ($id) is not in the site collection App Catalog after the upload." }
         if ($app.Title) { $result.Title = $title = [string] $app.Title }
 
         if ([string]::IsNullOrEmpty([string] $app.InstalledVersion)) {
-            $null = Install-PnPApp -Identity ([guid] $id) -Scope Site
+            $null = Install-PnPApp -Identity ([guid] $app.Id) -Scope Site
             $result.Action = 'Installed'
         }
         elseif ([string] $app.InstalledVersion -ne [string] $app.AppCatalogVersion) {
-            $null = Update-PnPApp -Identity ([guid] $id) -Scope Site
+            $null = Update-PnPApp -Identity ([guid] $app.Id) -Scope Site
             $result.Action = 'Updated'
         }
         else {
@@ -377,14 +381,17 @@ function Install-OrpheusSolution {
             throw "$reinstallTarget`: Component manifest missing for $($missing -join ', '); clean reinstall declined."
         }
         Write-Warning "$title`: no active manifest for $($missing -join ', '); reinstalling cleanly."
-        $null = Uninstall-PnPApp -Identity ([guid] $id) -Scope Site
+        $catalogItemId = [guid] (Get-OrpheusApp -Name $info.Name).Id
+        $null = Uninstall-PnPApp -Identity $catalogItemId -Scope Site
         Wait-OrpheusCondition -Description "$title to be uninstalled" -TimeoutSeconds $TimeoutSeconds -Condition {
-            $current = Get-OrpheusApp -SolutionId $id
+            $current = Get-OrpheusApp -Name $info.Name
             $null -eq $current -or [string]::IsNullOrEmpty([string] $current.InstalledVersion)
         }
-        $null = Remove-PnPApp -Identity ([guid] $id) -Scope Site -Force
+        $null = Remove-PnPApp -Identity $catalogItemId -Scope Site -Force
         $null = Add-PnPApp -Path $Path -Scope Site -Publish
-        $null = Install-PnPApp -Identity ([guid] $id) -Scope Site
+        $reuploaded = Get-OrpheusApp -Name $info.Name
+        if (-not $reuploaded) { throw "$title ($id) is not in the site collection App Catalog after the re-upload." }
+        $null = Install-PnPApp -Identity ([guid] $reuploaded.Id) -Scope Site
         & $waitInstalled
         $result.Action = 'Reinstalled'
 

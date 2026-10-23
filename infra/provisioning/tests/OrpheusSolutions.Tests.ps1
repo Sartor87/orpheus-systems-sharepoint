@@ -39,13 +39,14 @@ BeforeAll {
             [Parameter(Mandatory)] [string] $Path,
             [Parameter(Mandatory)] [string] $ProductId,
             [Parameter(Mandatory)] [string] $Version,
-            [string[]] $Entries = @()
+            [string[]] $Entries = @(),
+            [string] $Name = 'test-client-side-solution'
         )
         Add-Type -AssemblyName System.IO.Compression
         $stream = [System.IO.File]::Create($Path)
         $zip = [System.IO.Compression.ZipArchive]::new($stream, [System.IO.Compression.ZipArchiveMode]::Create)
         try {
-            $manifest = "<?xml version=`"1.0`" encoding=`"utf-8`"?><App xmlns=`"http://schemas.microsoft.com/sharepoint/2012/app/manifest`" Name=`"test-client-side-solution`" ProductID=`"$ProductId`" Version=`"$Version`" IsClientSideSolution=`"true`"><Properties><Title>Test</Title></Properties></App>"
+            $manifest = "<?xml version=`"1.0`" encoding=`"utf-8`"?><App xmlns=`"http://schemas.microsoft.com/sharepoint/2012/app/manifest`" Name=`"$Name`" ProductID=`"$ProductId`" Version=`"$Version`" IsClientSideSolution=`"true`"><Properties><Title>Test</Title></Properties></App>"
             foreach ($name in @('AppManifest.xml') + $Entries) {
                 $writer = [System.IO.StreamWriter]::new($zip.CreateEntry($name).Open())
                 try { $writer.Write($(if ($name -eq 'AppManifest.xml') { $manifest } else { '<Elements />' })) } finally { $writer.Dispose() }
@@ -91,6 +92,7 @@ Describe 'Read-SppkgInfo' {
         $info = Read-SppkgInfo -Path $path
 
         $info.SolutionId | Should -BeExactly '8c050d2e-26f4-4a5e-822c-414d9365314f'
+        $info.Name | Should -BeExactly 'test-client-side-solution'
         $info.Version | Should -BeExactly '1.0.1.0'
         $info.ComponentIds | Should -BeExactly @('30930118-2d09-49f4-bdc4-fb2c9b4af49e')
     }
@@ -161,7 +163,7 @@ Describe 'Get-MissingManifests' {
 Describe 'Install-OrpheusSolution' {
     BeforeAll {
         $script:SolutionId = '8c050d2e-26f4-4a5e-822c-414d9365314f'
-        $script:Package = New-Sppkg -Path (Join-Path $TestDrive 'ext-app-customizer.sppkg') -ProductId $script:SolutionId -Version '1.0.1.0' `
+        $script:Package = New-Sppkg -Path (Join-Path $TestDrive 'ext-app-customizer.sppkg') -ProductId $script:SolutionId -Version '1.0.1.0' -Name 'ext-app-customizer-client-side-solution' `
             -Entries "$script:AppCustomizerId/Extension_$script:AppCustomizerId.xml"
     }
 
@@ -171,7 +173,9 @@ Describe 'Install-OrpheusSolution' {
 
         # A fake site collection App Catalog. Catalog = $null means the app is not in the catalog.
         # Installs and updates finish at once; set $script:Catalog.Stuck to keep InstalledVersion.
-        $script:Catalog = @{ Present = $false; AppCatalogVersion = $null; InstalledVersion = $null; Stuck = $false }
+        # Live finding: Get-PnPApp's Id is the catalog list item's id, not the package ProductID, and a
+        # re-upload after Remove-PnPApp gets a new item id.
+        $script:Catalog = @{ Present = $false; AppCatalogVersion = $null; InstalledVersion = $null; Stuck = $false; ItemId = $null; Uploads = 0 }
         $script:Calls = [System.Collections.Generic.List[string]]::new()
         # The fake component manifest. ManifestMode: 'Healthy'; 'BrokenUntilReinstall' (empty until
         # Remove-PnPApp has run, the live failure); 'AlwaysBroken'. LagPolls: the number of calls that
@@ -182,8 +186,9 @@ Describe 'Install-OrpheusSolution' {
 
         Mock -ModuleName OrpheusSolutions Get-PnPApp {
             if (-not $script:Catalog.Present) { return }
+            if (-not $script:Catalog.ItemId) { $script:Catalog.ItemId = 'c0c0c0c0-0000-4000-8000-0000000000aa' }
             [pscustomobject]@{
-                Id                = [guid] $script:SolutionId
+                Id                = [guid] $script:Catalog.ItemId
                 Title             = 'ext-app-customizer-client-side-solution'
                 AppCatalogVersion = $script:Catalog.AppCatalogVersion
                 InstalledVersion  = $script:Catalog.InstalledVersion
@@ -191,25 +196,31 @@ Describe 'Install-OrpheusSolution' {
         }
         Mock -ModuleName OrpheusSolutions Add-PnPApp {
             $script:Calls.Add('Add')
+            if (-not $script:Catalog.Present) { $script:Catalog.Uploads++; $script:Catalog.ItemId = 'c0c0c0c0-0000-4000-8000-{0:d12}' -f $script:Catalog.Uploads }
             $script:Catalog.Present = $true
             $script:Catalog.AppCatalogVersion = [version] '1.0.1.0'
         }
         Mock -ModuleName OrpheusSolutions Install-PnPApp {
+            if ([string] $Identity.Id -ne $script:Catalog.ItemId) { throw "Install-PnPApp got '$($Identity.Id)', expected the catalog item id '$($script:Catalog.ItemId)'." }
             $script:Calls.Add('Install')
             if (-not $script:Catalog.Stuck) { $script:Catalog.InstalledVersion = $script:Catalog.AppCatalogVersion }
         }
         Mock -ModuleName OrpheusSolutions Update-PnPApp {
+            if ([string] $Identity.Id -ne $script:Catalog.ItemId) { throw "Update-PnPApp got '$($Identity.Id)', expected the catalog item id '$($script:Catalog.ItemId)'." }
             $script:Calls.Add('Update')
             if (-not $script:Catalog.Stuck) { $script:Catalog.InstalledVersion = $script:Catalog.AppCatalogVersion }
         }
         Mock -ModuleName OrpheusSolutions Uninstall-PnPApp {
+            if ([string] $Identity.Id -ne $script:Catalog.ItemId) { throw "Uninstall-PnPApp got '$($Identity.Id)', expected the catalog item id '$($script:Catalog.ItemId)'." }
             $script:Calls.Add('Uninstall')
             $script:Catalog.InstalledVersion = $null
         }
         Mock -ModuleName OrpheusSolutions Remove-PnPApp {
+            if ([string] $Identity.Id -ne $script:Catalog.ItemId) { throw "Remove-PnPApp got '$($Identity.Id)', expected the catalog item id '$($script:Catalog.ItemId)'." }
             $script:Calls.Add('Remove')
             $script:Catalog.Present = $false
             $script:Catalog.AppCatalogVersion = $null
+            $script:Catalog.ItemId = $null
         }
         Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Url -eq '/_api/web/GetClientSideComponentsById' } -MockWith {
             $script:ManifestCalls++
