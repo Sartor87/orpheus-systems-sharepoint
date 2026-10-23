@@ -1,6 +1,6 @@
 # Screenshots
 
-The root [README](../../README.md) and the package READMEs show the images below. They are taken by hand on a test tenant with the demo data, and the README links to these file names already: a link shows as a broken image until its file is added here.
+The root [README](../../README.md) and the package READMEs show the images below. They are taken by hand on a test tenant with the demo data, and the README already references these file names, hidden in comments until each file is added here.
 
 ## How to take them
 
@@ -41,5 +41,5 @@ The root [README](../../README.md) and the package READMEs show the images below
 
 ## After adding the files
 
-1. Commit the PNGs in this folder. Nothing else needs to change: the README already links to these names.
+1. Commit the PNGs in this folder. The root README already references every name, but hides a shot inside an HTML comment (`<!-- screenshot pending: ... -->` or `<!-- screenshots pending: ... -->` around a table) until its file exists. When all files of a block are present, remove the comment markers around it.
 2. Optional: the web part's `config/package-solution.json` has an empty `screenshotPaths`. Adding `01-calendar-month-view.png` there shows it in the App Catalog; that is a code change for the package owner.

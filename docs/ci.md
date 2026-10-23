@@ -26,7 +26,7 @@ Runs on `ubuntu-latest` inside `docker.io/m365pnp/spfx:1.23.2`, the dev image, s
 | Test | `npm run test:all`: the `scripts/ci` tests, then every workspace's `test`, one package at a time |
 | Upload | artifact `sppkg` (14 days): `packages/*/sharepoint/solution/*.sppkg` |
 
-Package runs before the tests on purpose. Heft writes the `*.module.scss` typings to `temp/sass-ts`, and the `wp-contract-calendar` suites that import a component with a `.module.scss` file fail to compile under ts-jest until those typings exist. On a fresh clone, build or package once before `test:all`.
+Package runs before the tests, so a broken production build fails the run before the longer test step finishes. The order is not needed for the tests themselves: `wp-contract-calendar` has a fallback `*.module.scss` typing, so its suites compile on a fresh clone without a prior Heft build.
 
 `NODE_OPTIONS=--max-old-space-size=3072` is set for the job. The runner has more memory than the shared Podman VM, and the production webpack builds need it.
 
@@ -74,7 +74,7 @@ export NODE_OPTIONS=--max-old-space-size=1536
 npm run hygiene
 npm run build:shared
 npm run typecheck
-npm run package:solutions   # also generates the scss typings the tests need
+npm run package:solutions
 npm run test:all
 ```
 

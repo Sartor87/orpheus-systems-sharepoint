@@ -31,47 +31,55 @@ It is built with the SharePoint Framework (SPFx 1.23.2) as an npm-workspaces mon
 - Role-aware: contractors see their own contracts, contract managers the contracts they manage, site owners all of them.
 - Runs on demo data in a debug build, with a switch between demo users, so it can be tried without creating any list.
 
+<!-- screenshots pending:
 | Range selection | Overlapping contracts | Timesheet |
 |---|---|---|
 | ![Range drag](docs/screenshots/02-calendar-range-drag.png) | ![Which contract? dialog](docs/screenshots/03-overlap-dialog.png) | ![Timesheet dialog](docs/screenshots/04-timesheet-dialog.png) |
+-->
 
-![First page of a generated timesheet](docs/screenshots/05-timesheet-pdf.png)
+<!-- screenshot pending: ![First page of a generated timesheet](docs/screenshots/05-timesheet-pdf.png) -->
 
 ### Header and footer (application customizer)
 
 An Orpheus header with a role-aware menu (My calendar · Contracts · Holidays) that collapses into a dropdown below 640 px, and a footer with contact and version.
 
+<!-- screenshots pending:
 | Header and footer | Compact menu |
 |---|---|
 | ![Header and footer](docs/screenshots/06-header-footer.png) | ![Compact menu](docs/screenshots/07-header-compact-menu.png) |
+-->
 
 ### Remaining-days bars (field customizer)
 
 On the Contracts list, the `RemainingDays` column shows two compact bars per contract: on-site and off-site days left, or over.
 
-![Remaining-days bars on the Contracts list](docs/screenshots/08-remaining-days-bars.png)
+<!-- screenshot pending: ![Remaining-days bars on the Contracts list](docs/screenshots/08-remaining-days-bars.png) -->
 
 ### Contract form (form customizer)
 
 New, Edit and Display forms for contracts: validation as you type, people and date pickers, a warning when the contractor already has an overlapping contract, and an **Open calendar** link. Only a site admin or the contract's manager can edit.
 
+<!-- screenshots pending:
 | New | Edit | Display | Not allowed |
 |---|---|---|---|
 | ![New form](docs/screenshots/09-form-new.png) | ![Edit form with overlap warning](docs/screenshots/10-form-edit.png) | ![Display form](docs/screenshots/11-form-display.png) | ![Not allowed notice](docs/screenshots/12-form-not-allowed.png) |
+-->
 
 ### Toasts and packaging
 
 Every component reports through one shared toast stack. The four SPFx solutions install from the site collection App Catalog.
 
+<!-- screenshots pending:
 | Toasts | App Catalog |
 |---|---|
 | ![Stacked toasts](docs/screenshots/13-toasts.png) | ![The four apps in the App Catalog](docs/screenshots/14-app-catalog.png) |
+-->
 
 ### Contract Calendar agent (Microsoft 365 Copilot)
 
 "Book me on-site days from 1 to 5 December": a declarative agent in Copilot Chat books, removes and reads days through an MCP server that reuses the web part's own data layer, so both apply the same rules. See [The Copilot agent](#the-copilot-agent).
 
-![The agent in Copilot Chat](docs/screenshots/15-agent-copilot.png)
+<!-- screenshot pending: ![The agent in Copilot Chat](docs/screenshots/15-agent-copilot.png) -->
 
 ## Architecture
 
@@ -163,7 +171,7 @@ Tests run in the same container, one package at a time: `podman compose run --rm
 
 ## Deploy to a site
 
-In short: build the four `.sppkg` files (`.\scripts\podman.ps1 package`), add them to the site collection App Catalog, then run the provisioning script, which creates the lists, content types, the calendar page and the extension bindings. The step-by-step guide is [docs/deployment.md](docs/deployment.md); the script itself is described in [infra/provisioning](infra/provisioning/README.md).
+In short: build the four `.sppkg` files (`.\scripts\podman.ps1 package`), create the lists with the provisioning script, add the apps to the site collection App Catalog, then create the calendar page and bind the three extensions. The step-by-step guide is [docs/deployment.md](docs/deployment.md); the provisioning script is described in [infra/provisioning](infra/provisioning/README.md).
 
 Optional extras:
 
