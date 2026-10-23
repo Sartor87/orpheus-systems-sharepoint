@@ -4,7 +4,7 @@ A SharePoint Online solution for tracking on-site and off-site work days against
 
 It is built with the SharePoint Framework (SPFx 1.23.2) as an npm-workspaces monorepo: one web part, three extensions, two shared libraries, an MCP server and a declarative agent. Everything runs client-side in SharePoint except the agent's MCP server.
 
-![The contract calendar web part](docs/screenshots/01-calendar-month-view.png)
+![Booking days and generating a timesheet](docs/screenshots/00-demo.gif)
 
 ## Contents
 
@@ -20,6 +20,8 @@ It is built with the SharePoint Framework (SPFx 1.23.2) as an npm-workspaces mon
 ## Features
 
 ### Contract calendar web part
+
+![The contract calendar web part](docs/screenshots/01-calendar-month-view.png)
 
 - Month grid for the whole contract period (or a fixed number of months), with on-site, off-site and half days in their own colours.
 - Click a day or drag across a range; the selection type picker sets full or half, on-site or off-site. Weekends and public holidays of the contract's country are blocked.

@@ -6,7 +6,7 @@ The root [README](../../README.md) and the package READMEs show the images below
 
 - **Data:** the demo data only (the `001xxx` seed from `Provision-OrpheusSite.ps1 -SeedDemoData` and the `002xxx` agent demo series). The demo people are Jane Doe (contractor), Ivan Petrov (contract manager), Maria Georgieva and Site Admin. No real person, client or employer may appear.
 - **Browser:** Microsoft Edge or Chrome, window 1600 × 1000, zoom 100 %, light theme. Close the developer tools.
-- **Format:** PNG, file names exactly as listed. Keep each file under 500 KB (`pngquant` or the Windows Snipping Tool's PNG is fine).
+- **Format:** PNG (the demo is a GIF), file names exactly as listed. Keep each file under 500 KB (`pngquant` or the Windows Snipping Tool's PNG is fine).
 - **Crop:** to the part named in "Frame". Keep the browser's address bar only where the frame says so.
 
 ### Redaction (mandatory)
@@ -14,12 +14,14 @@ The root [README](../../README.md) and the package READMEs show the images below
 - **Blur the tenant name** wherever it shows: in the address bar (`<tenant>.sharepoint.com` → blur the `<tenant>` part), in the site header, in the App Catalog URL and in Copilot. Use a solid blur or a filled box, not a light blur that can be reversed.
 - Blur the signed-in account's name, photo and email in the top-right corner if it is a real account.
 - Blur any GUID that identifies the tenant (tenant id, app registration client id) if one shows, for example in the App Catalog details pane.
+- In the demo GIF, crop the address bar and the account corner out instead of blurring frame by frame.
 - Check every image at 200 % before committing. `npm run hygiene` cannot see text inside images.
 
 ## Shot list
 
 | # | File | Component | Frame | What must be visible |
 |---|---|---|---|---|
+| 0 | `00-demo.gif` | Web part (+ optional agent) | The web part only, no address bar | 15–30 s: pick a contract, drag a range of on-site days, resolve the overlap dialog, generate the timesheet PDF. 1200 px wide, 10–12 fps, under 8 MB |
 | 1 | `01-calendar-month-view.png` | Web part | The web part only | A full contract period as Jane Doe: the contract header, several months with on-site, off-site and half days, a holiday and the stats panel with used and remaining days |
 | 2 | `02-calendar-range-drag.png` | Web part | The month being dragged | A range drag in progress across a week, with the selection type picker showing the chosen type; weekends inside the range stay unselected |
 | 3 | `03-overlap-dialog.png` | Web part | Dialog with the calendar behind it | The "Which contract?" dialog for days that fall in two overlapping contracts (for example `001185_2026` and `001186_2027`) |
