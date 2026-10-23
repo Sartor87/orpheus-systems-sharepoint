@@ -45,7 +45,7 @@ repo at `/usr/app/spfx` and the npm cache as a named volume:
 | `build` | `npm run build` (all packages, dev) |
 | `serve` | `npm run serve` (`heft --unmanaged start --clean --nobrowser`) for one package; ports 4321/35729 exposed; package chosen via `PKG` env |
 | `package` | `npm run package` producing every `.sppkg` (`--ship`) |
-| `mcp` | `npm run start -w @orpheussystems/mcp-contract-calendar`; port 8787 published; reads `packages/mcp-contract-calendar/.env` if present. Run with `COMPOSE_PROJECT_NAME=orpheus-agent` |
+| `mcp` | `npm run start -w @orpheussystems/mcp-contract-calendar`; port 8787 published; reads `packages/mcp-contract-calendar/.env` if present. Runs from the main checkout with the default compose project |
 
 Node memory caps: the MCP SDK's zod-driven generics once pushed `tsc` to about
 4.2 GB and crashed the host. Every Node run in the container for the server

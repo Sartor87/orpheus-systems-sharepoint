@@ -92,7 +92,6 @@ Copy `.env.sample` to `.env` (gitignored). The `mcp` compose service reads it if
 Node runs only in Podman (ADR 0002). From the repository root, in PowerShell:
 
 ```powershell
-$env:COMPOSE_PROJECT_NAME = 'orpheus-agent'
 podman compose run --rm shell bash -c "npm run build:shared && npm run build -w @orpheussystems/mcp-contract-calendar"
 podman compose run --rm --service-ports mcp
 ```
@@ -117,7 +116,6 @@ Connect with transport "Streamable HTTP" to `http://localhost:8787/mcp`, list to
 ## Tests
 
 ```powershell
-$env:COMPOSE_PROJECT_NAME = 'orpheus-agent'
 podman compose run --rm shell bash -c "export NODE_OPTIONS=--max-old-space-size=1536; npm run build:shared && timeout 180 npm test -w @orpheussystems/mcp-contract-calendar -- --maxWorkers=2 && timeout 180 npm run typecheck -w @orpheussystems/mcp-contract-calendar"
 ```
 

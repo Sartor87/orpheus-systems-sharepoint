@@ -2,7 +2,7 @@
 
 Everything runs in Podman; nothing is installed on the host (ADR 0002). The compose file next to
 the DSL uses its own project name, `orpheus-structurizr`, so it never touches the SPFx services in
-the root `compose.yml` or the agent's `orpheus-agent` project.
+the root `compose.yml` project.
 
 ## Browse the diagrams, decisions and docs (Structurizr local mode)
 

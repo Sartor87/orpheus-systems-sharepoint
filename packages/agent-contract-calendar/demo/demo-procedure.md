@@ -102,14 +102,12 @@ LOG_REQUEST_HEADERS=true
 Build once after every code change:
 
 ```powershell
-$env:COMPOSE_PROJECT_NAME = 'orpheus-agent'
 podman compose run --rm shell bash -c "export NODE_OPTIONS=--max-old-space-size=1536; npm run build:shared && npm run build -w @orpheussystems/mcp-contract-calendar"
 ```
 
 Start:
 
 ```powershell
-$env:COMPOSE_PROJECT_NAME = 'orpheus-agent'
 podman compose run --rm --service-ports -e NODE_OPTIONS=--max-old-space-size=1024 mcp
 ```
 

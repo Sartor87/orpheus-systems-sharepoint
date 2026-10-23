@@ -41,7 +41,7 @@ every request without a valid token for its audience gets 401, and `createApp` r
 (fixtures, no SharePoint) and is used with MCP Inspector, never through the tunnel.
 
 The `devtunnel` CLI runs on the host OS; the server runs in the `mcp` compose service
-(`COMPOSE_PROJECT_NAME=orpheus-agent`), published on host port 8787.
+(default compose project of the main checkout), published on host port 8787.
 
 ![Local flow through the dev tunnel](diagrams/0015-dev-tunnel-for-the-agent-demo-1.svg)
 
