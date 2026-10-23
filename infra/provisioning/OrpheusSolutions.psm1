@@ -16,6 +16,8 @@
         Set-OrpheusFieldCustomizer  the RemainingDays field customizer and its default view column
         Set-OrpheusFormCustomizer   the Orpheus Contract form customizer on the Contracts list
         Set-OrpheusCalendarPage     the ContractCalendar page with the web part pointed at the lists
+        Get-OrpheusPackagePaths     the four .sppkg files, checked before anything touches the site
+        Invoke-OrpheusSolutionInstall  all of the above in order (Provision-OrpheusSite.ps1 -InstallSolutions)
 
     Site collection App Catalog only (-Scope Site). Every write goes through ShouldProcess, so -WhatIf
     makes no write call; the only POST it may send is the read-only GetClientSideComponentsById.
@@ -53,6 +55,11 @@ $script:ChromeProperties = '{"contractsListUrl":"Lists/Contracts","calendarPageU
 
 $script:ContractsListTitle = 'Contracts'
 $script:RemainingDaysField = 'RemainingDays'
+
+# The repository root (this file is infra/provisioning/OrpheusSolutions.psm1), and the packages in
+# install order: the web part first, then the header, field and form extensions.
+$script:RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..' '..'))
+$script:PackageNames = @('wp-contract-calendar', 'ext-app-customizer', 'ext-field-customizer', 'ext-form-customizer')
 
 #endregion
 
@@ -586,5 +593,100 @@ function Set-OrpheusCalendarPage {
 
 #endregion
 
+#region Orchestration
+
+function Get-OrpheusPackagePaths {
+    <#
+    .SYNOPSIS
+        Resolves the four .sppkg files, in install order, and throws when one is missing.
+    .DESCRIPTION
+        For each package it looks for <SolutionsPath>/packages/<name>/sharepoint/solution/<name>.sppkg
+        (a repository checkout, the default) and then for <SolutionsPath>/<name>.sppkg (a flat folder,
+        such as the files of a GitHub Release). It reads nothing from SharePoint.
+    .OUTPUTS
+        [pscustomobject] with Name and Path, one per package.
+    #>
+    [CmdletBinding()]
+    [OutputType([pscustomobject])]
+    param([ValidateNotNullOrEmpty()] [string] $SolutionsPath = $script:RepoRoot)
+
+    $root = [System.IO.Path]::GetFullPath($SolutionsPath)
+    $found = foreach ($name in $script:PackageNames) {
+        $candidates = @(
+            (Join-Path $root 'packages' $name 'sharepoint' 'solution' "$name.sppkg"),
+            (Join-Path $root "$name.sppkg")
+        )
+        $path = $candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+        [pscustomobject]@{ Name = $name; Path = $path }
+    }
+    # A script block, not "ForEach-Object Name": the member form honours -WhatIf and would skip.
+    $missing = @($found | Where-Object { -not $_.Path } | ForEach-Object { $_.Name })
+    if ($missing.Count) {
+        throw "Solution package(s) not found: $($missing -join ', '). Looked in $root\packages\<name>\sharepoint\solution and in $root. Build them with .\scripts\podman.ps1 package, or pass -SolutionsPath."
+    }
+    return $found
+}
+
+function Assert-OrpheusSiteAppCatalog {
+    # Read-only probe: the install needs a site collection App Catalog on the connected site.
+    try { $null = Get-PnPApp -Scope Site }
+    catch {
+        throw ("This site has no usable site collection App Catalog ($($_.Exception.Message)). A SharePoint administrator must " +
+            'first make sure the tenant App Catalog exists (Register-PnPAppCatalogSite), then, connected to the SharePoint admin ' +
+            'center, run Add-PnPSiteCollectionAppCatalog -Site <site url>. See docs/deployment.md.')
+    }
+}
+
+function Invoke-OrpheusSolutionInstall {
+    <#
+    .SYNOPSIS
+        Installs the four Orpheus solutions on the connected site and wires them up, in order.
+    .DESCRIPTION
+        1. Resolves the four packages (Get-OrpheusPackagePaths). A missing one throws before any call
+           to SharePoint.
+        2. Checks that the site has a site collection App Catalog (read-only).
+        3. Install-OrpheusSolution for wp-contract-calendar, ext-app-customizer, ext-field-customizer
+           and ext-form-customizer.
+        4. Set-OrpheusAppCustomizer, Set-OrpheusFieldCustomizer, Set-OrpheusFormCustomizer,
+           Set-OrpheusCalendarPage.
+        -WhatIf and -Confirm are passed on explicitly to every step. The first error stops the run.
+    .OUTPUTS
+        [pscustomobject] with Component and Action, one per step, for a summary table.
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    [OutputType([pscustomobject])]
+    param(
+        [ValidateNotNullOrEmpty()] [string] $SolutionsPath = $script:RepoRoot,
+        [hashtable] $Labels = @{},
+        [ValidateRange(1, 86400)] [int] $TimeoutSeconds = 300
+    )
+
+    $packages = Get-OrpheusPackagePaths -SolutionsPath $SolutionsPath
+
+    # Preference variables do not reach other commands reliably, so pass the switches explicitly.
+    $gate = @{ WhatIf = [bool] $WhatIfPreference }
+    if ($PSBoundParameters.ContainsKey('Confirm')) { $gate.Confirm = [bool] $PSBoundParameters['Confirm'] }
+
+    Assert-OrpheusSiteAppCatalog
+
+    foreach ($package in $packages) {
+        Write-Host "  Solution $($package.Name) ..." -ForegroundColor Cyan
+        $installed = Install-OrpheusSolution -Path $package.Path -TimeoutSeconds $TimeoutSeconds @gate
+        [pscustomobject]@{ Component = "$($package.Name) $($installed.Version)"; Action = $installed.Action }
+    }
+
+    Write-Host '  Header custom action ...' -ForegroundColor Cyan
+    [pscustomobject]@{ Component = "Header custom action ($script:ChromeName)"; Action = Set-OrpheusAppCustomizer @gate }
+    Write-Host '  Field customizer ...' -ForegroundColor Cyan
+    [pscustomobject]@{ Component = "Field customizer ($script:ContractsListTitle.$script:RemainingDaysField)"; Action = Set-OrpheusFieldCustomizer @gate }
+    Write-Host '  Form customizer ...' -ForegroundColor Cyan
+    [pscustomobject]@{ Component = 'Form customizer (Orpheus Contract)'; Action = Set-OrpheusFormCustomizer @gate }
+    Write-Host '  Calendar page ...' -ForegroundColor Cyan
+    [pscustomobject]@{ Component = 'Calendar page (SitePages/ContractCalendar.aspx)'; Action = Set-OrpheusCalendarPage -Labels $Labels @gate }
+}
+
+#endregion
+
 Export-ModuleMember -Function Read-SppkgInfo, Get-MissingManifests, Install-OrpheusSolution,
-    Set-OrpheusAppCustomizer, Set-OrpheusFieldCustomizer, Set-OrpheusFormCustomizer, Set-OrpheusCalendarPage
+    Set-OrpheusAppCustomizer, Set-OrpheusFieldCustomizer, Set-OrpheusFormCustomizer, Set-OrpheusCalendarPage,
+    Get-OrpheusPackagePaths, Invoke-OrpheusSolutionInstall

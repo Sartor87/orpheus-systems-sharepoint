@@ -23,8 +23,15 @@
     and ContractManager on every seeded contract. Afterwards OnSiteUsedDays / OffSiteUsedDays of each
     seeded contract are recomputed from its calendar entries (full day = 1, half day = 0.5).
 
+    -InstallSolutions then installs the four SPFx solutions into the site collection App Catalog and
+    wires them up, through OrpheusSolutions.psm1 (Invoke-OrpheusSolutionInstall): the web part and the
+    header, field and form extensions, the OrpheusChrome custom action, the RemainingDays field
+    customizer, the Orpheus Contract form customizer and the ContractCalendar page with the web part
+    pointed at the three lists. Every step is idempotent. The four .sppkg files are checked before
+    the script connects, so a missing package stops the run before any write.
+
     With -WhatIf the script does not connect to SharePoint. It prints what the template contains and,
-    with -SeedDemoData, what would be seeded.
+    with -SeedDemoData, what would be seeded, and with -InstallSolutions, the packages and steps.
 
 .PARAMETER SiteUrl
     Absolute URL of the target site, for example https://<tenant>.sharepoint.com/sites/<site>.
@@ -42,6 +49,21 @@
 .PARAMETER SeedDemoData
     Also upsert the demo contracts, calendar entries and holidays from the fixtures.
 
+.PARAMETER InstallSolutions
+    After the lists (and the seed), install the four solutions into the site collection App Catalog
+    and register the header, the field and form customizers and the calendar page. The site needs a
+    site collection App Catalog (see docs/deployment.md).
+
+.PARAMETER SolutionsPath
+    Where the .sppkg files are: a repository checkout (packages/<name>/sharepoint/solution/<name>.sppkg)
+    or a flat folder with the four <name>.sppkg files. Default: this repository.
+
+.PARAMETER ApprovingOrgLabel
+    Calendar web part label for the approving organisation. Default on a new web part: Client approval.
+
+.PARAMETER ServiceProviderLabel
+    Calendar web part label for the service provider. Default on a new web part: Service provider.
+
 .EXAMPLE
     ./Provision-OrpheusSite.ps1 -SiteUrl https://<tenant>.sharepoint.com/sites/<site> -ClientId <app-client-id> -WhatIf
 
@@ -56,6 +78,11 @@
     ./Provision-OrpheusSite.ps1 -SiteUrl https://<tenant>.sharepoint.com/sites/<site> -ClientId <app-client-id> -SeedDemoData -Country BG
 
     Applies the template and seeds the demo contracts, entries and BG + "*" holidays.
+
+.EXAMPLE
+    ./Provision-OrpheusSite.ps1 -SiteUrl https://<tenant>.sharepoint.com/sites/<site> -ClientId <app-client-id> -InstallSolutions
+
+    Applies the template, then installs and wires the four solutions from packages/*/sharepoint/solution.
 
 .NOTES
     Requires PowerShell 7.4+ and PnP.PowerShell 3.0+. Writes go through the SharePoint REST API with
@@ -74,7 +101,18 @@ param(
     [ValidatePattern('^[A-Za-z]{2}$')]
     [string] $Country = 'BG',
 
-    [switch] $SeedDemoData
+    [switch] $SeedDemoData,
+
+    [switch] $InstallSolutions,
+
+    [ValidateNotNullOrEmpty()]
+    [string] $SolutionsPath,
+
+    [ValidateNotNullOrEmpty()]
+    [string] $ApprovingOrgLabel,
+
+    [ValidateNotNullOrEmpty()]
+    [string] $ServiceProviderLabel
 )
 
 Set-StrictMode -Version 1.0
@@ -570,10 +608,42 @@ function Invoke-DemoSeed {
 $template = Read-OrpheusTemplate -Path $TemplatePath
 $fixtures = if ($SeedDemoData) { Read-Fixtures } else { $null }
 
-$action = 'Apply the Orpheus site template (site columns, content types, lists, indexes)' + $(if ($SeedDemoData) { " and seed demo data (holidays: $Country and *)" } else { '' })
+#region Solutions
+
+$solutionParams = @{}
+$solutionRows = [System.Collections.Generic.List[object]]::new()
+if ($InstallSolutions) {
+    Import-Module (Join-Path $PSScriptRoot 'OrpheusSolutions.psm1') -Force
+    if ($SolutionsPath) { $solutionParams.SolutionsPath = $SolutionsPath }
+    $labels = @{}
+    if ($ApprovingOrgLabel) { $labels.approvingOrgLabel = $ApprovingOrgLabel }
+    if ($ServiceProviderLabel) { $labels.serviceProviderLabel = $ServiceProviderLabel }
+    $solutionParams.Labels = $labels
+    # Throws before the script connects when a package is missing, so nothing is written.
+    $packageParams = @{}
+    if ($SolutionsPath) { $packageParams.SolutionsPath = $SolutionsPath }
+    $packages = @(Get-OrpheusPackagePaths @packageParams)
+}
+
+function Show-SolutionPlan {
+    Write-Host 'Solutions (-InstallSolutions), site collection App Catalog:' -ForegroundColor Cyan
+    foreach ($package in $packages) {
+        $info = Read-SppkgInfo -Path $package.Path
+        Write-Host ("  {0,-22} {1,-9} {2}" -f $package.Name, $info.Version, $package.Path)
+    }
+    Write-Host '  Then: header custom action OrpheusChrome, RemainingDays field customizer, Orpheus Contract form customizer,'
+    Write-Host '  and SitePages/ContractCalendar.aspx with the web part pointed at the three lists (each only when it differs).'
+}
+
+#endregion
+
+$action = 'Apply the Orpheus site template (site columns, content types, lists, indexes)' +
+    $(if ($SeedDemoData) { " and seed demo data (holidays: $Country and *)" } else { '' }) +
+    $(if ($InstallSolutions) { ', then install and wire the four solutions' } else { '' })
 if (-not $PSCmdlet.ShouldProcess($SiteUrl, $action)) {
     Show-TemplateSummary -Template $template
     if ($SeedDemoData) { Show-SeedSummary -Fixtures $fixtures }
+    if ($InstallSolutions) { Show-SolutionPlan }
     return
 }
 
@@ -597,6 +667,14 @@ try {
     Set-ContractDateValidation
 
     if ($SeedDemoData) { Invoke-DemoSeed -Fixtures $fixtures }
+
+    if ($InstallSolutions) {
+        Write-Host 'Installing and wiring the solutions ...' -ForegroundColor Cyan
+        # Preference variables do not reach a script module's functions, so pass them explicitly.
+        $gate = @{ WhatIf = [bool] $WhatIfPreference }
+        if ($PSBoundParameters.ContainsKey('Confirm')) { $gate.Confirm = [bool] $PSBoundParameters['Confirm'] }
+        Invoke-OrpheusSolutionInstall @solutionParams @gate | ForEach-Object { $solutionRows.Add($_) }
+    }
     $completed = $true
 }
 finally {
@@ -606,4 +684,5 @@ finally {
     if ($completed) { Write-Host "  Template: $($template.SiteFields.Count) site columns, $($template.ContentTypes.Count) content types, lists $(($template.Lists | ForEach-Object { $_.Title }) -join ', ')" }
     if ($script:Counts.Count -eq 0) { Write-Host '  No list items or indexes were written or checked.' }
     foreach ($key in $script:Counts.Keys) { Write-Host ("  {0}: {1}" -f $key, $script:Counts[$key]) }
+    if ($solutionRows.Count) { $solutionRows | Format-Table Component, Action -AutoSize | Out-Host }
 }

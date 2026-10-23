@@ -800,3 +800,169 @@ Describe 'Set-OrpheusCalendarPage' {
 }
 
 #endregion
+
+#region Task 5: orchestrator
+
+Describe 'Get-OrpheusPackagePaths' {
+    BeforeAll {
+        $script:PackageNames = 'wp-contract-calendar', 'ext-app-customizer', 'ext-field-customizer', 'ext-form-customizer'
+    }
+
+    BeforeEach { New-PnPSafetyNet }
+
+    It 'resolves the four packages in a repository layout, in install order' {
+        $root = Join-Path $TestDrive 'repo'
+        foreach ($name in $script:PackageNames) {
+            $dir = New-Item -ItemType Directory -Force -Path (Join-Path $root 'packages' $name 'sharepoint' 'solution')
+            Set-Content -LiteralPath (Join-Path $dir "$name.sppkg") -Value 'zip'
+        }
+
+        $packages = Get-OrpheusPackagePaths -SolutionsPath $root
+
+        $packages.Name | Should -BeExactly $script:PackageNames
+        $packages[1].Path | Should -BeExactly ([System.IO.Path]::GetFullPath((Join-Path $root 'packages' 'ext-app-customizer' 'sharepoint' 'solution' 'ext-app-customizer.sppkg')))
+    }
+
+    It 'resolves the four packages in a flat folder' {
+        $flat = New-Item -ItemType Directory -Force -Path (Join-Path $TestDrive 'flat')
+        foreach ($name in $script:PackageNames) { Set-Content -LiteralPath (Join-Path $flat "$name.sppkg") -Value 'zip' }
+
+        $packages = Get-OrpheusPackagePaths -SolutionsPath $flat
+
+        $packages.Name | Should -BeExactly $script:PackageNames
+        $packages[3].Path | Should -BeExactly ([System.IO.Path]::GetFullPath((Join-Path $flat 'ext-form-customizer.sppkg')))
+    }
+
+    It 'throws naming every missing package and the package command' {
+        $partial = New-Item -ItemType Directory -Force -Path (Join-Path $TestDrive 'partial')
+        Set-Content -LiteralPath (Join-Path $partial 'ext-app-customizer.sppkg') -Value 'zip'
+
+        { Get-OrpheusPackagePaths -SolutionsPath $partial } |
+            Should -Throw '*wp-contract-calendar, ext-field-customizer, ext-form-customizer*.\scripts\podman.ps1 package*'
+    }
+
+    It 'still throws for a missing package while -WhatIf is in effect' {
+        $partial = New-Item -ItemType Directory -Force -Path (Join-Path $TestDrive 'partial-whatif')
+        $WhatIfPreference = $true
+
+        { Get-OrpheusPackagePaths -SolutionsPath $partial } | Should -Throw '*podman.ps1 package*'
+        { Invoke-OrpheusSolutionInstall -SolutionsPath $partial -WhatIf } | Should -Throw '*podman.ps1 package*'
+    }
+
+    It 'defaults to the repository root two levels above the module' {
+        $expected = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..' '..' '..'))
+        (& (Get-Module OrpheusSolutions) { $script:RepoRoot }) | Should -BeExactly $expected
+    }
+}
+
+Describe 'Invoke-OrpheusSolutionInstall' {
+    BeforeAll {
+        $script:Flat = New-Item -ItemType Directory -Force -Path (Join-Path $TestDrive 'solutions')
+        foreach ($name in 'wp-contract-calendar', 'ext-app-customizer', 'ext-field-customizer', 'ext-form-customizer') {
+            Set-Content -LiteralPath (Join-Path $script:Flat "$name.sppkg") -Value 'zip'
+        }
+    }
+
+    BeforeEach {
+        New-PnPSafetyNet
+        $script:Order = [System.Collections.Generic.List[string]]::new()
+        Mock -ModuleName OrpheusSolutions Get-PnPApp { $script:Order.Add('Probe') }
+        Mock -ModuleName OrpheusSolutions Install-OrpheusSolution {
+            $name = [System.IO.Path]::GetFileNameWithoutExtension($Path)
+            $script:Order.Add("Install:$name")
+            [pscustomobject]@{ Title = "$name-client-side-solution"; Version = '1.0.0.0'; Action = 'Installed' }
+        }
+        Mock -ModuleName OrpheusSolutions Set-OrpheusAppCustomizer { $script:Order.Add('AppCustomizer'); 'Added' }
+        Mock -ModuleName OrpheusSolutions Set-OrpheusFieldCustomizer { $script:Order.Add('FieldCustomizer'); 'Added' }
+        Mock -ModuleName OrpheusSolutions Set-OrpheusFormCustomizer { $script:Order.Add('FormCustomizer'); 'Unchanged' }
+        Mock -ModuleName OrpheusSolutions Set-OrpheusCalendarPage { $script:Order.Add('CalendarPage'); 'Created' }
+    }
+
+    It 'checks the App Catalog, installs the four packages, then wires header, field, form and page in order' {
+        $rows = Invoke-OrpheusSolutionInstall -SolutionsPath $script:Flat
+
+        $script:Order -join ',' | Should -BeExactly ('Probe,Install:wp-contract-calendar,Install:ext-app-customizer,Install:ext-field-customizer,' +
+            'Install:ext-form-customizer,AppCustomizer,FieldCustomizer,FormCustomizer,CalendarPage')
+        $rows.Count | Should -Be 8
+        $rows[0].Component | Should -BeLike '*wp-contract-calendar*'
+        $rows[0].Action | Should -BeExactly 'Installed'
+        ($rows | Select-Object -Last 4).Action -join ',' | Should -BeExactly 'Added,Added,Unchanged,Created'
+    }
+
+    It 'throws on a missing package before reading or writing anything on the site' {
+        $missing = New-Item -ItemType Directory -Force -Path (Join-Path $TestDrive 'missing')
+
+        { Invoke-OrpheusSolutionInstall -SolutionsPath $missing } | Should -Throw '*podman.ps1 package*'
+        $script:Order.Count | Should -Be 0
+    }
+
+    It 'stops with the admin commands when the site has no site collection App Catalog' {
+        Mock -ModuleName OrpheusSolutions Get-PnPApp { throw 'The site collection app catalog does not exist.' }
+
+        { Invoke-OrpheusSolutionInstall -SolutionsPath $script:Flat } |
+            Should -Throw '*tenant App Catalog*Register-PnPAppCatalogSite*Add-PnPSiteCollectionAppCatalog*'
+        Should -Invoke -ModuleName OrpheusSolutions Install-OrpheusSolution -Times 0 -Exactly
+    }
+
+    It 'passes the labels to the calendar page' {
+        $null = Invoke-OrpheusSolutionInstall -SolutionsPath $script:Flat -Labels @{ approvingOrgLabel = 'Approver' }
+
+        Should -Invoke -ModuleName OrpheusSolutions Set-OrpheusCalendarPage -Times 1 -Exactly -ParameterFilter { $Labels.approvingOrgLabel -eq 'Approver' }
+    }
+
+    It 'passes -WhatIf explicitly to every step' {
+        $null = Invoke-OrpheusSolutionInstall -SolutionsPath $script:Flat -WhatIf
+
+        foreach ($name in 'Install-OrpheusSolution', 'Set-OrpheusAppCustomizer', 'Set-OrpheusFieldCustomizer', 'Set-OrpheusFormCustomizer', 'Set-OrpheusCalendarPage') {
+            Should -Invoke -ModuleName OrpheusSolutions $name -Times 0 -Exactly -ParameterFilter { -not $WhatIf }
+        }
+        Should -Invoke -ModuleName OrpheusSolutions Install-OrpheusSolution -Times 4 -Exactly -ParameterFilter { $WhatIf }
+    }
+}
+
+Describe 'Invoke-OrpheusSolutionInstall -WhatIf on a fresh site' {
+    # End to end through the real module functions: only reads are mocked, every write cmdlet is
+    # left to the safety net, so any write throws.
+    BeforeAll {
+        $script:Fresh = New-Item -ItemType Directory -Force -Path (Join-Path $TestDrive 'fresh')
+        $ids = @{
+            'wp-contract-calendar' = @('326f6878-25b8-4117-93fb-ba9882352eaf', "1200746d-2d50-40ae-9f33-21f153ccec28/WebPart_$script:WebPartId.xml")
+            'ext-app-customizer'   = @('8c050d2e-26f4-4a5e-822c-414d9365314f', "$script:AppCustomizerId/Extension_$script:AppCustomizerId.xml")
+            'ext-field-customizer' = @('ff0771c6-d3da-4799-a42d-4d1e225cb3b3', "$script:FieldCustomizerId/Extension_$script:FieldCustomizerId.xml")
+            'ext-form-customizer'  = @('f5fa93dd-a37d-498c-8c17-87a94be561e5', "$script:FormCustomizerId/Extension_$script:FormCustomizerId.xml")
+        }
+        foreach ($name in $ids.Keys) {
+            $null = New-Sppkg -Path (Join-Path $script:Fresh "$name.sppkg") -ProductId $ids[$name][0] -Version '1.0.0.0' -Entries $ids[$name][1]
+        }
+    }
+
+    BeforeEach {
+        New-PnPSafetyNet
+        Mock -ModuleName OrpheusSolutions Get-PnPApp { }
+        Mock -ModuleName OrpheusSolutions Get-PnPList { [pscustomobject]@{ Id = [guid]::NewGuid() } }
+        Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Method -eq 'Get' } -MockWith {
+            switch -Wildcard ($Url) {
+                '/_api/web/UserCustomActions' { [pscustomobject]@{ value = @() } }
+                '*/fields/getbyinternalnameortitle*' { [pscustomobject]@{ ClientSideComponentId = '00000000-0000-0000-0000-000000000000' } }
+                '*/DefaultView/ViewFields' { [pscustomobject]@{ Items = @('LinkTitle') } }
+                '*/contenttypes*' { [pscustomobject]@{ value = @([pscustomobject]@{ Name = 'Orpheus Contract'; StringId = '0x0100514116295A2F4DD1A93519F365EB8AAF00AB' }) } }
+                '*SitePages*' { [pscustomobject]@{ value = @() } }
+                default { throw "Unexpected GET $Url" }
+            }
+        }
+    }
+
+    It 'plans every step and makes no write call' {
+        $rows = Invoke-OrpheusSolutionInstall -SolutionsPath $script:Fresh -WhatIf
+
+        $rows.Action -join ',' | Should -BeExactly 'Installed,Installed,Installed,Installed,Added,Added,Added,Created'
+        Should -Invoke -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -Times 0 -Exactly -ParameterFilter { $Method -ne 'Get' }
+        foreach ($name in 'Add-PnPApp', 'Install-PnPApp', 'Update-PnPApp', 'Uninstall-PnPApp', 'Remove-PnPApp', 'Add-PnPCustomAction',
+            'Remove-PnPCustomAction', 'Set-PnPField', 'Get-PnPContentType', 'Invoke-PnPQuery', 'Add-PnPPage', 'Add-PnPPageWebPart',
+            'Set-PnPPageWebPart', 'Set-PnPPage') {
+            Should -Invoke -ModuleName OrpheusSolutions $name -Times 0 -Exactly
+        }
+    }
+}
+
+#endregion
