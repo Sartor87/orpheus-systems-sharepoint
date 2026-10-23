@@ -1,0 +1,57 @@
+name: Architecture site
+
+# Publishes the architecture to GitHub Pages: live C4 views exported from the Structurizr
+# workspace, the TOGAF phase documents and the ADRs, all rendered from the files in architecture/.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'architecture/**'
+      - '.github/pages/**'
+      - '.github/workflows/architecture-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Export the Structurizr views as Mermaid
+        run: |
+          mkdir -p build/views
+          docker run --rm -u "$(id -u):$(id -g)" \
+            -v "${{ github.workspace }}/architecture:/ws" \
+            -v "${{ github.workspace }}/build/views:/out" \
+            docker.io/structurizr/structurizr:latest export \
+              -workspace /ws/structurizr/workspace.dsl -format mermaid -output /out
+          ls build/views/*.mmd
+
+      - name: Install pandoc
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq pandoc
+
+      - name: Build the site
+        run: bash .github/pages/build-architecture-site.sh build/views site
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
