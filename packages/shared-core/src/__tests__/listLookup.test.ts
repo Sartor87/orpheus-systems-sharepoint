@@ -29,7 +29,7 @@ describe('contractsOfContractorQuery', () => {
 });
 
 describe('deriveRolesForContracts', () => {
-  interface Fake { asContractor?: boolean; asManager?: boolean; isSiteAdmin?: boolean; groups?: Array<{ Id: number; Title: string }>; ownerGroupId?: number }
+  interface Fake { asContractor?: boolean; asManager?: boolean; isSiteAdmin?: boolean; groups?: Array<{ Id: number; Title: string }>; ownerGroupId?: number; me?: 'reject' | 'empty' }
 
   function fakeSp(f: Fake): SPFI {
     let call = 0;
@@ -40,7 +40,7 @@ describe('deriveRolesForContracts', () => {
       lists: { getById: () => ({ items }) },
       associatedOwnerGroup: { select: () => () => Promise.resolve({ Id: f.ownerGroupId === undefined ? 3 : f.ownerGroupId }) },
       currentUser: {
-        select: () => () => Promise.resolve({ IsSiteAdmin: !!f.isSiteAdmin }),
+        select: () => () => f.me === 'reject' ? Promise.reject(new Error('403')) : Promise.resolve(f.me === 'empty' ? {} : { IsSiteAdmin: !!f.isSiteAdmin }),
         groups: { select: () => () => Promise.resolve(f.groups || []) }
       }
     };
@@ -76,5 +76,18 @@ describe('deriveRolesForContracts', () => {
 
   it('owners group member is still Admin', async () => {
     await expect(deriveRolesForContracts(fakeSp({ groups: [{ Id: 3, Title: 'Owners' }] }), 'c', 7)).resolves.toEqual(['Admin']);
+  });
+
+  it('rejects, and never grants Admin, when the IsSiteAdmin read fails', async () => {
+    await expect(deriveRolesForContracts(fakeSp({ me: 'reject', groups: [{ Id: 3, Title: 'Owners' }] }), 'c', 7)).rejects.toThrow('403');
+  });
+
+  it('gives no Admin when the IsSiteAdmin field is missing', async () => {
+    await expect(deriveRolesForContracts(fakeSp({ me: 'empty', groups: [{ Id: 5, Title: 'Members' }] }), 'c', 7)).resolves.toEqual([]);
+  });
+
+  it('matches the managers group title exactly (case-sensitive)', async () => {
+    const groups = [{ Id: 9, Title: 'orpheus contract managers' }];
+    await expect(deriveRolesForContracts(fakeSp({ groups }), 'c', 7)).resolves.toEqual([]);
   });
 });

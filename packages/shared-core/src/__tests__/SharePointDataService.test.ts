@@ -210,3 +210,59 @@ describe('SharePointDataService used days', () => {
     expect(updates).toEqual([{ OnSiteUsedDays: 2, OffSiteUsedDays: 1 }]);
   });
 });
+
+describe('SharePointDataService used days of other contracts and on delete', () => {
+  /** Filters are evaluated here (unlike routedSp): contracts by id, entries by `ContractId eq n` or by day. */
+  function periodSp(contracts: SPContractItem[], entries: SPEntryItem[]): { sp: SPFI; updates: Array<{ id: number; payload: unknown }>; contractSelects: string[][] } {
+    const updates: Array<{ id: number; payload: unknown }> = [];
+    const contractSelects: string[][] = [];
+    const makeQuery = (listId: string, byId?: number): Record<string, unknown> => {
+      let filter = '';
+      const q = (() => {
+        if (listId === 'c') { return Promise.resolve(byId !== undefined ? contracts.filter(c => c.Id === byId)[0] : contracts); }
+        if (listId === 'h') { return Promise.resolve([]); }
+        const ids = (filter.match(/ContractId eq (\d+)/g) || []).map(m => Number(m.split(' ')[2]));
+        const day = filter.includes('EntryDate ge') ? monday : '';
+        return Promise.resolve(entries.filter(x => ids.indexOf((x.Contract as { Id: number }).Id) >= 0 && (!day || x.EntryDate.indexOf(day) === 0)));
+      }) as unknown as Record<string, unknown>;
+      q.filter = (f: string) => { filter = f; return q; };
+      q.select = (...a: string[]) => { if (listId === 'c' && byId === undefined) { contractSelects.push(a); } return q; };
+      ['expand', 'orderBy', 'top'].forEach(m => { q[m] = () => q; });
+      return q;
+    };
+    const getList = (id: string): unknown => ({ items: Object.assign(makeQuery(id), { getById: (n: number) => makeQuery(id, n) }) });
+    const ok = (): Promise<unknown> => Promise.resolve({ Id: 99 });
+    const batchSp = { web: { lists: { getById: () => ({ items: {
+      getById: (n: number) => ({ delete: ok, update: (payload: unknown) => { updates.push({ id: n, payload }); return ok(); } }),
+      add: ok
+    } }) } } };
+    const sp = { web: { lists: { getById: getList } }, batched: () => [batchSp, () => Promise.resolve()] } as unknown as SPFI;
+    return { sp, updates, contractSelects };
+  }
+
+  const second: SPContractItem = { ...base, Id: 2, Title: '002100_2026', StartDate: '2026-03-01T00:00:00Z', LatestExecutionDate: '2026-03-31T00:00:00Z' };
+
+  it('upsert recomputes a displaced sibling contract from its in-period entries, using the period from the sibling select', async () => {
+    const { sp, updates, contractSelects } = periodSp([base, second], [
+      { Id: 60, Contract: { Id: 2 }, EntryDate: `${monday}T00:00:00Z`, EntryType: 'OnSiteFull' },   // displaced by the upsert
+      { Id: 61, Contract: { Id: 2 }, EntryDate: '2026-03-10T00:00:00Z', EntryType: 'OnSiteFull' },
+      { Id: 62, Contract: { Id: 2 }, EntryDate: '2026-02-20T00:00:00Z', EntryType: 'OnSiteFull' },  // before the sibling's start
+      { Id: 63, Contract: { Id: 2 }, EntryDate: '2026-04-15T00:00:00Z', EntryType: 'OnSiteFull' }   // after the sibling's end
+    ]);
+    await new SharePointDataService(sp, lists, jane).upsertEntry({ contractId: 1, date: monday, type: 'OffSiteFull' });
+    expect(contractSelects.some(s => s.indexOf('StartDate') >= 0 && s.indexOf('LatestExecutionDate') >= 0)).toBe(true);
+    expect(updates).toContainEqual({ id: 2, payload: { OnSiteUsedDays: 1, OffSiteUsedDays: 0 } });
+    expect(updates).toContainEqual({ id: 1, payload: { OnSiteUsedDays: 0, OffSiteUsedDays: 1 } });
+  });
+
+  it('delete recomputes from in-period entries only', async () => {
+    const { sp, updates } = periodSp([base], [
+      { Id: 70, Contract: { Id: 1 }, EntryDate: `${monday}T00:00:00Z`, EntryType: 'OnSiteFull' },    // deleted
+      { Id: 71, Contract: { Id: 1 }, EntryDate: '2026-03-10T00:00:00Z', EntryType: 'OnSiteFull' },
+      { Id: 72, Contract: { Id: 1 }, EntryDate: '2026-01-30T00:00:00Z', EntryType: 'OnSiteFull' },  // before StartDate
+      { Id: 73, Contract: { Id: 1 }, EntryDate: '2027-03-01T00:00:00Z', EntryType: 'OffSiteFull' }  // after the end
+    ]);
+    await new SharePointDataService(sp, lists, jane).deleteEntry(1, monday);
+    expect(updates).toEqual([{ id: 1, payload: { OnSiteUsedDays: 1, OffSiteUsedDays: 0 } }]);
+  });
+});
