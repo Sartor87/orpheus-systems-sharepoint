@@ -60,7 +60,7 @@ describe('generateTimesheet', () => {
     expect(result.current.generating).toBe(false);
   });
 
-  it('queries the service for exactly the requested period and applies label overrides', async () => {
+  it('loads entries from the contract start to the period end, holidays for the period, and applies label overrides', async () => {
     const download = jest.fn().mockResolvedValue(undefined);
     const service = new LocalDataService({ demoUserId: 1 });
     const getEntries = jest.spyOn(service, 'getEntries');
@@ -74,7 +74,7 @@ describe('generateTimesheet', () => {
     getEntries.mockClear();
     getHolidays.mockClear();
     await act(async () => { await result.current.generateTimesheet({ from: '2026-03-02', to: '2026-04-30' }); });
-    expect(getEntries).toHaveBeenCalledWith(c.id, '2026-03-02', '2026-04-30');
+    expect(getEntries).toHaveBeenCalledWith(c.id, c.startDate, '2026-04-30');
     expect(getHolidays).toHaveBeenCalledWith(c.country, '2026-03-02', '2026-04-30');
     const [model] = download.mock.calls[0] as [TimesheetModel];
     expect(model.labels).toEqual({ approvingOrg: 'Ministry', serviceProvider: 'Vendor' });

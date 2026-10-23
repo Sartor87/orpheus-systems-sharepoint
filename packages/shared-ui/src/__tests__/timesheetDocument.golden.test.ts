@@ -25,4 +25,15 @@ describe('buildTimesheetDocDefinition golden output', () => {
     expect(model.pages).toHaveLength(2);
     expect(buildTimesheetDocDefinition(model)).toMatchSnapshot();
   });
+
+  it('repeats the contract header on every page', () => {
+    const model = buildTimesheetModel(contract({}), [], [], { from: '2026-02-01', to: '2027-03-31' }, labels);
+    const doc = buildTimesheetDocDefinition(model);
+    const stacks = (doc.content as Array<{ stack: unknown[] }>);
+    expect(stacks).toHaveLength(2);
+    stacks.forEach(s => {
+      const text = JSON.stringify(s.stack);
+      ['Framework contract', 'Specific contract', 'Remaining on-site', 'Remaining off-site', 'Remaining total'].forEach(l => expect(text).toContain(l));
+    });
+  });
 });

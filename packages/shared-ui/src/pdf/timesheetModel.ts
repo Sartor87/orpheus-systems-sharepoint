@@ -1,6 +1,6 @@
 import {
   CalendarEntry, Contract, DateKey, Holiday,
-  computeRemaining, computeTotals, daysInMonth, hoursFor, isBlocked, isWithin, monthsBetween
+  computeRemaining, computeTotals, computeUsedTotals, daysInMonth, hoursFor, isBlocked, isWithin, monthsBetween
 } from '@orpheussystems/shared-core';
 
 export interface TimesheetLabels { approvingOrg: string; serviceProvider: string }
@@ -65,7 +65,8 @@ export function buildTimesheetModel(
   for (let i = 0; i < rows.length; i += ROWS_PER_PAGE) { pages.push({ rows: rows.slice(i, i + ROWS_PER_PAGE) }); }
 
   const totals = computeTotals(inPeriod);
-  const rem = computeRemaining(contract, totals);
+  // Remaining is as of the period end: every in-contract day up to period.to counts, including days before the period.
+  const rem = computeRemaining(contract, computeUsedTotals(contract, entries.filter(x => x.date <= period.to)));
   return {
     header: {
       frameworkContract: contract.frameworkContract,

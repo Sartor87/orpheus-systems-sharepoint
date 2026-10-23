@@ -538,8 +538,9 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
       if (templateUrl && !source) { throw new Error(`the timesheet template "${templateUrl}" is set but no template source is available`); }
       // Straight from the service, not the cached display data. getHolidays already merges the '*' (all countries) rows.
       // The template and its contract data are fetched on every generation (no cache), in parallel with the entries.
+      // Entries run from the contract start so "Remaining" can subtract the days before the period too.
       const [list, hols, template] = await Promise.all([
-        service.getEntries(contract.id, period.from, period.to),
+        service.getEntries(contract.id, contract.startDate, period.to),
         service.getHolidays(contract.country, period.from, period.to),
         source ? Promise.all([source.loadTemplate(), source.loadTemplateData(contract.id)]) : undefined
       ]);

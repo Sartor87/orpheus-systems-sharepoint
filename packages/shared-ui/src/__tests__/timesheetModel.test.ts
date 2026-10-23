@@ -34,6 +34,25 @@ test('timesheet model marks weekends as not blocked when blockWeekends is false'
   expect(c[0].kind).toBe('empty'); // Sun 1 Feb
   expect(c[4].kind).toBe('blocked'); // holiday stays blocked
 });
+test('remaining subtracts days before the period too', () => {
+  const c = contract({ startDate: '2027-01-01', latestExecutionDate: '2027-03-31', onSiteTargetDays: 20, offSiteTargetDays: 10 });
+  const jan = ['2027-01-04', '2027-01-05', '2027-01-06', '2027-01-07', '2027-01-08'].map(d => e('OnSiteFull', d));
+  const feb = ['2027-02-01', '2027-02-02'].map(d => e('OnSiteFull', d));
+  const m = buildTimesheetModel(c, [...jan, ...feb], [], { from: '2027-02-01', to: '2027-02-28' }, labels);
+  expect(m.header).toMatchObject({ remainingOnSite: 20 - 7, remainingOffSite: 10, remainingTotal: 30 - 7 });
+});
+test('remaining ignores entries after the period end', () => {
+  const c = contract({ startDate: '2027-01-01', latestExecutionDate: '2027-03-31', onSiteTargetDays: 20, offSiteTargetDays: 10 });
+  const m = buildTimesheetModel(c, [e('OnSiteFull', '2027-02-01'), e('OnSiteFull', '2027-03-01')], [], { from: '2027-02-01', to: '2027-02-28' }, labels);
+  expect(m.header.remainingOnSite).toBe(19);
+});
+test('grid shows only the period days', () => {
+  const c = contract({ startDate: '2027-01-01', latestExecutionDate: '2027-03-31' });
+  const m = buildTimesheetModel(c, [e('OnSiteFull', '2027-01-05'), e('OnSiteFull', '2027-02-02')], [], { from: '2027-02-01', to: '2027-02-28' }, labels);
+  expect(m.pages[0].rows).toHaveLength(1);
+  expect(m.pages[0].rows[0].cells.filter(x => x.kind === 'onsite').map(x => x.day)).toEqual([2]);
+  expect(m.grand).toEqual({ onSite: 1, offSite: 0, total: 1 });
+});
 test('formatLongDate', () => {
   expect(formatLongDate('2026-02-02')).toBe('02 February 2026');
 });

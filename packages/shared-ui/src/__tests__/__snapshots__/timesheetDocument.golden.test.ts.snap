@@ -268,7 +268,7 @@ exports[`buildTimesheetDocDefinition golden output matches the snapshot for 14 m
                 {
                   "bold": true,
                   "color": "#262626",
-                  "text": "9.5",
+                  "text": "10",
                 },
               ],
             },
@@ -288,7 +288,7 @@ exports[`buildTimesheetDocDefinition golden output matches the snapshot for 14 m
                 {
                   "bold": true,
                   "color": "#262626",
-                  "text": "18.5",
+                  "text": "19",
                 },
               ],
             },
@@ -2817,7 +2817,7 @@ exports[`buildTimesheetDocDefinition golden output matches the snapshot for 14 m
                 {
                   "bold": true,
                   "color": "#262626",
-                  "text": "9.5",
+                  "text": "10",
                 },
               ],
             },
@@ -2837,7 +2837,7 @@ exports[`buildTimesheetDocDefinition golden output matches the snapshot for 14 m
                 {
                   "bold": true,
                   "color": "#262626",
-                  "text": "18.5",
+                  "text": "19",
                 },
               ],
             },
