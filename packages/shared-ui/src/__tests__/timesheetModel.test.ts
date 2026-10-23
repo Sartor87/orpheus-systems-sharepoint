@@ -27,6 +27,13 @@ test('weekends and holidays are blocked, header targets and remaining', () => {
   expect(c[5].kind).toBe('empty'); // Fri 6 Feb? weekday
   expect(m.header).toMatchObject({ targetOnSite: 10, targetOffSite: 5, targetTotal: 15, remainingOnSite: 9, remainingOffSite: 5, remainingTotal: 14 });
 });
+test('timesheet model marks weekends as not blocked when blockWeekends is false', () => {
+  const hols = [{ title: 'H', date: '2026-02-05', country: '*', source: 'Manual' as const }];
+  const m = buildTimesheetModel(contract(), [], hols, { from: '2026-02-01', to: '2026-02-28' }, labels, { blockWeekends: false });
+  const c = m.pages[0].rows[0].cells;
+  expect(c[0].kind).toBe('empty'); // Sun 1 Feb
+  expect(c[4].kind).toBe('blocked'); // holiday stays blocked
+});
 test('formatLongDate', () => {
   expect(formatLongDate('2026-02-02')).toBe('02 February 2026');
 });

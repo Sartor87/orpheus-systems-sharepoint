@@ -9,6 +9,8 @@ import holidaysJson from './fixtures/holidays.json';
 
 export interface LocalDataServiceOptions {
   demoUserId: number;
+  /** Weekends are blocked for writes. Defaults to true; holidays are always blocked. */
+  blockWeekends?: boolean;
 }
 
 const ADMIN_USER_ID = 4;
@@ -21,6 +23,7 @@ export class LocalDataService implements IDataService {
   public static readonly demoUsers: UserRef[] = clone(usersJson) as UserRef[];
 
   private readonly userId: number;
+  private readonly blockWeekends: boolean;
   private readonly contracts: Contract[] = clone(contractsJson) as Contract[];
   private entries: CalendarEntry[] = clone(entriesJson) as CalendarEntry[];
   private readonly holidays: Holiday[] = clone(holidaysJson) as Holiday[];
@@ -28,6 +31,7 @@ export class LocalDataService implements IDataService {
 
   constructor(opts: LocalDataServiceOptions) {
     this.userId = opts.demoUserId;
+    this.blockWeekends = opts.blockWeekends ?? true;
     this.nextId = this.entries.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;
   }
 
@@ -60,7 +64,7 @@ export class LocalDataService implements IDataService {
     const contract = this.contracts.find(c => c.id === entry.contractId);
     if (!contract) { throw new Error(`Unknown contract ${entry.contractId}`); }
     assertCanWriteDays(contract, this.userId);
-    if (isBlocked(entry.date, this.holidays, contract.country, true)) {
+    if (isBlocked(entry.date, this.holidays, contract.country, this.blockWeekends)) {
       throw new Error(`Date ${entry.date} is blocked (weekend or holiday)`);
     }
     if (!isWithin(entry.date, contract.startDate, contract.latestExecutionDate)) {

@@ -1,6 +1,6 @@
 jest.mock('@orpheussystems/shared-core/sharepoint', () => ({
   SharePointDataService: class FakeSpService {
-    constructor(public sp: unknown, public lists: unknown, public user: unknown) {}
+    constructor(public sp: unknown, public lists: unknown, public user: unknown, public options?: unknown) {}
   }
 }));
 
@@ -53,6 +53,19 @@ describe('createDataService', () => {
   });
 });
 
+describe('createDataService blockWeekends', () => {
+  const sharePoint = { ...base, useLocalData: false, contractsListId: 'c', entriesListId: 'e', holidaysListId: 'h' };
+  it('createDataService passes blockWeekends from the properties', async () => {
+    const off = createDataService({ ...sharePoint, blockWeekends: false }, sp, false, user) as unknown as { options: unknown };
+    expect(off.options).toEqual({ blockWeekends: false });
+    const on = createDataService({ ...sharePoint, blockWeekends: true }, sp, false, user) as unknown as { options: unknown };
+    expect(on.options).toEqual({ blockWeekends: true });
+    const local = createDataService({ ...base, useLocalData: true, blockWeekends: false }, undefined, false);
+    await expect(local.getMyContracts()).resolves.toBeDefined();
+    await expect(local.upsertEntry({ contractId: 1, date: '2026-06-06', type: 'OnSiteFull' })).resolves.toBeDefined();
+  });
+});
+
 describe('shipped default (no useLocalData, not debug, no lists)', () => {
   it('throws the configuration message', () => {
     expect(() => createDataService(base, undefined, false))
@@ -61,10 +74,10 @@ describe('shipped default (no useLocalData, not debug, no lists)', () => {
 });
 
 describe('requiresServiceRebuild', () => {
-  it.each(['useLocalData', 'demoUserId', 'contractsListId', 'entriesListId', 'holidaysListId'])('%s rebuilds', p => {
+  it.each(['useLocalData', 'demoUserId', 'contractsListId', 'entriesListId', 'holidaysListId', 'blockWeekends'])('%s rebuilds', p => {
     expect(requiresServiceRebuild(p)).toBe(true);
   });
-  it.each(['monthsToShow', 'blockWeekends', 'approvingOrgLabel', 'serviceProviderLabel'])('%s does not', p => {
+  it.each(['monthsToShow', 'approvingOrgLabel', 'serviceProviderLabel'])('%s does not', p => {
     expect(requiresServiceRebuild(p)).toBe(false);
   });
 });

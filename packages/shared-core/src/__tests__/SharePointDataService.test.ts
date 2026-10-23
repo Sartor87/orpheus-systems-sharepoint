@@ -8,7 +8,7 @@ jest.mock('@pnp/sp/batching', () => ({}));
 
 import type { SPFI } from '@pnp/sp';
 import { SharePointDataService } from '../data/SharePointDataService';
-import type { SPContractItem, SPEntryItem } from '../data/spMappers';
+import type { SPContractItem, SPEntryItem, SPHolidayItem } from '../data/spMappers';
 
 const base: SPContractItem = {
   Id: 1,
@@ -49,7 +49,7 @@ describe('SharePointDataService.getMyContracts', () => {
   });
 });
 
-interface FakeLists { contracts: SPContractItem[]; entries?: SPEntryItem[] }
+interface FakeLists { contracts: SPContractItem[]; entries?: SPEntryItem[]; holidays?: SPHolidayItem[] }
 
 /**
  * Routes by list id: `c` contracts, `e` entries, `h` holidays (always empty). Item queries resolve every row of the
@@ -62,7 +62,7 @@ function routedSp(data: FakeLists): { sp: SPFI; batched: jest.Mock } {
     return q;
   };
   const list = (id: string): unknown => {
-    const rows: Array<{ Id: number }> = id === 'c' ? data.contracts : id === 'e' ? (data.entries || []) : [];
+    const rows: Array<{ Id: number }> = id === 'c' ? data.contracts : id === 'e' ? (data.entries || []) : id === 'h' ? (data.holidays || []) : [];
     return { items: Object.assign(query(rows), { getById: (n: number) => query(rows.filter(r => r.Id === n)[0] as unknown as unknown[]) }) };
   };
   const batched = jest.fn(() => { throw new Error('no write expected'); });
@@ -264,5 +264,38 @@ describe('SharePointDataService used days of other contracts and on delete', () 
     ]);
     await new SharePointDataService(sp, lists, jane).deleteEntry(1, monday);
     expect(updates).toEqual([{ id: 1, payload: { OnSiteUsedDays: 1, OffSiteUsedDays: 0 } }]);
+  });
+});
+
+describe('SharePointDataService blockWeekends option', () => {
+  const saturday = '2026-03-07';
+  const holidayRow: SPHolidayItem = { Id: 1, Title: 'H', HolidayDate: '2026-03-03T00:00:00Z', Country: 'BG', Source: 'Manual' };
+
+  function withBatch(sp: SPFI): void {
+    const ok = (): Promise<unknown> => Promise.resolve({ Id: 99 });
+    const item = { delete: ok, update: ok };
+    const batchSp = { web: { lists: { getById: () => ({ items: { getById: () => item, add: ok } }) } } };
+    (sp as unknown as { batched: jest.Mock }).batched = jest.fn(() => [batchSp, () => Promise.resolve()]);
+  }
+
+  it('with blockWeekends false writes a Saturday', async () => {
+    const { sp } = routedSp({ contracts: [base] });
+    withBatch(sp);
+    const svc = new SharePointDataService(sp, lists, jane, { blockWeekends: false });
+    await expect(svc.upsertEntry({ contractId: 1, date: saturday, type: 'OnSiteFull' })).resolves.toMatchObject({ date: saturday });
+  });
+
+  it('with blockWeekends false still rejects a holiday', async () => {
+    const { sp } = routedSp({ contracts: [base], holidays: [holidayRow] });
+    withBatch(sp);
+    const svc = new SharePointDataService(sp, lists, jane, { blockWeekends: false });
+    await expect(svc.upsertEntry({ contractId: 1, date: '2026-03-03', type: 'OnSiteFull' })).rejects.toThrow(/blocked/i);
+  });
+
+  it('by default still rejects a Saturday', async () => {
+    const { sp } = routedSp({ contracts: [base] });
+    withBatch(sp);
+    await expect(new SharePointDataService(sp, lists, jane).upsertEntry({ contractId: 1, date: saturday, type: 'OnSiteFull' }))
+      .rejects.toThrow(/blocked/i);
   });
 });

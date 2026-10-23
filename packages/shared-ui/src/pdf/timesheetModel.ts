@@ -32,8 +32,10 @@ export function formatLongDate(key: DateKey): string {
 
 export function buildTimesheetModel(
   contract: Contract, entries: CalendarEntry[], holidays: Holiday[],
-  period: { from: DateKey; to: DateKey }, labels: TimesheetLabels
+  period: { from: DateKey; to: DateKey }, labels: TimesheetLabels,
+  options: { blockWeekends?: boolean } = {}
 ): TimesheetModel {
+  const blockWeekends = options.blockWeekends ?? true;
   const inPeriod = entries.filter(x => isWithin(x.date, period.from, period.to));
   const byDate = new Map<DateKey, CalendarEntry>();
   inPeriod.forEach(x => byDate.set(x.date, x));
@@ -48,7 +50,7 @@ export function buildTimesheetModel(
       if (entry) {
         const onsite = entry.type === 'OnSiteFull' || entry.type === 'OnSiteHalf';
         cells.push({ day, hours: hoursFor(entry.type, contract.hoursPerDay), kind: onsite ? 'onsite' : 'offsite' });
-      } else if (isBlocked(key, holidays, contract.country, true)) {
+      } else if (isBlocked(key, holidays, contract.country, blockWeekends)) {
         cells.push({ day, kind: 'blocked' });
       } else {
         cells.push({ day, kind: 'empty' });

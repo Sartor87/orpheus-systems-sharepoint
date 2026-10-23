@@ -36,6 +36,11 @@ export async function deriveRoles(sp: SPFI, lists: SharePointListConfig, userId:
   return deriveRolesForContracts(sp, lists.contractsListId, userId);
 }
 
+export interface DataServiceOptions {
+  /** Weekends are blocked for writes. Defaults to true; holidays are always blocked. */
+  blockWeekends?: boolean;
+}
+
 export class SharePointDataService implements IDataService {
   /**
    * Writes run one at a time. Each write recomputes the used days of its contracts from the entries it reads
@@ -47,7 +52,8 @@ export class SharePointDataService implements IDataService {
   constructor(
     private readonly sp: SPFI,
     private readonly lists: SharePointListConfig,
-    private readonly currentUser: UserInfo
+    private readonly currentUser: UserInfo,
+    private readonly options: DataServiceOptions = {}
   ) {}
 
   public async getCurrentUser(): Promise<UserInfo> {
@@ -94,7 +100,7 @@ export class SharePointDataService implements IDataService {
     const contract = await this.loadContract(entry.contractId);
     assertCanWriteDays(contract, this.currentUser.id);
     const holidays = await this.getHolidays(contract.country, entry.date, entry.date);
-    if (isBlocked(entry.date, holidays, contract.country, true)) {
+    if (isBlocked(entry.date, holidays, contract.country, this.options.blockWeekends ?? true)) {
       throw new Error(`Date ${entry.date} is blocked (weekend or holiday)`);
     }
     if (!isWithin(entry.date, contract.startDate, contract.latestExecutionDate)) {

@@ -15,7 +15,7 @@ export function createDataService(
   currentUser?: UserInfo
 ): IDataService {
   if (isLocalData(props, isDebug)) {
-    return new LocalDataService({ demoUserId: props.demoUserId });
+    return new LocalDataService({ demoUserId: props.demoUserId, blockWeekends: !!props.blockWeekends });
   }
   if (!props.contractsListId || !props.entriesListId || !props.holidaysListId) {
     throw new Error('Select the Contracts, Calendar entries and Holidays lists in the property pane');
@@ -30,11 +30,13 @@ export function createDataService(
       entriesListId: props.entriesListId,
       holidaysListId: props.holidaysListId
     },
-    currentUser
+    currentUser,
+    { blockWeekends: !!props.blockWeekends }
   );
 }
 
-const REBUILD_PATHS = ['useLocalData', 'demoUserId', 'contractsListId', 'entriesListId', 'holidaysListId'];
+// blockWeekends is read when the service is built, so changing it must rebuild.
+const REBUILD_PATHS = ['useLocalData', 'demoUserId', 'contractsListId', 'entriesListId', 'holidaysListId', 'blockWeekends'];
 
 /** Only data-source properties require a new service; display properties just re-render. */
 export function requiresServiceRebuild(propertyPath: string): boolean {

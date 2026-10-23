@@ -546,7 +546,7 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
       const model = buildTimesheetModel(contract, list, hols, period, {
         approvingOrg: props.approvingOrgLabel || 'Client approval',
         serviceProvider: props.serviceProviderLabel || 'Service provider'
-      });
+      }, { blockWeekends: !!props.blockWeekends });
       const pdf = await loadPdfRef.current();
       const fileName = timesheetFileName(contract, period.from, period.to);
       if (source && template) {

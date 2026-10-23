@@ -86,3 +86,18 @@ describe('LocalDataService', () => {
     expect((await new LocalDataService({ demoUserId: 4 }).getCurrentUser()).roles).toContain('Admin');
   });
 });
+
+describe('LocalDataService blockWeekends option', () => {
+  test('with blockWeekends false writes a Saturday', async () => {
+    const svc = new LocalDataService({ demoUserId: 1, blockWeekends: false });
+    await expect(svc.upsertEntry({ contractId: 1, date: '2026-06-06', type: 'OnSiteFull' })).resolves.toMatchObject({ date: '2026-06-06' });
+  });
+  test('with blockWeekends false still rejects a holiday', async () => {
+    const svc = new LocalDataService({ demoUserId: 1, blockWeekends: false });
+    await expect(svc.upsertEntry({ contractId: 1, date: '2026-12-25', type: 'OnSiteFull' })).rejects.toThrow(/blocked/i);
+  });
+  test('by default still rejects a Saturday', async () => {
+    await expect(new LocalDataService({ demoUserId: 1 }).upsertEntry({ contractId: 1, date: '2026-06-06', type: 'OnSiteFull' }))
+      .rejects.toThrow(/blocked/i);
+  });
+});
