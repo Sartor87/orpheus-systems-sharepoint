@@ -1,0 +1,4 @@
+# Written by Structurizr Lite and the CLI; the DSL is the source of truth.
+workspace.json
+.structurizr/
+export/

@@ -1,0 +1,25 @@
+# Structurizr (local mode) for architecture/structurizr/workspace.dsl.
+# Own project name so it never collides with the SPFx services (root compose.yml) or the
+# agent demo (COMPOSE_PROJECT_NAME=orpheus-agent). See docs/03-how-to-render.md.
+#
+#   podman compose -f architecture/structurizr/compose.yml up
+#   open http://localhost:8080
+#
+# The consolidated image replaces structurizr/lite and structurizr/cli. Its `local` command reads
+# workspace.dsl from /usr/local/structurizr, so this folder is the data directory and the ADR
+# folder is mounted next to it for `!adrs ../adr`.
+name: orpheus-structurizr
+
+services:
+  structurizr:
+    image: docker.io/structurizr/structurizr:latest
+    command: local
+    volumes:
+      - .:/usr/local/structurizr
+      - ../adr:/usr/local/adr:ro
+    environment:
+      # The Podman machine has 2 GiB; keep the JVM small (see docs/03-how-to-render.md).
+      - JAVA_TOOL_OPTIONS=-Xmx512m
+    mem_limit: 900m
+    ports:
+      - "8080:8080"
