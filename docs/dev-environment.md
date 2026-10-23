@@ -100,13 +100,7 @@ Builds the shared packages, then runs `heft build --production` and `heft packag
 
 On Windows the Podman machine is a WSL distribution, so its memory is the WSL limit (`memory=` in `%UserProfile%\.wslconfig`); `podman machine set --memory` has no effect on WSL. Never run `wsl --shutdown` to apply a change while other containers are running: it stops every WSL distribution.
 
-The extension packages deploy code only (`skipFeatureDeployment: true`, no features). Adding the app does not register the application customizer on any site. Until the provisioning script does it, register it on the Orpheus site by hand, for example with PnP PowerShell:
-
-```powershell
-Add-PnPCustomAction -Name 'OrpheusChrome' -Title 'Orpheus chrome' -Location 'ClientSideExtension.ApplicationCustomizer' `
-  -ClientSideComponentId '30930118-2d09-49f4-bdc4-fb2c9b4af49e' `
-  -ClientSideComponentProperties '{"contractsListUrl":"Lists/Contracts","calendarPageUrl":"SitePages/ContractCalendar.aspx","showFooter":true}'
-```
+The extension packages deploy code only (`skipFeatureDeployment: true`, no features). Adding the app does not register the application customizer on any site. `Provision-OrpheusSite.ps1 -InstallSolutions` does it: it installs the packages and registers the web custom action `OrpheusChrome` exactly once, with the component id `30930118-2d09-49f4-bdc4-fb2c9b4af49e` and the properties `{"contractsListUrl":"Lists/Contracts","calendarPageUrl":"SitePages/ContractCalendar.aspx","showFooter":true}`. See [deployment.md](deployment.md).
 
 ## When an extension does not appear after an upgrade
 
