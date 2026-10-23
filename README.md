@@ -55,11 +55,9 @@ On the Contracts list, the `RemainingDays` column shows two compact bars per con
 
 New, Edit and Display forms for contracts: validation as you type, people and date pickers, a warning when the contractor already has an overlapping contract, and an **Open calendar** link. Only a site admin or the contract's manager can edit.
 
-<!-- screenshots pending:
 | New | Edit | Display | Not allowed |
 |---|---|---|---|
 | ![New form](docs/screenshots/09-form-new.png) | ![Edit form with overlap warning](docs/screenshots/10-form-edit.png) | ![Display form](docs/screenshots/11-form-display.png) | ![Not allowed notice](docs/screenshots/12-form-not-allowed.png) |
--->
 
 ### Toasts and packaging
 
