@@ -64,6 +64,10 @@
 .PARAMETER ServiceProviderLabel
     Calendar web part label for the service provider. Default on a new web part: Service provider.
 
+.PARAMETER ForceUpload
+    With -InstallSolutions, upload the packages even when the site already has their versions. A
+    re-run otherwise uploads nothing for unchanged packages, so use this after a same-version rebuild.
+
 .EXAMPLE
     ./Provision-OrpheusSite.ps1 -SiteUrl https://<tenant>.sharepoint.com/sites/<site> -ClientId <app-client-id> -WhatIf
 
@@ -112,7 +116,9 @@ param(
     [string] $ApprovingOrgLabel,
 
     [ValidateNotNullOrEmpty()]
-    [string] $ServiceProviderLabel
+    [string] $ServiceProviderLabel,
+
+    [switch] $ForceUpload
 )
 
 Set-StrictMode -Version 1.0
@@ -619,6 +625,7 @@ if ($InstallSolutions) {
     if ($ApprovingOrgLabel) { $labels.approvingOrgLabel = $ApprovingOrgLabel }
     if ($ServiceProviderLabel) { $labels.serviceProviderLabel = $ServiceProviderLabel }
     $solutionParams.Labels = $labels
+    if ($ForceUpload) { $solutionParams.ForceUpload = $true }
     # Throws before the script connects when a package is missing, so nothing is written.
     $packageParams = @{}
     if ($SolutionsPath) { $packageParams.SolutionsPath = $SolutionsPath }
@@ -652,6 +659,12 @@ try {
     Write-Host "Connecting to $SiteUrl ..." -ForegroundColor Cyan
     Connect-PnPOnline -Url $SiteUrl -ClientId $ClientId -Interactive
 
+    if ($InstallSolutions) {
+        # Before any write: a site without a site collection App Catalog stops here, unchanged.
+        Write-Host 'Checking the site collection App Catalog ...' -ForegroundColor Cyan
+        Assert-OrpheusSiteAppCatalog
+    }
+
     Assert-NoFieldConflicts -Template $template
 
     Write-Host "Applying $TemplatePath ..." -ForegroundColor Cyan
@@ -682,7 +695,7 @@ finally {
     if ($completed) { Write-Host "Done: $SiteUrl" -ForegroundColor Green }
     else { Write-Host "Stopped before completion: $SiteUrl. Changes made so far:" -ForegroundColor Yellow }
     if ($completed) { Write-Host "  Template: $($template.SiteFields.Count) site columns, $($template.ContentTypes.Count) content types, lists $(($template.Lists | ForEach-Object { $_.Title }) -join ', ')" }
-    if ($script:Counts.Count -eq 0) { Write-Host '  No list items or indexes were written or checked.' }
+    if ($script:Counts.Count -eq 0 -and $solutionRows.Count -eq 0) { Write-Host '  No list items or indexes were written or checked.' }
     foreach ($key in $script:Counts.Keys) { Write-Host ("  {0}: {1}" -f $key, $script:Counts[$key]) }
     if ($solutionRows.Count) { $solutionRows | Format-Table Component, Action -AutoSize | Out-Host }
 }

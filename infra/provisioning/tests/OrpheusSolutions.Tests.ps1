@@ -241,9 +241,55 @@ Describe 'Install-OrpheusSolution' {
         $result = Install-OrpheusSolution -Path $script:Package
 
         $result.Action | Should -BeExactly 'Unchanged'
-        $script:Calls -join ',' | Should -BeExactly 'Add'
+        $script:Calls.Count | Should -Be 0
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPApp -Times 0 -Exactly
         Should -Invoke -ModuleName OrpheusSolutions Install-PnPApp -Times 0 -Exactly
         Should -Invoke -ModuleName OrpheusSolutions Update-PnPApp -Times 0 -Exactly
+        $script:ManifestCalls | Should -Be 1
+    }
+
+    It 'uploads a same-version package again with -ForceUpload' {
+        $script:Catalog.Present = $true
+        $script:Catalog.AppCatalogVersion = [version] '1.0.1.0'
+        $script:Catalog.InstalledVersion = [version] '1.0.1.0'
+
+        $result = Install-OrpheusSolution -Path $script:Package -ForceUpload
+
+        $result.Action | Should -BeExactly 'Uploaded'
+        $script:Calls -join ',' | Should -BeExactly 'Add'
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPApp -Times 1 -Exactly -ParameterFilter { $Overwrite -and $Publish }
+    }
+
+    It 'uploads when the catalog holds another version than the package' {
+        # Installed at the package version, but the catalog holds another version: upload to align.
+        $script:Catalog.Present = $true
+        $script:Catalog.AppCatalogVersion = [version] '1.0.0.0'
+        $script:Catalog.InstalledVersion = [version] '1.0.1.0'
+
+        $null = Install-OrpheusSolution -Path $script:Package
+
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPApp -Times 1 -Exactly
+    }
+
+    It 'reports Skipped and writes nothing when the upload is declined' {
+        Mock -ModuleName OrpheusSolutions Test-OrpheusShouldProcess { $false }
+
+        (Install-OrpheusSolution -Path $script:Package).Action | Should -BeExactly 'Skipped'
+        $script:Calls.Count | Should -Be 0
+    }
+
+    It 'returns a single result with a string Action when the PnP cmdlets emit objects' {
+        Mock -ModuleName OrpheusSolutions Install-PnPApp {
+            $script:Calls.Add('Install')
+            $script:Catalog.InstalledVersion = $script:Catalog.AppCatalogVersion
+            [pscustomobject]@{ Id = [guid]::NewGuid(); Status = 'Installed' }
+        }
+
+        $result = @(Install-OrpheusSolution -Path $script:Package)
+
+        $result.Count | Should -Be 1
+        $result[0].Action | Should -BeOfType [string]
+        $result[0].Action | Should -BeExactly 'Installed'
     }
 
     It 'updates an older installed version' {
@@ -291,7 +337,7 @@ Describe 'Install-OrpheusSolution' {
         $script:LagPolls = 1
 
         (Install-OrpheusSolution -Path $script:Package).Action | Should -BeExactly 'Unchanged'
-        $script:Calls -join ',' | Should -BeExactly 'Add'
+        $script:Calls.Count | Should -Be 0
     }
 
     It 'succeeds when the manifest is empty right after the reinstall and then appears' {
@@ -302,7 +348,7 @@ Describe 'Install-OrpheusSolution' {
         $script:LagPolls = 1
 
         (Install-OrpheusSolution -Path $script:Package).Action | Should -BeExactly 'Reinstalled'
-        $script:Calls -join ',' | Should -BeExactly 'Add,Uninstall,Remove,Add,Install'
+        $script:Calls -join ',' | Should -BeExactly 'Uninstall,Remove,Add,Install'
     }
 
     It 'throws with the component id when the manifest stays empty through the reinstall' {
@@ -312,7 +358,7 @@ Describe 'Install-OrpheusSolution' {
         $script:ManifestMode = 'AlwaysBroken'
 
         { Install-OrpheusSolution -Path $script:Package } | Should -Throw "*$script:AppCustomizerId*even after a clean reinstall*"
-        $script:Calls -join ',' | Should -BeExactly 'Add,Uninstall,Remove,Add,Install'
+        $script:Calls -join ',' | Should -BeExactly 'Uninstall,Remove,Add,Install'
         $script:ManifestCalls | Should -BeGreaterThan 2
     }
 
@@ -325,7 +371,7 @@ Describe 'Install-OrpheusSolution' {
         Mock -ModuleName OrpheusSolutions Test-OrpheusShouldProcess -ParameterFilter { $Action -like 'Clean reinstall*' } -MockWith { $false }
 
         { Install-OrpheusSolution -Path $script:Package } | Should -Throw "*$script:AppCustomizerId*clean reinstall declined*"
-        $script:Calls -join ',' | Should -BeExactly 'Add'
+        $script:Calls.Count | Should -Be 0
         Should -Invoke -ModuleName OrpheusSolutions Test-OrpheusShouldProcess -Times 1 -Exactly -ParameterFilter {
             $Action -like 'Clean reinstall*' -and $Target -like "*$script:SolutionId*"
         }
@@ -648,6 +694,55 @@ Describe 'Set-OrpheusFormCustomizer' {
     }
 }
 
+Describe 'Binding functions under -Confirm and with chatty cmdlets' {
+    BeforeEach {
+        New-PnPSafetyNet
+        Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Method -eq 'Get' } -MockWith {
+            switch -Wildcard ($Url) {
+                '/_api/web/UserCustomActions' { [pscustomobject]@{ value = @() } }
+                '*/fields/getbyinternalnameortitle*' { [pscustomobject]@{ ClientSideComponentId = '00000000-0000-0000-0000-000000000000' } }
+                '*/DefaultView/ViewFields' { [pscustomobject]@{ Items = @('LinkTitle') } }
+                '*/contenttypes*' { [pscustomobject]@{ value = @([pscustomobject]@{ Name = 'Orpheus Contract'; StringId = '0x0100514116295A2F4DD1A93519F365EB8AAF00AB' }) } }
+                default { throw "Unexpected GET $Url" }
+            }
+        }
+        Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Method -ne 'Get' } -MockWith { [pscustomobject]@{ odata = 'response' } }
+        Mock -ModuleName OrpheusSolutions Add-PnPCustomAction { [pscustomobject]@{ Id = [guid]::NewGuid() } }
+        Mock -ModuleName OrpheusSolutions Set-PnPField { [pscustomobject]@{ InternalName = 'RemainingDays' } }
+        Mock -ModuleName OrpheusSolutions Get-PnPContentType {
+            $ct = [pscustomobject]@{ StringId = '0x01'; NewFormClientSideComponentId = $null; EditFormClientSideComponentId = $null; DisplayFormClientSideComponentId = $null }
+            $ct | Add-Member -MemberType ScriptMethod -Name Update -Value { param($updateChildren) }
+            $ct
+        }
+        Mock -ModuleName OrpheusSolutions Invoke-PnPQuery { [pscustomobject]@{ Done = $true } }
+    }
+
+    It 'returns a single string from each binding when the cmdlets emit objects' {
+        foreach ($result in @(@(Set-OrpheusAppCustomizer), @(Set-OrpheusFieldCustomizer), @(Set-OrpheusFormCustomizer))) {
+            $result.Count | Should -Be 1
+            $result[0] | Should -BeOfType [string]
+        }
+    }
+
+    It 'reports Skipped and writes nothing when each step is declined' {
+        Mock -ModuleName OrpheusSolutions Test-OrpheusShouldProcess { $false }
+
+        Set-OrpheusAppCustomizer | Should -BeExactly 'Skipped'
+        Set-OrpheusFieldCustomizer | Should -BeExactly 'Skipped'
+        Set-OrpheusFormCustomizer | Should -BeExactly 'Skipped'
+
+        foreach ($name in 'Add-PnPCustomAction', 'Set-PnPField', 'Get-PnPContentType', 'Invoke-PnPQuery') {
+            Should -Invoke -ModuleName OrpheusSolutions $name -Times 0 -Exactly
+        }
+        Should -Invoke -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -Times 0 -Exactly -ParameterFilter { $Method -ne 'Get' }
+    }
+
+    It 'still reports the plan, not Skipped, under -WhatIf' {
+        Set-OrpheusAppCustomizer -WhatIf | Should -BeExactly 'Added'
+        Set-OrpheusFieldCustomizer -WhatIf | Should -BeExactly 'Added'
+    }
+}
+
 #endregion
 
 #region Task 4: calendar page with the web part
@@ -778,6 +873,26 @@ Describe 'Set-OrpheusCalendarPage' {
         Should -Invoke -ModuleName OrpheusSolutions Add-PnPPage -Times 0 -Exactly
     }
 
+    It 'reports Skipped and writes nothing when the page creation is declined' {
+        $script:Pages = @()
+        Mock -ModuleName OrpheusSolutions Test-OrpheusShouldProcess { $false }
+
+        Set-OrpheusCalendarPage | Should -BeExactly 'Skipped'
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPPage -Times 0 -Exactly
+    }
+
+    It 'returns a single string when the page cmdlets emit objects' {
+        $script:Pages = @()
+        Mock -ModuleName OrpheusSolutions Add-PnPPage { [pscustomobject]@{ Name = 'ContractCalendar.aspx' } }
+        Mock -ModuleName OrpheusSolutions Add-PnPPageWebPart { [pscustomobject]@{ InstanceId = [guid]::NewGuid() } }
+        Mock -ModuleName OrpheusSolutions Set-PnPPage { [pscustomobject]@{ Name = 'ContractCalendar.aspx' } }
+
+        $result = @(Set-OrpheusCalendarPage)
+
+        $result.Count | Should -Be 1
+        $result[0] | Should -BeExactly 'Created'
+    }
+
     It 'throws when a list is missing' {
         $script:MissingList = 'Lists/Holidays'
 
@@ -855,6 +970,43 @@ Describe 'Get-OrpheusPackagePaths' {
     }
 }
 
+Describe 'Assert-OrpheusSiteAppCatalog' {
+    BeforeEach { New-PnPSafetyNet }
+
+    It 'passes when the catalog can be read' {
+        Mock -ModuleName OrpheusSolutions Get-PnPApp { }
+
+        { Assert-OrpheusSiteAppCatalog } | Should -Not -Throw
+    }
+
+    It 'names the admin commands when the site has no Apps for SharePoint library' {
+        Mock -ModuleName OrpheusSolutions Get-PnPApp { throw 'Something went wrong.' }
+        Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Url -like '*BaseTemplate eq 336*' } -MockWith { [pscustomobject]@{ value = @() } }
+
+        { Assert-OrpheusSiteAppCatalog } | Should -Throw '*no site collection App Catalog*Register-PnPAppCatalogSite*Add-PnPSiteCollectionAppCatalog*'
+    }
+
+    It 'reports the real error, not a missing catalog, when the catalog exists' {
+        Mock -ModuleName OrpheusSolutions Get-PnPApp { throw '(403) Forbidden.' }
+        Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Url -like '*BaseTemplate eq 336*' } -MockWith { [pscustomobject]@{ value = @([pscustomobject]@{ Id = [guid]::NewGuid() }) } }
+
+        $message = try { Assert-OrpheusSiteAppCatalog; '' } catch { $_.Exception.Message }
+
+        $message | Should -BeLike '*(403) Forbidden.*'
+        $message | Should -Not -BeLike '*no site collection App Catalog*'
+    }
+
+    It 'reports the real error when even the library check fails' {
+        Mock -ModuleName OrpheusSolutions Get-PnPApp { throw 'The remote server returned an error: (429).' }
+        Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Url -like '*BaseTemplate eq 336*' } -MockWith { throw '(429) Too many requests.' }
+
+        $message = try { Assert-OrpheusSiteAppCatalog; '' } catch { $_.Exception.Message }
+
+        $message | Should -BeLike '*(429)*'
+        $message | Should -Not -BeLike '*no site collection App Catalog*'
+    }
+}
+
 Describe 'Invoke-OrpheusSolutionInstall' {
     BeforeAll {
         $script:Flat = New-Item -ItemType Directory -Force -Path (Join-Path $TestDrive 'solutions')
@@ -898,6 +1050,7 @@ Describe 'Invoke-OrpheusSolutionInstall' {
 
     It 'stops with the admin commands when the site has no site collection App Catalog' {
         Mock -ModuleName OrpheusSolutions Get-PnPApp { throw 'The site collection app catalog does not exist.' }
+        Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Url -like '*BaseTemplate eq 336*' } -MockWith { [pscustomobject]@{ value = @() } }
 
         { Invoke-OrpheusSolutionInstall -SolutionsPath $script:Flat } |
             Should -Throw '*tenant App Catalog*Register-PnPAppCatalogSite*Add-PnPSiteCollectionAppCatalog*'
@@ -908,6 +1061,41 @@ Describe 'Invoke-OrpheusSolutionInstall' {
         $null = Invoke-OrpheusSolutionInstall -SolutionsPath $script:Flat -Labels @{ approvingOrgLabel = 'Approver' }
 
         Should -Invoke -ModuleName OrpheusSolutions Set-OrpheusCalendarPage -Times 1 -Exactly -ParameterFilter { $Labels.approvingOrgLabel -eq 'Approver' }
+    }
+
+    It 'adds a Failed row for the step that throws, then rethrows' {
+        Mock -ModuleName OrpheusSolutions Install-OrpheusSolution -ParameterFilter { $Path -like '*ext-app-customizer*' } -MockWith { throw 'Timed out after 300 s waiting for x.' }
+        $rows = [System.Collections.Generic.List[object]]::new()
+
+        { Invoke-OrpheusSolutionInstall -SolutionsPath $script:Flat | ForEach-Object { $rows.Add($_) } } | Should -Throw '*Timed out*'
+
+        $rows.Count | Should -Be 2
+        $rows[1].Component | Should -BeLike '*ext-app-customizer*'
+        $rows[1].Action | Should -BeLike 'Failed: Timed out after 300 s*'
+        Should -Invoke -ModuleName OrpheusSolutions Set-OrpheusAppCustomizer -Times 0 -Exactly
+    }
+
+    It 'adds a Failed row when a binding step throws' {
+        Mock -ModuleName OrpheusSolutions Set-OrpheusFieldCustomizer { throw 'Field RemainingDays not found.' }
+        $rows = [System.Collections.Generic.List[object]]::new()
+
+        { Invoke-OrpheusSolutionInstall -SolutionsPath $script:Flat | ForEach-Object { $rows.Add($_) } } | Should -Throw '*RemainingDays*'
+
+        $rows[-1].Component | Should -BeLike 'Field customizer*'
+        $rows[-1].Action | Should -BeExactly 'Failed: Field RemainingDays not found.'
+    }
+
+    It 'passes -ForceUpload to every install' {
+        $null = Invoke-OrpheusSolutionInstall -SolutionsPath $script:Flat -ForceUpload
+
+        Should -Invoke -ModuleName OrpheusSolutions Install-OrpheusSolution -Times 4 -Exactly -ParameterFilter { $ForceUpload }
+    }
+
+    It 'passes -Confirm:$false to every step' {
+        $null = Invoke-OrpheusSolutionInstall -SolutionsPath $script:Flat -Confirm:$false
+
+        Should -Invoke -ModuleName OrpheusSolutions Install-OrpheusSolution -Times 4 -Exactly -ParameterFilter { $null -ne $Confirm -and -not $Confirm }
+        Should -Invoke -ModuleName OrpheusSolutions Set-OrpheusCalendarPage -Times 1 -Exactly -ParameterFilter { $null -ne $Confirm -and -not $Confirm }
     }
 
     It 'passes -WhatIf explicitly to every step' {

@@ -237,6 +237,13 @@ function Test-OrpheusShouldProcess {
     return $Cmdlet.ShouldProcess($Target, $Action)
 }
 
+function Resolve-StepResult {
+    # 'Skipped' when a needed write was declined under -Confirm, otherwise the result.
+    param([Parameter(Mandatory)] [string] $Result, [bool] $Declined)
+    if ($Declined) { return 'Skipped' }
+    return $Result
+}
+
 function Get-OrpheusApp {
     # The site collection App Catalog entry for a solution id, or $null. Get-PnPApp -Identity throws
     # for a missing app, so list the catalog and filter.
@@ -251,35 +258,48 @@ function Test-AppInstalled {
         ([string] $App.InstalledVersion) -eq ([string] $App.AppCatalogVersion)
 }
 
+function Test-SameVersion {
+    # True when two version strings name the same version ('1.0.1.0' and '1.0.1' included). Empty never matches.
+    param([string] $Left, [string] $Right)
+    if ([string]::IsNullOrWhiteSpace($Left) -or [string]::IsNullOrWhiteSpace($Right)) { return $false }
+    return ([version] $Left) -eq ([version] $Right)
+}
+
 function Install-OrpheusSolution {
     <#
     .SYNOPSIS
         Installs or updates one .sppkg in the site collection App Catalog and checks its manifests.
     .DESCRIPTION
-        1. Uploads the package (Add-PnPApp -Scope Site -Publish -Overwrite). The upload always
-           happens, because the catalog copy is the only way to compare versions.
-        2. Installs it when it is not installed, updates it when the installed version differs from
-           the catalog version, and otherwise does nothing.
-        3. Waits until the installed version matches the catalog version.
-        4. Checks the client-side manifests, polling for up to $script:ManifestSettleSeconds (60 s)
+        The installed and catalog versions are read with Get-PnPApp and the package version from the
+        file, before anything is written.
+        1. When the installed and catalog versions both equal the package version, nothing is
+           uploaded (unless -ForceUpload, for a same-version rebuild whose content changed). Otherwise
+           the package is uploaded (Add-PnPApp -Scope Site -Publish -Overwrite), then installed when
+           it is not installed, or updated when the installed version differs from the catalog one.
+        2. After an install or update it waits until the installed version matches the catalog one.
+        3. It checks the client-side manifests, polling for up to $script:ManifestSettleSeconds (60 s)
            because activation can lag the install. When one stays empty, it does a clean reinstall
            behind its own ShouldProcess: uninstall, wait, remove from the catalog, upload, install,
            wait, and polls again. It throws with the component ids when a manifest is still empty,
            or when the reinstall is declined.
-        It throws before any upload when the package has no component entries, or when the installed
+        It throws before any write when the package has no component entries, or when the installed
         or catalog version is newer than the package (a downgrade).
         Remove-PnPApp removes the package from the site collection App Catalog, so a clean reinstall
         also breaks the app on any other web of the site collection where it is installed.
-        With -WhatIf it only reads the catalog and the manifests and returns the planned action.
+        With -WhatIf it only reads the catalog and the manifests and returns the planned action. When
+        the upload is declined under -Confirm, it writes nothing and returns 'Skipped'.
+    .PARAMETER ForceUpload
+        Upload and publish the package even when the site already has this version.
     .OUTPUTS
-        [pscustomobject] with Title, Version and Action ('Unchanged', 'Installed', 'Updated' or
-        'Reinstalled').
+        [pscustomobject] with Title, Version and Action ('Unchanged', 'Installed', 'Updated',
+        'Uploaded', 'Reinstalled' or 'Skipped').
     #>
     [CmdletBinding(SupportsShouldProcess)]
     [OutputType([pscustomobject])]
     param(
         [Parameter(Mandatory)] [string] $Path,
-        [ValidateRange(1, 86400)] [int] $TimeoutSeconds = 300
+        [ValidateRange(1, 86400)] [int] $TimeoutSeconds = 300,
+        [switch] $ForceUpload
     )
 
     $info = Read-SppkgInfo -Path $Path
@@ -295,19 +315,18 @@ function Install-OrpheusSolution {
         }
     }
 
-    # The plan from the current state. The catalog copy is replaced by the upload, so an installed
-    # app counts as current when its installed version equals the package version.
+    # The plan, from versions read before any write.
     $installed = $null -ne $app -and -not [string]::IsNullOrEmpty([string] $app.InstalledVersion)
-    $action = if (-not $installed) { 'Installed' } elseif ([string] $app.InstalledVersion -ne $info.Version) { 'Updated' } else { 'Unchanged' }
-    # Under -WhatIf the manifests are checked here (a read-only POST) so the plan shows a reinstall.
-    # A real run checks them after the upload instead.
-    if ($WhatIfPreference -and $action -eq 'Unchanged' -and @(Get-MissingManifests -ComponentIds $info.ComponentIds).Count) { $action = 'Reinstalled' }
+    $upToDate = $installed -and (Test-SameVersion ([string] $app.InstalledVersion) $info.Version) -and
+        (Test-SameVersion ([string] $app.AppCatalogVersion) $info.Version)
+    $upload = -not $upToDate -or $ForceUpload
+    $action = if (-not $installed) { 'Installed' }
+    elseif (-not (Test-SameVersion ([string] $app.InstalledVersion) $info.Version)) { 'Updated' }
+    elseif ($ForceUpload) { 'Uploaded' }
+    else { 'Unchanged' }
+    # Under -WhatIf the manifests are checked once here (a read-only POST), so the plan shows a reinstall.
+    if ($WhatIfPreference -and $installed -and $action -in 'Unchanged', 'Uploaded' -and @(Get-MissingManifests -ComponentIds $info.ComponentIds).Count) { $action = 'Reinstalled' }
     $result = [pscustomobject]@{ Title = $title; Version = $info.Version; Action = $action }
-
-    $verb = @{ Installed = 'install'; Updated = 'update to'; Unchanged = 'keep'; Reinstalled = 'reinstall' }[$action]
-    if (-not (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "$title $($info.Version) ($id)" -Action "Upload to the site collection App Catalog and $verb")) {
-        return $result
-    }
 
     $waitInstalled = {
         Wait-OrpheusCondition -Description "$title to be installed at the catalog version" -TimeoutSeconds $TimeoutSeconds -Condition {
@@ -315,23 +334,38 @@ function Install-OrpheusSolution {
         }
     }
 
-    $null = Add-PnPApp -Path $Path -Scope Site -Publish -Overwrite
-    $app = Get-OrpheusApp -SolutionId $id
-    if (-not $app) { throw "$title ($id) is not in the site collection App Catalog after the upload." }
-    if ($app.Title) { $result.Title = $title = [string] $app.Title }
+    if ($upload) {
+        $verb = @{ Installed = 'install'; Updated = 'update to'; Uploaded = 'keep (same version)'; Unchanged = 'keep'; Reinstalled = 'reinstall' }[$action]
+        if (-not (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "$title $($info.Version) ($id)" -Action "Upload to the site collection App Catalog and $verb")) {
+            if (-not $WhatIfPreference) { $result.Action = 'Skipped' }
+            return $result
+        }
 
-    if ([string]::IsNullOrEmpty([string] $app.InstalledVersion)) {
-        Install-PnPApp -Identity ([guid] $id) -Scope Site
-        $result.Action = 'Installed'
+        $null = Add-PnPApp -Path $Path -Scope Site -Publish -Overwrite
+        $app = Get-OrpheusApp -SolutionId $id
+        if (-not $app) { throw "$title ($id) is not in the site collection App Catalog after the upload." }
+        if ($app.Title) { $result.Title = $title = [string] $app.Title }
+
+        if ([string]::IsNullOrEmpty([string] $app.InstalledVersion)) {
+            $null = Install-PnPApp -Identity ([guid] $id) -Scope Site
+            $result.Action = 'Installed'
+        }
+        elseif ([string] $app.InstalledVersion -ne [string] $app.AppCatalogVersion) {
+            $null = Update-PnPApp -Identity ([guid] $id) -Scope Site
+            $result.Action = 'Updated'
+        }
+        else {
+            $result.Action = 'Uploaded'
+        }
+        & $waitInstalled
     }
-    elseif ([string] $app.InstalledVersion -ne [string] $app.AppCatalogVersion) {
-        Update-PnPApp -Identity ([guid] $id) -Scope Site
-        $result.Action = 'Updated'
+    elseif ($WhatIfPreference) {
+        # Nothing to upload: the plan is complete, and the reinstall gate below would only repeat it.
+        return $result
     }
     else {
         $result.Action = 'Unchanged'
     }
-    & $waitInstalled
 
     $missing = @(Wait-OrpheusManifests -ComponentIds $info.ComponentIds -TimeoutSeconds $script:ManifestSettleSeconds)
     if ($missing.Count) {
@@ -343,14 +377,14 @@ function Install-OrpheusSolution {
             throw "$reinstallTarget`: Component manifest missing for $($missing -join ', '); clean reinstall declined."
         }
         Write-Warning "$title`: no active manifest for $($missing -join ', '); reinstalling cleanly."
-        Uninstall-PnPApp -Identity ([guid] $id) -Scope Site
+        $null = Uninstall-PnPApp -Identity ([guid] $id) -Scope Site
         Wait-OrpheusCondition -Description "$title to be uninstalled" -TimeoutSeconds $TimeoutSeconds -Condition {
             $current = Get-OrpheusApp -SolutionId $id
             $null -eq $current -or [string]::IsNullOrEmpty([string] $current.InstalledVersion)
         }
-        Remove-PnPApp -Identity ([guid] $id) -Scope Site -Force
+        $null = Remove-PnPApp -Identity ([guid] $id) -Scope Site -Force
         $null = Add-PnPApp -Path $Path -Scope Site -Publish
-        Install-PnPApp -Identity ([guid] $id) -Scope Site
+        $null = Install-PnPApp -Identity ([guid] $id) -Scope Site
         & $waitInstalled
         $result.Action = 'Reinstalled'
 
@@ -377,7 +411,7 @@ function Set-OrpheusAppCustomizer {
         (compared as parsed JSON) it updates them in place with a REST MERGE.
     .OUTPUTS
         'Unchanged', 'Added', 'Updated' or 'Deduplicated' (duplicates removed, and the kept action
-        updated when needed).
+        updated when needed). 'Skipped' when a needed write was declined under -Confirm.
     #>
     [CmdletBinding(SupportsShouldProcess)]
     [OutputType([string])]
@@ -388,31 +422,35 @@ function Set-OrpheusAppCustomizer {
     $actions = @(@((Invoke-OrpheusRest -Url '/_api/web/UserCustomActions').value) |
             Where-Object { $null -ne $_ -and (Test-SameId ([string] $_.ClientSideComponentId) $script:AppCustomizerId) })
 
+    $declined = $false
     if ($actions.Count -eq 0) {
-        if ($PSCmdlet.ShouldProcess("web custom action $script:ChromeName", 'Add the header and footer application customizer')) {
+        if (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "web custom action $script:ChromeName" -Action 'Add the header and footer application customizer') {
             $null = Add-PnPCustomAction -Name $script:ChromeName -Title $script:ChromeTitle -Location $script:ChromeLocation `
                 -ClientSideComponentId ([guid] $script:AppCustomizerId) -ClientSideComponentProperties $PropertiesJson -Scope Web
         }
-        return 'Added'
+        elseif (-not $WhatIfPreference) { $declined = $true }
+        return (Resolve-StepResult -Result 'Added' -Declined $declined)
     }
 
     $result = 'Unchanged'
     $kept = $actions[0]
     foreach ($duplicate in @($actions | Select-Object -Skip 1)) {
-        if ($PSCmdlet.ShouldProcess("web custom action $($duplicate.Name) ($($duplicate.Id))", "Remove the duplicate (keeping $($kept.Id))")) {
-            Remove-PnPCustomAction -Identity ([guid] $duplicate.Id) -Scope Web -Force
+        if (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "web custom action $($duplicate.Name) ($($duplicate.Id))" -Action "Remove the duplicate (keeping $($kept.Id))") {
+            $null = Remove-PnPCustomAction -Identity ([guid] $duplicate.Id) -Scope Web -Force
         }
+        elseif (-not $WhatIfPreference) { $declined = $true }
         $result = 'Deduplicated'
     }
 
     if ((ConvertTo-CanonicalJson ([string] $kept.ClientSideComponentProperties)) -ne (ConvertTo-CanonicalJson $PropertiesJson)) {
-        if ($PSCmdlet.ShouldProcess("web custom action $($kept.Name) ($($kept.Id))", "Set ClientSideComponentProperties to $PropertiesJson")) {
+        if (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "web custom action $($kept.Name) ($($kept.Id))" -Action "Set ClientSideComponentProperties to $PropertiesJson") {
             # Invoke-PnPSPRestMethod -Method Merge sends the MERGE that SharePoint REST expects for an update.
             $null = Invoke-OrpheusRest -Method Merge -Url "/_api/web/UserCustomActions('$($kept.Id)')" -Body @{ ClientSideComponentProperties = $PropertiesJson }
         }
+        elseif (-not $WhatIfPreference) { $declined = $true }
         if ($result -eq 'Unchanged') { $result = 'Updated' }
     }
-    return $result
+    return (Resolve-StepResult -Result $result -Declined $declined)
 }
 
 function Set-OrpheusFieldCustomizer {
@@ -431,22 +469,25 @@ function Set-OrpheusFieldCustomizer {
     $field = Invoke-OrpheusRest -Url "$list/fields/getbyinternalnameortitle('$script:RemainingDaysField')?`$select=ClientSideComponentId"
     $current = [string] $field.ClientSideComponentId
     $result = 'Unchanged'
+    $declined = $false
 
     if (-not (Test-SameId $current $script:FieldCustomizerId)) {
         $result = if (Test-EmptyId $current) { 'Added' } else { 'Updated' }
-        if ($PSCmdlet.ShouldProcess("$script:ContractsListTitle.$script:RemainingDaysField", "Set ClientSideComponentId to $script:FieldCustomizerId")) {
-            Set-PnPField -List $script:ContractsListTitle -Identity $script:RemainingDaysField -Values @{ ClientSideComponentId = [guid] $script:FieldCustomizerId }
+        if (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "$script:ContractsListTitle.$script:RemainingDaysField" -Action "Set ClientSideComponentId to $script:FieldCustomizerId") {
+            $null = Set-PnPField -List $script:ContractsListTitle -Identity $script:RemainingDaysField -Values @{ ClientSideComponentId = [guid] $script:FieldCustomizerId }
         }
+        elseif (-not $WhatIfPreference) { $declined = $true }
     }
 
     $viewFields = @((Invoke-OrpheusRest -Url "$list/DefaultView/ViewFields").Items)
     if ($viewFields -notcontains $script:RemainingDaysField) {
         if ($result -eq 'Unchanged') { $result = 'Updated' }
-        if ($PSCmdlet.ShouldProcess("$script:ContractsListTitle default view", "Add the $script:RemainingDaysField column")) {
+        if (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "$script:ContractsListTitle default view" -Action "Add the $script:RemainingDaysField column") {
             $null = Invoke-OrpheusRest -Method Post -Url "$list/DefaultView/ViewFields/addviewfield('$script:RemainingDaysField')"
         }
+        elseif (-not $WhatIfPreference) { $declined = $true }
     }
-    return $result
+    return (Resolve-StepResult -Result $result -Declined $declined)
 }
 
 function Set-OrpheusFormCustomizer {
@@ -475,13 +516,14 @@ function Set-OrpheusFormCustomizer {
     if (-not $differ.Count) { return 'Unchanged' }
     $result = if (@($forms | Where-Object { -not (Test-EmptyId ([string] $listCt.$_)) }).Count -eq 0) { 'Added' } else { 'Updated' }
 
-    if ($PSCmdlet.ShouldProcess("$script:ContractsListTitle content type $($listCt.Name) ($($listCt.StringId))", "Set $($differ -join ', ') to $script:FormCustomizerId")) {
+    if (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "$script:ContractsListTitle content type $($listCt.Name) ($($listCt.StringId))" -Action "Set $($differ -join ', ') to $script:FormCustomizerId") {
         $ct = Get-PnPContentType -List $script:ContractsListTitle -Identity ([string] $listCt.StringId)
         if (-not $ct) { throw "Content type $($listCt.StringId) not found on the $script:ContractsListTitle list." }
         foreach ($form in $differ) { $ct.$form = $script:FormCustomizerId }
-        $ct.Update($false)
-        Invoke-PnPQuery
+        $null = $ct.Update($false)
+        $null = Invoke-PnPQuery
     }
+    elseif (-not $WhatIfPreference) { return 'Skipped' }
     return $result
 }
 
@@ -547,11 +589,12 @@ function Set-OrpheusCalendarPage {
     $pageExists = @($files | Where-Object { $null -ne $_ -and [string] $_.Name -eq "$pageName.aspx" }).Count -gt 0
 
     if (-not $pageExists) {
-        if ($PSCmdlet.ShouldProcess("SitePages/$pageName.aspx", 'Create the page with the contract calendar web part and publish it')) {
+        if (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "SitePages/$pageName.aspx" -Action 'Create the page with the contract calendar web part and publish it') {
             $null = Add-PnPPage -Name $pageName -Title 'Contract calendar' -LayoutType Article
             $null = Add-PnPPageWebPart -Page $pageName -Component $script:WebPartId -WebPartProperties ([hashtable] $required)
             $null = Set-PnPPage -Identity $pageName -Publish
         }
+        elseif (-not $WhatIfPreference) { return 'Skipped' }
         return 'Created'
     }
 
@@ -559,10 +602,11 @@ function Set-OrpheusCalendarPage {
             $null -ne $_ -and $_.PSObject.Properties['WebPartId'] -and (Test-SameId ([string] $_.WebPartId) $script:WebPartId)
         })
     if ($instances.Count -eq 0) {
-        if ($PSCmdlet.ShouldProcess("SitePages/$pageName.aspx", 'Add the contract calendar web part and publish the page')) {
+        if (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "SitePages/$pageName.aspx" -Action 'Add the contract calendar web part and publish the page') {
             $null = Add-PnPPageWebPart -Page $pageName -Component $script:WebPartId -WebPartProperties ([hashtable] $required)
             $null = Set-PnPPage -Identity $pageName -Publish
         }
+        elseif (-not $WhatIfPreference) { return 'Skipped' }
         return 'Updated'
     }
     if ($instances.Count -gt 1) { Write-Warning "SitePages/$pageName.aspx has $($instances.Count) contract calendar web parts; only the first is checked." }
@@ -584,10 +628,11 @@ function Set-OrpheusCalendarPage {
     foreach ($key in $defaults.Keys) { if (-not $current.Contains($key)) { $current[$key] = $defaults[$key] } }
     [string] $json = $current | ConvertTo-Json -Compress -Depth 20
 
-    if ($PSCmdlet.ShouldProcess("SitePages/$pageName.aspx web part $($webPart.InstanceId)", "Set $($stale -join ', ') and publish the page")) {
+    if (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "SitePages/$pageName.aspx web part $($webPart.InstanceId)" -Action "Set $($stale -join ', ') and publish the page") {
         $null = Set-PnPPageWebPart -Page $pageName -Identity ([guid] $webPart.InstanceId) -PropertiesJson $json
         $null = Set-PnPPage -Identity $pageName -Publish
     }
+    elseif (-not $WhatIfPreference) { return 'Skipped' }
     return 'Updated'
 }
 
@@ -628,13 +673,33 @@ function Get-OrpheusPackagePaths {
 }
 
 function Assert-OrpheusSiteAppCatalog {
-    # Read-only probe: the install needs a site collection App Catalog on the connected site.
-    try { $null = Get-PnPApp -Scope Site }
-    catch {
-        throw ("This site has no usable site collection App Catalog ($($_.Exception.Message)). A SharePoint administrator must " +
-            'first make sure the tenant App Catalog exists (Register-PnPAppCatalogSite), then, connected to the SharePoint admin ' +
-            'center, run Add-PnPSiteCollectionAppCatalog -Site <site url>. See docs/deployment.md.')
+    <#
+    .SYNOPSIS
+        Checks, read-only, that the connected site has a usable site collection App Catalog.
+    .DESCRIPTION
+        Reads the catalog with Get-PnPApp -Scope Site. When that fails, it looks for the catalog's
+        library (an "Apps for SharePoint" list, BaseTemplate 336) on the site collection's root web.
+        Only when that library is missing, or the check cannot run and the error mentions the app
+        catalog, does it report a missing catalog with the admin commands. Any other failure, such as
+        a 403 or throttling, is reported as it is.
+    #>
+    [CmdletBinding()]
+    param()
+
+    try { $null = Get-PnPApp -Scope Site; return }
+    catch { $probeError = $_.Exception.Message }
+
+    $libraryExists = try {
+        @((Invoke-OrpheusRest -Url '/_api/site/rootweb/lists?$filter=BaseTemplate eq 336&$select=Id').value).Count -gt 0
     }
+    catch { $null }
+
+    if ($libraryExists -eq $false -or ($null -eq $libraryExists -and $probeError -match 'app ?catalog')) {
+        throw ("This site has no site collection App Catalog ($probeError). A SharePoint administrator must first make sure " +
+            'the tenant App Catalog exists (Register-PnPAppCatalogSite), then, connected to the SharePoint admin center, run ' +
+            'Add-PnPSiteCollectionAppCatalog -Site <site url>. See docs/deployment.md.')
+    }
+    throw "Could not read the site collection App Catalog: $probeError"
 }
 
 function Invoke-OrpheusSolutionInstall {
@@ -649,7 +714,10 @@ function Invoke-OrpheusSolutionInstall {
            and ext-form-customizer.
         4. Set-OrpheusAppCustomizer, Set-OrpheusFieldCustomizer, Set-OrpheusFormCustomizer,
            Set-OrpheusCalendarPage.
-        -WhatIf and -Confirm are passed on explicitly to every step. The first error stops the run.
+        -WhatIf and -Confirm are passed on explicitly to every step. The first error stops the run,
+        after a row 'Failed: <message>' for the step that failed.
+    .PARAMETER ForceUpload
+        Upload the packages even when the site already has their versions (same-version rebuilds).
     .OUTPUTS
         [pscustomobject] with Component and Action, one per step, for a summary table.
     #>
@@ -658,7 +726,8 @@ function Invoke-OrpheusSolutionInstall {
     param(
         [ValidateNotNullOrEmpty()] [string] $SolutionsPath = $script:RepoRoot,
         [hashtable] $Labels = @{},
-        [ValidateRange(1, 86400)] [int] $TimeoutSeconds = 300
+        [ValidateRange(1, 86400)] [int] $TimeoutSeconds = 300,
+        [switch] $ForceUpload
     )
 
     $packages = Get-OrpheusPackagePaths -SolutionsPath $SolutionsPath
@@ -670,23 +739,35 @@ function Invoke-OrpheusSolutionInstall {
     Assert-OrpheusSiteAppCatalog
 
     foreach ($package in $packages) {
-        Write-Host "  Solution $($package.Name) ..." -ForegroundColor Cyan
-        $installed = Install-OrpheusSolution -Path $package.Path -TimeoutSeconds $TimeoutSeconds @gate
-        [pscustomobject]@{ Component = "$($package.Name) $($installed.Version)"; Action = $installed.Action }
+        Invoke-OrpheusStep -Component $package.Name -Step {
+            $installed = Install-OrpheusSolution -Path $package.Path -TimeoutSeconds $TimeoutSeconds -ForceUpload:$ForceUpload @gate
+            [pscustomobject]@{ Component = "$($package.Name) $($installed.Version)"; Action = [string] $installed.Action }
+        }
     }
 
-    Write-Host '  Header custom action ...' -ForegroundColor Cyan
-    [pscustomobject]@{ Component = "Header custom action ($script:ChromeName)"; Action = Set-OrpheusAppCustomizer @gate }
-    Write-Host '  Field customizer ...' -ForegroundColor Cyan
-    [pscustomobject]@{ Component = "Field customizer ($script:ContractsListTitle.$script:RemainingDaysField)"; Action = Set-OrpheusFieldCustomizer @gate }
-    Write-Host '  Form customizer ...' -ForegroundColor Cyan
-    [pscustomobject]@{ Component = 'Form customizer (Orpheus Contract)'; Action = Set-OrpheusFormCustomizer @gate }
-    Write-Host '  Calendar page ...' -ForegroundColor Cyan
-    [pscustomobject]@{ Component = 'Calendar page (SitePages/ContractCalendar.aspx)'; Action = Set-OrpheusCalendarPage -Labels $Labels @gate }
+    Invoke-OrpheusStep -Component "Header custom action ($script:ChromeName)" -Step { Set-OrpheusAppCustomizer @gate }
+    Invoke-OrpheusStep -Component "Field customizer ($script:ContractsListTitle.$script:RemainingDaysField)" -Step { Set-OrpheusFieldCustomizer @gate }
+    Invoke-OrpheusStep -Component 'Form customizer (Orpheus Contract)' -Step { Set-OrpheusFormCustomizer @gate }
+    Invoke-OrpheusStep -Component 'Calendar page (SitePages/ContractCalendar.aspx)' -Step { Set-OrpheusCalendarPage -Labels $Labels @gate }
+}
+
+function Invoke-OrpheusStep {
+    # Runs one step and emits its summary row. A step returns either an action string or a ready
+    # row. When it throws, it emits a 'Failed: <message>' row and rethrows, so the summary shows
+    # where the run stopped.
+    param([Parameter(Mandatory)] [string] $Component, [Parameter(Mandatory)] [scriptblock] $Step)
+    Write-Host "  $Component ..." -ForegroundColor Cyan
+    try { $output = & $Step }
+    catch {
+        [pscustomobject]@{ Component = $Component; Action = "Failed: $($_.Exception.Message)" }
+        throw
+    }
+    if ($output -is [string]) { return [pscustomobject]@{ Component = $Component; Action = $output } }
+    return $output
 }
 
 #endregion
 
 Export-ModuleMember -Function Read-SppkgInfo, Get-MissingManifests, Install-OrpheusSolution,
     Set-OrpheusAppCustomizer, Set-OrpheusFieldCustomizer, Set-OrpheusFormCustomizer, Set-OrpheusCalendarPage,
-    Get-OrpheusPackagePaths, Invoke-OrpheusSolutionInstall
+    Get-OrpheusPackagePaths, Assert-OrpheusSiteAppCatalog, Invoke-OrpheusSolutionInstall
