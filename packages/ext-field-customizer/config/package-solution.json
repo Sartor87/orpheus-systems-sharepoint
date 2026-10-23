@@ -3,7 +3,7 @@
   "solution": {
     "name": "ext-field-customizer-client-side-solution",
     "id": "ff0771c6-d3da-4799-a42d-4d1e225cb3b3",
-    "version": "1.0.0.0",
+    "version": "1.0.1.0",
     "includeClientSideAssets": true,
     "iconPath": "images/orpheus-icon-96.png",
     "skipFeatureDeployment": true,
