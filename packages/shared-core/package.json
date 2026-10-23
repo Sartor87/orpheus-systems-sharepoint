@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
-  "files": ["lib", "sharepoint.js", "sharepoint.d.ts"],
+  "files": ["lib", "sharepoint.js", "sharepoint.d.ts", "links.js", "links.d.ts"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rimraf lib",
