@@ -1,4 +1,4 @@
-import { canCreateContract, canEditContract, computeRemaining, computeTotals, contractsCoveringDate, dayValue, hasContractPeriod, hoursFor, isBlocked, isOnSite, usageRatio } from '../rules';
+import { canCreateContract, canEditContract, computeRemaining, computeTotals, contractsCoveringDate, dayValue, hasContractPeriod, holidayApplies, hoursFor, isBlocked, isOnSite, usageRatio } from '../rules';
 import { contract, e, hol } from './fixtures';
 
 test('computeTotals counts halves as 0.5', () => {
@@ -31,6 +31,18 @@ test('isBlocked: weekends, country holidays and * holidays', () => {
   expect(isBlocked('2027-01-01', h, 'DE', true)).toBe(true);
   expect(isBlocked('2026-11-07', h, 'BG', true)).toBe(true);   // Saturday
   expect(isBlocked('2026-11-07', h, 'BG', false)).toBe(false);
+});
+test('isBlocked compares countries regardless of case and surrounding spaces', () => {
+  const h = [hol('2026-12-24', 'bg'), hol('2026-12-25', ' BG ')];
+  expect(isBlocked('2026-12-24', h, 'BG', true)).toBe(true);
+  expect(isBlocked('2026-12-25', h, 'bg', true)).toBe(true);
+  expect(isBlocked('2026-12-24', h, 'DE', true)).toBe(false);
+});
+test('holidayApplies: same country in any case, or *', () => {
+  expect(holidayApplies('Bg', 'bG')).toBe(true);
+  expect(holidayApplies('*', 'DE')).toBe(true);
+  expect(holidayApplies('DE', 'BG')).toBe(false);
+  expect(holidayApplies('', '')).toBe(false);
 });
 test('contractsCoveringDate skips contracts with an empty start or end date', () => {
   const noStart = contract({ id: 1, startDate: '', latestExecutionDate: '2027-01-31' });

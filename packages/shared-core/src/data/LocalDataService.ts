@@ -1,6 +1,6 @@
 import { CalendarEntry, Contract, DateKey, Holiday, Role, UserInfo, UserRef } from '../models';
 import { compareKeys, isWithin } from '../dates';
-import { hasContractPeriod, isBlocked } from '../rules';
+import { assertCanWriteDays, assertNotClosedSibling, hasContractPeriod, holidayApplies, isBlocked } from '../rules';
 import { IDataService } from './IDataService';
 import usersJson from './fixtures/users.json';
 import contractsJson from './fixtures/contracts.json';
@@ -59,6 +59,7 @@ export class LocalDataService implements IDataService {
   public async upsertEntry(entry: CalendarEntry): Promise<CalendarEntry> {
     const contract = this.contracts.find(c => c.id === entry.contractId);
     if (!contract) { throw new Error(`Unknown contract ${entry.contractId}`); }
+    assertCanWriteDays(contract, this.userId);
     if (isBlocked(entry.date, this.holidays, contract.country, true)) {
       throw new Error(`Date ${entry.date} is blocked (weekend or holiday)`);
     }
@@ -66,6 +67,9 @@ export class LocalDataService implements IDataService {
       throw new Error(`Date ${entry.date} is outside the contract period ${contract.startDate}..${contract.latestExecutionDate}`);
     }
     const siblings = new Set(this.contracts.filter(c => c.contractor.id === contract.contractor.id).map(c => c.id));
+    this.entries
+      .filter(x => x.date === entry.date && siblings.has(x.contractId) && x.contractId !== contract.id)
+      .forEach(x => assertNotClosedSibling(this.contracts.find(c => c.id === x.contractId) as Contract));
     this.entries = this.entries.filter(x => !(x.date === entry.date && siblings.has(x.contractId)));
     const saved: CalendarEntry = { ...entry, id: this.nextId++ };
     this.entries.push(saved);
@@ -73,12 +77,15 @@ export class LocalDataService implements IDataService {
   }
 
   public async deleteEntry(contractId: number, date: DateKey): Promise<void> {
+    const contract = this.contracts.find(c => c.id === contractId);
+    if (!contract) { throw new Error(`Unknown contract ${contractId}`); }
+    assertCanWriteDays(contract, this.userId);
     this.entries = this.entries.filter(x => !(x.contractId === contractId && x.date === date));
   }
 
   public async getHolidays(country: string, from: DateKey, to: DateKey): Promise<Holiday[]> {
     return clone(this.holidays
-      .filter(h => (h.country === country || h.country === '*') && isWithin(h.date, from, to))
+      .filter(h => holidayApplies(h.country, country) && isWithin(h.date, from, to))
       .sort((a, b) => compareKeys(a.date, b.date)));
   }
 }

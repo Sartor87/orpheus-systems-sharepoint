@@ -64,9 +64,37 @@ export function contractsCoveringDate(contracts: Contract[], date: DateKey): Con
   return contracts.filter(c => hasContractPeriod(c) && isWithin(date, c.startDate, c.latestExecutionDate));
 }
 
+function normaliseCountry(c: string | null | undefined): string {
+  return (c || '').trim().toUpperCase();
+}
+
+/** A holiday applies to a contract when it is for all countries ('*') or for the contract's country, in any case. */
+export function holidayApplies(holidayCountry: string, contractCountry: string): boolean {
+  const h = normaliseCountry(holidayCountry);
+  return h === '*' || (h !== '' && h === normaliseCountry(contractCountry));
+}
+
 export function isBlocked(date: DateKey, holidays: Holiday[], country: string, blockWeekends: boolean): boolean {
   if (blockWeekends && isWeekend(date)) { return true; }
-  return holidays.some(h => h.date === date && (h.country === country || h.country === '*'));
+  return holidays.some(h => h.date === date && holidayApplies(h.country, country));
+}
+
+/**
+ * Server-side of the calendar's read-only rule (UI checks are not enough: the agent and other clients write too).
+ * Throws when the days of `contract` may not be changed by `userId`: a Closed contract, someone other than its
+ * contractor, or a contract without a period.
+ */
+export function assertCanWriteDays(contract: Pick<Contract, 'title' | 'status' | 'contractor' | 'startDate' | 'latestExecutionDate'>, userId: number): void {
+  if (contract.status === 'Closed') { throw new Error(`Contract ${contract.title} is closed; its days cannot be changed`); }
+  if (!userId || contract.contractor.id !== userId) { throw new Error(`Only the contractor of ${contract.title} can change its days`); }
+  if (!hasContractPeriod(contract)) { throw new Error(`Contract ${contract.title} has no start or end date`); }
+}
+
+/** A day held by a Closed contract must not be moved off it by a write to a sibling contract. */
+export function assertNotClosedSibling(sibling: Pick<Contract, 'title' | 'status'>): void {
+  if (sibling.status === 'Closed') {
+    throw new Error(`This day is counted against ${sibling.title}, which is closed; it cannot be moved`);
+  }
 }
 
 /** May create contracts: an Admin, or a user who manages at least one contract. UI gate only (spec: no item permissions). */

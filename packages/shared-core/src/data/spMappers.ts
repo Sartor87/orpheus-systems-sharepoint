@@ -22,7 +22,8 @@ export interface SPContractItem {
 
 export interface SPEntryItem {
   Id: number;
-  Contract: { Id: number };
+  /** null when the lookup target was deleted (the lookup has no delete behaviour). */
+  Contract: { Id: number } | null;
   EntryDate: string;
   EntryType: string;
   Note?: string | null;
@@ -63,6 +64,15 @@ export function isoToDateKey(iso: string | null | undefined): DateKey {
   return new Date(ms + 12 * 3600 * 1000).toISOString().substring(0, 10);
 }
 
+/** HoursPerDay column default; a blank value means the default, not 0 hours. */
+export const DEFAULT_HOURS_PER_DAY = 8;
+
+const ENTRY_TYPES: EntryType[] = ['OnSiteFull', 'OnSiteHalf', 'OffSiteFull', 'OffSiteHalf'];
+
+export function isKnownEntryType(t: string): t is EntryType {
+  return ENTRY_TYPES.indexOf(t as EntryType) >= 0;
+}
+
 function mapUser(u: SPUserField | null): UserRef {
   if (!u) { return { id: 0, loginName: '', displayName: '', email: '' }; }
   return { id: u.Id, loginName: u.Name || '', displayName: u.Title || '', email: u.EMail || '' };
@@ -81,8 +91,8 @@ export function mapContract(item: SPContractItem): Contract {
     latestExecutionDate: isoToDateKey(item.LatestExecutionDate),
     onSiteTargetDays: item.OnSiteTargetDays || 0,
     offSiteTargetDays: item.OffSiteTargetDays || 0,
-    hoursPerDay: item.HoursPerDay || 0,
-    country: item.Country,
+    hoursPerDay: item.HoursPerDay === null || item.HoursPerDay === undefined ? DEFAULT_HOURS_PER_DAY : item.HoursPerDay,
+    country: item.Country || '',
     status: item.Status as ContractStatus
   };
 }
@@ -90,12 +100,26 @@ export function mapContract(item: SPContractItem): Contract {
 export function mapEntry(item: SPEntryItem): CalendarEntry {
   const entry: CalendarEntry = {
     id: item.Id,
-    contractId: item.Contract.Id,
+    contractId: item.Contract ? item.Contract.Id : 0,
     date: isoToDateKey(item.EntryDate),
     type: item.EntryType as EntryType
   };
   if (item.Note) { entry.note = item.Note; }
   return entry;
+}
+
+/**
+ * Maps entry rows, leaving out rows that cannot be counted: an orphaned Contract lookup, a blank date or an
+ * EntryType outside the four known values (a renamed choice would otherwise crash the grid and miscount totals).
+ */
+export function mapEntries(items: SPEntryItem[]): CalendarEntry[] {
+  const out: CalendarEntry[] = [];
+  for (const item of items) {
+    const e = mapEntry(item);
+    if (e.contractId && e.date && isKnownEntryType(e.type)) { out.push(e); }
+    else { console.warn(`Skipped calendar entry ${item.Id}: no contract, date or known type`); }
+  }
+  return out;
 }
 
 export function mapHoliday(item: SPHolidayItem): Holiday {

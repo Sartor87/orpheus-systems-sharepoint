@@ -37,6 +37,10 @@ describe('spQueries', () => {
       "ContractId eq 5 and EntryDate ge datetime'2026-10-31T12:00:00Z' and EntryDate lt datetime'2026-11-30T12:00:00Z'");
   });
 
+  it('holidaysFilter with a blank country matches only * and does not throw', () => {
+    expect(holidaysFilter(null as unknown as string, '2026-01-01', '2026-12-31')).toContain("(Country eq '' or Country eq '*')");
+  });
+
   it('holidaysFilter matches the country or *', () => {
     expect(holidaysFilter('BG', '2026-01-01', '2026-12-31')).toBe(
       "(Country eq 'BG' or Country eq '*') and HolidayDate ge datetime'2025-12-31T12:00:00Z' and HolidayDate lt datetime'2026-12-31T12:00:00Z'");

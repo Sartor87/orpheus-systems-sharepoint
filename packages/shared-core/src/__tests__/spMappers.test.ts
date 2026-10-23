@@ -1,4 +1,4 @@
-import { isoToDateKey, mapContract, mapEntry, mapHoliday, toEntryItem, SPContractItem } from '../data/spMappers';
+import { DEFAULT_HOURS_PER_DAY, isKnownEntryType, isoToDateKey, mapContract, mapEntry, mapHoliday, toEntryItem, SPContractItem } from '../data/spMappers';
 
 const contractItem: SPContractItem = {
   Id: 3,
@@ -63,10 +63,33 @@ describe('spMappers', () => {
     expect(c.latestExecutionDate).toBe('');
   });
 
+  it('mapContract reads a blank HoursPerDay as the list default 8, not 0, and keeps target days at 0', () => {
+    const c = mapContract({ ...contractItem, HoursPerDay: null, OnSiteTargetDays: null, OffSiteTargetDays: null });
+    expect(c.hoursPerDay).toBe(DEFAULT_HOURS_PER_DAY);
+    expect(DEFAULT_HOURS_PER_DAY).toBe(8);
+    expect(c.onSiteTargetDays).toBe(0);
+    expect(c.offSiteTargetDays).toBe(0);
+    expect(mapContract({ ...contractItem, HoursPerDay: 7.5 }).hoursPerDay).toBe(7.5);
+  });
+
   it('mapEntry maps lookup, date and optional note', () => {
     const e = mapEntry({ Id: 11, Contract: { Id: 3 }, EntryDate: '2026-03-04T00:00:00Z', EntryType: 'OnSiteHalf', Note: null });
     expect(e).toEqual({ id: 11, contractId: 3, date: '2026-03-04', type: 'OnSiteHalf' });
     expect(mapEntry({ Id: 12, Contract: { Id: 3 }, EntryDate: '2026-03-05T00:00:00Z', EntryType: 'OffSiteFull', Note: 'wfh' }).note).toBe('wfh');
+  });
+
+  it('mapEntry tolerates an orphaned Contract lookup (contract deleted) and maps it to contract 0', () => {
+    expect(mapEntry({ Id: 13, Contract: null, EntryDate: '2026-03-05T00:00:00Z', EntryType: 'OffSiteFull' }).contractId).toBe(0);
+  });
+
+  it('mapContract maps a blank Country to an empty string', () => {
+    expect(mapContract({ ...contractItem, Country: null as unknown as string }).country).toBe('');
+  });
+
+  it('isKnownEntryType accepts only the four entry types', () => {
+    expect(['OnSiteFull', 'OnSiteHalf', 'OffSiteFull', 'OffSiteHalf'].every(isKnownEntryType)).toBe(true);
+    expect(isKnownEntryType('OnSite Full')).toBe(false);
+    expect(isKnownEntryType('')).toBe(false);
   });
 
   it('mapHoliday maps fields', () => {

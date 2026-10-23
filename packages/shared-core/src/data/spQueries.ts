@@ -1,13 +1,13 @@
 import { addDays } from '../dates';
 import { DateKey, UserInfo } from '../models';
 
+/** SharePoint DateTime cannot be queried below this instant. */
+const SP_MIN_DATETIME = "datetime'1900-01-01T00:00:00Z'";
+
 /**
  * Day window of a DateKey D is [(D-1)T12:00Z, DT12:00Z). It contains every representation SharePoint may return
  * for D (UTC midnight or local midnight of any site offset within +/-12 h).
  */
-/** SharePoint DateTime cannot be queried below this instant. */
-const SP_MIN_DATETIME = "datetime'1900-01-01T00:00:00Z'";
-
 export function spDayStart(k: DateKey): string {
   const start = `datetime'${addDays(k, -1)}T12:00:00Z'`;
   return start < SP_MIN_DATETIME ? SP_MIN_DATETIME : start;
@@ -17,8 +17,8 @@ export function spDayEnd(k: DateKey): string {
   return `datetime'${k}T12:00:00Z'`;
 }
 
-function quote(s: string): string {
-  return `'${s.replace(/'/g, "''")}'`;
+function quote(s: string | null | undefined): string {
+  return `'${(s || '').replace(/'/g, "''")}'`;
 }
 
 export function contractsFilter(user: UserInfo, includeClosed: boolean): string {

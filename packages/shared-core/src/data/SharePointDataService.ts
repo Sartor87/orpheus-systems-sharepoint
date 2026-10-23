@@ -7,12 +7,12 @@ import '@pnp/sp/site-groups';
 import '@pnp/sp/batching';
 import { CalendarEntry, Contract, DateKey, Holiday, Role, UserInfo } from '../models';
 import { compareKeys, isWithin } from '../dates';
-import { computeTotals, hasContractPeriod, isBlocked } from '../rules';
+import { assertCanWriteDays, assertNotClosedSibling, computeTotals, hasContractPeriod, isBlocked } from '../rules';
 import { IDataService } from './IDataService';
 import { deriveRolesForContracts } from './listLookup';
 import {
   CONTRACT_EXPAND, CONTRACT_SELECT, ENTRY_EXPAND, ENTRY_SELECT, HOLIDAY_SELECT,
-  mapContract, mapEntry, mapHoliday, SPContractItem, SPEntryItem, SPHolidayItem, toEntryItem
+  mapContract, mapEntries, mapHoliday, SPContractItem, SPEntryItem, SPHolidayItem, toEntryItem
 } from './spMappers';
 import {
   contractsFilter, contractsOfContractorFilter, entriesFilter, entriesOfContractFilter, entriesOnDateFilter, holidaysFilter
@@ -35,6 +35,13 @@ export async function deriveRoles(sp: SPFI, lists: SharePointListConfig, userId:
 }
 
 export class SharePointDataService implements IDataService {
+  /**
+   * Writes run one at a time. Each write recomputes the used days of its contracts from the entries it reads
+   * before its batch commits, so two writes in flight at once (a range, fast clicks) would each store a count
+   * that misses the other's day. Only writes through this instance are ordered; other clients can still race.
+   */
+  private writeQueue: Promise<unknown> = Promise.resolve();
+
   constructor(
     private readonly sp: SPFI,
     private readonly lists: SharePointListConfig,
@@ -57,7 +64,7 @@ export class SharePointDataService implements IDataService {
     const items = (await this.entriesList().items
       .filter(entriesFilter(contractId, from, to))
       .select(...ENTRY_SELECT).expand(...ENTRY_EXPAND).orderBy('EntryDate', true).top(5000)()) as SPEntryItem[];
-    return items.map(mapEntry);
+    return mapEntries(items);
   }
 
   public async getHolidays(country: string, from: DateKey, to: DateKey): Promise<Holiday[]> {
@@ -67,8 +74,23 @@ export class SharePointDataService implements IDataService {
     return items.map(mapHoliday).sort((a, b) => compareKeys(a.date, b.date));
   }
 
-  public async upsertEntry(entry: CalendarEntry): Promise<CalendarEntry> {
+  public upsertEntry(entry: CalendarEntry): Promise<CalendarEntry> {
+    return this.queued(() => this.doUpsert(entry));
+  }
+
+  public deleteEntry(contractId: number, date: DateKey): Promise<void> {
+    return this.queued(() => this.doDelete(contractId, date));
+  }
+
+  private queued<T>(op: () => Promise<T>): Promise<T> {
+    const run = this.writeQueue.then(op, op);
+    this.writeQueue = run.catch(() => undefined);
+    return run;
+  }
+
+  private async doUpsert(entry: CalendarEntry): Promise<CalendarEntry> {
     const contract = await this.loadContract(entry.contractId);
+    assertCanWriteDays(contract, this.currentUser.id);
     const holidays = await this.getHolidays(contract.country, entry.date, entry.date);
     if (isBlocked(entry.date, holidays, contract.country, true)) {
       throw new Error(`Date ${entry.date} is blocked (weekend or holiday)`);
@@ -77,8 +99,11 @@ export class SharePointDataService implements IDataService {
       throw new Error(`Date ${entry.date} is outside the contract period ${contract.startDate}..${contract.latestExecutionDate}`);
     }
 
-    const siblingIds = await this.siblingContractIds(contract);
-    const existing = await this.entriesOnDate(siblingIds, entry.date);
+    const siblings = await this.siblingContracts(contract);
+    const existing = await this.entriesOnDate(siblings.map(s => s.id), entry.date);
+    existing
+      .filter(x => x.contractId !== contract.id)
+      .forEach(x => siblings.filter(s => s.id === x.contractId).forEach(assertNotClosedSibling));
 
     // Final entry sets of every affected contract, computed in memory so all writes go out as one batch.
     const affectedIds = new Set<number>([contract.id]);
@@ -103,7 +128,8 @@ export class SharePointDataService implements IDataService {
     return { ...entry, id: result.Id };
   }
 
-  public async deleteEntry(contractId: number, date: DateKey): Promise<void> {
+  private async doDelete(contractId: number, date: DateKey): Promise<void> {
+    assertCanWriteDays(await this.loadContract(contractId), this.currentUser.id);
     const existing = await this.entriesOnDate([contractId], date);
     if (existing.length === 0) { return; }
     const finalEntries = new Map<number, CalendarEntry[]>();
@@ -138,24 +164,25 @@ export class SharePointDataService implements IDataService {
     return mapContract(item);
   }
 
-  private async siblingContractIds(contract: Contract): Promise<number[]> {
+  /** Every contract of the same contractor (including `contract`), with what the Closed check needs. */
+  private async siblingContracts(contract: Contract): Promise<Array<{ id: number; title: string; status: Contract['status'] }>> {
     const items = (await this.contractsList().items
-      .filter(contractsOfContractorFilter(contract.contractor.id)).select('Id').top(5000)()) as Array<{ Id: number }>;
-    const ids = items.map(i => i.Id);
-    return ids.indexOf(contract.id) >= 0 ? ids : ids.concat(contract.id);
+      .filter(contractsOfContractorFilter(contract.contractor.id)).select('Id', 'Title', 'Status').top(5000)()) as Array<{ Id: number; Title: string; Status: string }>;
+    const list = items.map(i => ({ id: i.Id, title: i.Title, status: i.Status as Contract['status'] }));
+    return list.some(s => s.id === contract.id) ? list : list.concat({ id: contract.id, title: contract.title, status: contract.status });
   }
 
   private async entriesOnDate(contractIds: number[], date: DateKey): Promise<CalendarEntry[]> {
     const items = (await this.entriesList().items
       .filter(entriesOnDateFilter(contractIds, date))
       .select(...ENTRY_SELECT).expand(...ENTRY_EXPAND).top(5000)()) as SPEntryItem[];
-    return items.map(mapEntry);
+    return mapEntries(items);
   }
 
   private allEntries(contractId: number): Promise<CalendarEntry[]> {
     return this.entriesList().items
       .filter(entriesOfContractFilter(contractId))
       .select(...ENTRY_SELECT).expand(...ENTRY_EXPAND).orderBy('EntryDate', true).top(5000)()
-      .then(items => (items as SPEntryItem[]).map(mapEntry));
+      .then(items => mapEntries(items as SPEntryItem[]));
   }
 }

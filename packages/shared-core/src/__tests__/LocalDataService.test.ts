@@ -56,6 +56,30 @@ describe('LocalDataService', () => {
     const h = await new LocalDataService({ demoUserId: 1 }).getHolidays('DE', '2026-12-01', '2027-01-31');
     expect(h.map(x => x.date)).toEqual(['2027-01-01']);
   });
+  test('getHolidays matches the country regardless of case', async () => {
+    const h = await new LocalDataService({ demoUserId: 1 }).getHolidays('bg', '2026-12-01', '2026-12-31');
+    const upper = await new LocalDataService({ demoUserId: 1 }).getHolidays('BG', '2026-12-01', '2026-12-31');
+    expect(h.length).toBeGreaterThan(0);
+    expect(h.map(x => x.date)).toEqual(upper.map(x => x.date));
+  });
+  test('upsert and delete refuse a Closed contract', async () => {
+    const svc = new LocalDataService({ demoUserId: 1 });
+    await expect(svc.upsertEntry({ contractId: 4, date: '2026-01-27', type: 'OnSiteFull' })).rejects.toThrow(/closed/i);
+    await expect(svc.deleteEntry(4, '2026-01-27')).rejects.toThrow(/closed/i);
+  });
+  test("upsert and delete refuse anyone but the contract's contractor", async () => {
+    const svc = new LocalDataService({ demoUserId: 3 });
+    await expect(svc.upsertEntry({ contractId: 1, date: '2026-03-02', type: 'OnSiteFull' })).rejects.toThrow(/only the contractor/i);
+    await expect(svc.deleteEntry(1, '2026-03-02')).rejects.toThrow(/only the contractor/i);
+  });
+  test('upsert refuses to move a day off a Closed sibling contract and keeps that day', async () => {
+    const svc = new LocalDataService({ demoUserId: 1 });
+    const internals = svc as unknown as { contracts: Array<{ id: number; latestExecutionDate: string }>; entries: Array<{ id?: number; contractId: number; date: string; type: string }> };
+    internals.contracts.filter(c => c.id === 4).forEach(c => { c.latestExecutionDate = '2026-03-31'; });
+    internals.entries.push({ id: 900, contractId: 4, date: '2026-03-02', type: 'OnSiteFull' });
+    await expect(svc.upsertEntry({ contractId: 1, date: '2026-03-02', type: 'OffSiteFull' })).rejects.toThrow(/001100_2025.*closed/i);
+    expect(internals.entries.filter(x => x.date === '2026-03-02').map(x => x.contractId)).toEqual([4]);
+  });
   test('getCurrentUser derives roles', async () => {
     expect((await new LocalDataService({ demoUserId: 1 }).getCurrentUser()).roles).toEqual(['Contractor']);
     expect((await new LocalDataService({ demoUserId: 3 }).getCurrentUser()).roles).toEqual(['ContractManager']);
