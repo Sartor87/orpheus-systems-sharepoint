@@ -24,7 +24,9 @@ const BANNED_NAMES = ['xczt', 'rhnn', 'rnfb', 'fnegbe', 'xvc'].map(rot13);
 function isSampleHost(text, label, index) {
   const lower = label.toLowerCase();
   if (lower === 'x' || lower.startsWith('contoso')) return true;
-  return index > 0 && text[index - 1] === '$'; // "$Tenant.sharepoint.com" in a script
+  if (index > 0 && text[index - 1] === '$') return true; // "$Tenant.sharepoint.com" in a script
+  // "<tenant>-admin.sharepoint.com": the label group cannot contain "<", so it only sees "admin".
+  return lower === 'admin' && text.slice(Math.max(0, index - 9), index) === '<tenant>-';
 }
 
 const CONTENT_RULES = [

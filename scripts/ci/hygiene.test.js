@@ -22,11 +22,16 @@ test('placeholder and sample hosts pass', () => {
     'https://x' + '.sharepoint.com/sites/demo',
     'https://contoso' + '.sharepoint.com/sites/demo',
     'https://contoso-admin' + '.sharepoint.com',
+    'https://<tenant>-admin' + '.sharepoint.com',
     '"https://$Tenant' + '.sharepoint.com"',
     'https://*' + '.sharepoint.com',
   ]) {
     assert.deepEqual(checkContent('a.md', text), [], text);
   }
+});
+
+test('a real admin host is flagged next to the placeholder form', () => {
+  assert.deepEqual(rules(checkContent('a.md', 'https://acme-admin' + '.sharepoint.com')), ['tenant-host']);
 });
 
 test('onmicrosoft hosts are flagged, placeholders pass', () => {
