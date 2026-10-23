@@ -21,7 +21,7 @@ under Orpheus Systems that:
 |---|------|
 | G1 | Clean public repo: no previous-employer references, Orpheus authorship and contact, Apache-2.0 licence with NOTICE, README a stranger can follow. |
 | G2 | npm-workspaces monorepo on SPFx 1.23.2; every package builds, bundles and packages into `.sppkg` inside `m365pnp/spfx:1.23.2` via Podman; no Node on the host. |
-| G3 | Five deployable SPFx artefacts: application customizer, calendar web part, field customizer, form customizer, plus the shared packages they use. |
+| G3 | Four deployable SPFx artefacts (`.sppkg`): application customizer, calendar web part, field customizer, form customizer, each bundling the shared packages it uses. |
 | G4 | The calendar web part works fully in the local workbench with fixtures, and against real SharePoint lists in production. |
 | G5 | One-page landscape PDF timesheet generated in the browser matching the reference layout. |
 | G6 | This TOGAF-structured `architecture/` folder. |
@@ -83,18 +83,18 @@ the author's machine; fake-looking demo data.
 C4Context
   title System context — Orpheus contract calendar suite
   Person(contractor, "Contractor", "Marks on-site / off-site days on own contracts; prints timesheet")
-  Person(manager, "Contract manager", "Creates and edits managed contracts; generates timesheet")
-  Person(admin, "Site admin", "Edits any contract; maintains Holidays; configures web part")
+  Person(manager, "Contract manager", "Manages a contract or is in Orpheus Contract Managers; creates contracts, edits managed ones; generates timesheet")
+  Person(admin, "Site admin", "Site collection admin or Owners member; edits any contract; maintains Holidays; configures web part")
   System(suite, "Orpheus SPFx suite", "Application customizer, calendar web part, field customizer, form customizer, shared packages")
   System_Ext(spo, "SharePoint Online site", "Contracts, CalendarEntries and Holidays lists; modern page ContractCalendar.aspx")
   System_Ext(browser, "User's browser", "Runs the SPFx bundles; generates and downloads the PDF")
-  System_Ext(prov, "Provisioning (PnP PowerShell 7 on host)", "Provision-OrpheusSite.ps1 creates lists, page, bindings")
+  System_Ext(prov, "Provisioning (PnP PowerShell 3 on PowerShell 7.4, host)", "Provision-OrpheusSite.ps1 -InstallSolutions with OrpheusSolutions.psm1: lists, App Catalog install, header, bindings, group, page")
   Rel(contractor, suite, "Uses")
   Rel(manager, suite, "Uses")
   Rel(admin, suite, "Uses and configures")
   Rel(suite, spo, "Reads/writes lists via PnPjs v4")
   Rel(suite, browser, "Renders UI, produces Timesheet_<ContractCode>_<from>_<to>.pdf")
-  Rel(prov, spo, "Creates content types, lists, page, customizer bindings")
+  Rel(prov, spo, "Creates content types and lists; installs the four .sppkg in the site collection App Catalog; registers the header; binds customizers; creates Orpheus Contract Managers and ContractCalendar.aspx")
 ```
 
 ## 6. Success measures
@@ -103,7 +103,7 @@ C4Context
 |---------|--------|
 | Clean-clone build | `podman compose run build` and `package` succeed on a clean clone with only Podman installed |
 | Hygiene | The case-insensitive hygiene grep defined in design §8 returns nothing in working tree and history |
-| Artefacts | Five `.sppkg` files produced with `--ship` |
+| Artefacts | Four `.sppkg` files produced with `--production` (the shared packages are bundled into them) |
 | Workbench | Calendar web part fully usable with fixtures, both demo roles selectable |
 | Production | Web part, customizers and forms verified on the real tenant; README screenshots come from a real site |
 | PDF | Landscape A4, one page per 12 months, layout as design §6.5 |

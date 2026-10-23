@@ -181,7 +181,8 @@ flowchart LR
   PDF -- "template columns of one contract; template HTML file" --> SPO
   FC -- "reads item columns only, no extra query" --> C
   FM -- "overlap query: same contractor, intersecting period" --> C
-  FM -- "save" --> C
+  FM -- "save; recomputed used days when the period changed" --> C
+  FM -- "entries of the contract, to recompute used days and count days outside a new period" --> E
   subgraph Server[MCP server, contract agent]
     TOOLS[Six MCP tools]
     DIR[Contract directory]

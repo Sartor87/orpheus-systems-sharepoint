@@ -22,19 +22,21 @@ orphan branch (ADR-007); the three existing commits are not carried over.
 ```mermaid
 flowchart TD
   S1[1. Clean-room pass: remove fingerprints, set author, licence, package metadata] --> S2[2. Fresh orphan branch; verify the design §8 hygiene grep returns nothing in tree and history]
-  S2 --> S3[3. Toolchain: compose.yml, devcontainer, workspaces, project references]
+  S2 --> S3[3. Toolchain: compose.yml, devcontainer, npm workspaces]
   S3 --> S4[4. shared-core then shared-ui]
   S4 --> S5[5. Four SPFx packages, each a standard Yeoman project]
-  S5 --> S6[6. podman compose run package → five .sppkg]
-  S6 --> S7[7. Upload .sppkg to the tenant app catalog]
-  S7 --> S8[8. Run Provision-OrpheusSite.ps1 -SiteUrl -Country, -WhatIf first]
+  S5 --> S6[6. podman compose run package → four .sppkg]
+  S6 --> S7["7. Site collection App Catalog on the target site, once, by a SharePoint administrator"]
+  S7 --> S8["8. Run Provision-OrpheusSite.ps1 -SiteUrl -ClientId -Country -InstallSolutions, -WhatIf first: lists, four .sppkg installed, header, field and form bindings, Orpheus Contract Managers, ContractCalendar.aspx"]
   S8 --> S9[9. Verify each package on the real site; take README screenshots]
   S9 --> S10[10. CI green on GitHub; publish repository]
 ```
 
-Step 8 depends on step 7 because the script binds the field and form
-customizers and places the web part by component ID, which exist only once the
-solutions are in the app catalog.
+Step 8 depends on step 7 because the script installs the solutions into the
+site's own App Catalog and then binds the field and form customizers and places
+the web part by component ID. The script does both in one run, installing
+before it binds (amendment of 2026-10-23 to ADR-006); a re-run reports
+`Unchanged` for every step.
 
 ### 3.1 Extensions: HTML template and contract agent
 
@@ -79,7 +81,7 @@ built yet.
 |---------|----------|
 | Cutover | Big bang for the repository (new public repo); the old skeleton is simply not published. |
 | Site provisioning | Idempotent; re-running the script is the recovery path. `-WhatIf` previews changes. |
-| Solution rollback | Remove or downgrade the `.sppkg` in the app catalog; lists and data are unaffected. |
+| Solution rollback | Remove or downgrade the `.sppkg` in the site collection App Catalog; lists and data are unaffected. |
 | HTML template rollback | Clear the `Timesheet template (optional)` property; the built-in layout returns. The optional columns can stay; nothing reads them in the built-in layout. |
 | Agent rollback | Stop `devtunnel host` and the `mcp` service, remove the sideloaded agent; delete the tunnel when the demo work is done. The 002xxx demo data, `Vendor` and `Orpheus HR` stay until removed by hand. The web part shows 002xxx contracts like any other; `Orpheus HR` has no meaning in the web part, and `Vendor` is shared with the HTML template. |
 | Downtime | Not applicable; no existing users on the target site. |
@@ -95,7 +97,7 @@ built yet.
 |--------|--------|--------|
 | Mock localStorage selections | — | Not migrated; demo only |
 | Fixture JSON | `LocalDataService` | Shipped in the bundle; no tenant data |
-| Starter holidays for `-Country` | Holidays list | Created by the provisioning script |
+| Starter holidays for `-Country` | Holidays list | Created by the provisioning script with `-SeedDemoData` |
 | `shared-core` fixture `templateData.json` | Template columns on `1185-Jane-Doe` | `Add-TimesheetTemplateColumns.ps1 -SeedDemoData`, only where values differ |
 | `setup/demo-data.json` | 002xxx contracts and entries, `Vendor` on them | `Setup-AgentDemo.ps1`; only 002xxx items, used days recomputed |
 
@@ -109,7 +111,7 @@ built yet.
 ## 7. Exit criteria
 
 - Clean clone + `podman compose run build` and `package` succeed.
-- Five `.sppkg` files produced with `--ship`.
+- Four `.sppkg` files produced with `--production` (the shared libraries are bundled, not packaged).
 - Script provisions a fresh site end to end and can be re-run without error.
 - All roles verified on the real site; screenshots in README.
 - Hygiene grep clean in tree and history.

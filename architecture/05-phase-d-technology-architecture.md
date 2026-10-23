@@ -17,7 +17,7 @@ step with `compose.yml`, `.devcontainer/` and `.github/workflows/ci.yml`.
 | UI | Fluent UI React, version shipped with SPFx 1.23 | Orpheus theme tokens over it | — |
 | PDF | pdfmake; fallback jsPDF + autotable | | ADR-004 |
 | PDF from an HTML template | html-to-pdfmake 2.5 | In the lazy `orpheus-timesheet-pdf` chunk with pdfmake, never in the main bundle | [ADR-010](adr/0010-html-template-timesheet.md) |
-| Provisioning | PnP PowerShell on PowerShell 7 (host) | `Provision-OrpheusSite.ps1` + PnP site template; `Add-TimesheetTemplateColumns.ps1` for the optional template columns | ADR-006, [ADR-010](adr/0010-html-template-timesheet.md) |
+| Provisioning | PnP PowerShell 3 on PowerShell 7.4 (host), Pester tests | `Provision-OrpheusSite.ps1` + PnP site template + `OrpheusSolutions.psm1` (`-InstallSolutions`); `Add-TimesheetTemplateColumns.ps1` for the optional template columns | ADR-006, [ADR-010](adr/0010-html-template-timesheet.md) |
 | Agent setup | PnP PowerShell 3 on PowerShell 7.4 (host), Pester tests | `Setup-AgentDemo.ps1`: `Vendor` column, `Orpheus HR` group, 002xxx demo data | [ADR-013](adr/0013-vendor-column-and-hr-group-for-the-agent.md) |
 | Agent server runtime | Node 22, TypeScript | In the same `m365pnp/spfx` container image (`mcp` compose service); no Node on the host | [ADR-011](adr/0011-custom-mcp-server-in-typescript.md), ADR-002 |
 | MCP | MCP TypeScript SDK (`@modelcontextprotocol/sdk` 1.x), zod 3.25 | Stateless Streamable HTTP; tools registered through a loosely typed wrapper | [ADR-011](adr/0011-custom-mcp-server-in-typescript.md) |
@@ -28,7 +28,7 @@ step with `compose.yml`, `.devcontainer/` and `.github/workflows/ci.yml`.
 | Agent | Microsoft 365 Agents Toolkit (VS Code extension or CLI) | Declarative agent manifest v1.8, app manifest 1.30, plugin manifest v2.4, `m365agents.yml` | [ADR-012](adr/0012-declarative-agent-entra-sso-obo.md) |
 | Agent tunnel (demo) | Microsoft dev tunnels (`devtunnel` CLI on the host) | Persistent tunnel to port 8787 | [ADR-015](adr/0015-dev-tunnel-for-the-agent-demo.md) |
 | Agent hosting (target, not built) | Azure API Management, Container Apps, Key Vault, Log Analytics, Container Registry; Terraform | See §3.2 | [ADR-016](adr/0016-azure-target-apim-container-apps-terraform.md) |
-| CI | GitHub Actions | Runs the container build; uploads `.sppkg` artefacts | — |
+| CI | GitHub Actions, Dependabot, repository ruleset | `ci.yml` / `build.yml`: hygiene scan, build, tests, production package in the same container image, Pester on pwsh; uploads `.sppkg` artefacts; `release.yml` attaches them to `v*` releases. Dependabot (GitHub Actions) monthly; a ruleset protects `main`. See `docs/ci.md` | — |
 | Editor | VS Code dev container | `.devcontainer/devcontainer.json` reuses the same image | ADR-002 |
 | Source control | Git, public GitHub `orpheussystems/sharepoint` | Fresh orphan branch | ADR-007 |
 | Licence | Apache-2.0 with NOTICE, © 2026 Orpheus Systems | | — |
@@ -69,33 +69,37 @@ Top-level npm scripts: `build`, `serve:<pkg>`, `package`, `clean`, `provision`.
 
 ```mermaid
 flowchart LR
-  subgraph Host["Developer host (Windows 11, Podman, PowerShell 7, no Node)"]
+  subgraph Host["Developer host (Windows 11, Podman, PowerShell 7.4, no Node)"]
     Repo[(Repository checkout)]
-    PS[Provision-OrpheusSite.ps1]
+    PS["Provision-OrpheusSite.ps1 -InstallSolutions<br/>OrpheusSolutions.psm1"]
     subgraph Container["m365pnp/spfx:1.23.2"]
       NPM[npm workspaces build / Heft]
     end
     Repo --> Container
   end
-  subgraph CI["GitHub Actions"]
-    CIC["Same container image: build + package"]
-    ART[".sppkg artefacts"]
+  subgraph CI["GitHub Actions (ruleset protects main; Dependabot monthly)"]
+    CIC["Same container image: hygiene, build, tests, production package"]
+    PEST["Pester on pwsh: provisioning and setup scripts"]
+    ART[".sppkg artefacts; attached to v* releases"]
     CIC --> ART
   end
-  subgraph Tenant["SharePoint Online tenant"]
-    AC[App catalog]
-    Site["Site: lists, ContractCalendar.aspx, customizer bindings"]
-    AC --> Site
+  subgraph Site["SharePoint Online site"]
+    AC[Site collection App Catalog]
+    Lists["Lists, Orpheus Contract Managers group"]
+    Bind["OrpheusChrome custom action, field and form customizer bindings, ContractCalendar.aspx"]
+    AC --> Bind
   end
-  Container -- ".sppkg (manual upload)" --> AC
-  ART -. "manual upload" .-> AC
-  PS -- "PnP PowerShell" --> Site
+  Container -- ".sppkg files" --> PS
+  ART -. "or downloaded from a release" .-> PS
+  PS -- "PnP PowerShell: install four .sppkg, Scope Site" --> AC
+  PS -- "PnP PowerShell: template, group" --> Lists
+  PS -- "PnP PowerShell: register, bind, create page" --> Bind
 ```
 
-> ⚠️ **Open:** The design has CI build and upload the `.sppkg` artefacts; it
-> does not describe automated deployment to the app catalog, tenant secrets
-> in CI, or tenant-scoped vs site-scoped app catalog. Deployment is assumed
-> manual for now.
+> **Update (2026-10-23):** Deployment goes to the **site collection** App
+> Catalog and is done by `Provision-OrpheusSite.ps1 -InstallSolutions`
+> (ADR-006 amendment), run from the host. CI builds, tests and packages but
+> never deploys to a tenant and holds no tenant secrets.
 
 The HTML timesheet template adds no deployment unit: it is an HTML file a site
 owner uploads to a library, and the web part property points at it
@@ -158,19 +162,32 @@ Terraform modules.
 ## 4. Provisioning (design §6.9, ADR-006)
 
 `Provision-OrpheusSite.ps1` wraps a PnP site template
-(`Invoke-PnPSiteTemplate`, re-runnable). Runs from PowerShell 7 on the host,
-needs no Node. Parameters: `-SiteUrl`, `-Country`, `-WhatIf`.
+(`Invoke-PnPSiteTemplate`, re-runnable). Runs from PowerShell 7.4 with PnP
+PowerShell 3 on the host, needs no Node. Parameters: `-SiteUrl`, `-ClientId`,
+`-Country`, `-SeedDemoData`, `-InstallSolutions`, `-WhatIf`. With
+`-InstallSolutions` it calls `Invoke-OrpheusSolutionInstall` in
+`infra/provisioning/OrpheusSolutions.psm1`. Every step is idempotent: a re-run
+on a provisioned site reports `Unchanged` (deployment guide:
+`docs/deployment.md`).
 
 Order of provisioning:
 
-1. Content types and the three lists with indexes.
-2. `RemainingDays` column with the field customizer bound to it.
-3. `Orpheus Contract` content type bound to the form customizer.
-4. Modern page `ContractCalendar.aspx` hosting the calendar web part with the
-   three lists preselected.
-5. Starter Holidays set for the given country.
-6. Application customizer registration with properties: relative URLs of the
-   Contracts list and the calendar page.
+1. Content types and the three lists with indexes, and the Contracts list
+   validation (template).
+2. With `-SeedDemoData`: demo contracts, entries and the holidays of
+   `-Country` plus `*`.
+3. With `-InstallSolutions`, from the module:
+   1. the four `.sppkg` files installed into the site collection App Catalog,
+      with a clean reinstall (own `-Confirm` gate) when a component manifest
+      stays empty;
+   2. the `OrpheusChrome` application customizer custom action, with the
+      relative URLs of the Contracts list and the calendar page (the package
+      has no feature and does not register itself);
+   3. `RemainingDays` bound to the field customizer;
+   4. `Orpheus Contract` content type bound to the form customizer;
+   5. the `Orpheus Contract Managers` group with Contribute;
+   6. `SitePages/ContractCalendar.aspx` created or updated with the calendar
+      web part wired to the three lists.
 
 Optional follow-up scripts, each idempotent with `-WhatIf`, run after
 `Provision-OrpheusSite.ps1` (they need the `Orpheus Contract` content type

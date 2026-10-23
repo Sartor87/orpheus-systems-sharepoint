@@ -69,7 +69,7 @@ flowchart LR
     CT["Contractor<br/>own contracts, books and removes days"]
     MG["Contract manager<br/>ContractManager = me, read only"]
     HR["HR: SharePoint group Orpheus HR, Read<br/>all contracts, read only"]
-    OW["Site owners, Admin<br/>all contracts, read only in the agent"]
+    OW["Admin: site collection admin<br/>or Owners member<br/>all contracts, read only in the agent"]
   end
   CT --> C
   MG --> C

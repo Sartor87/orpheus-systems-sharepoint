@@ -1,8 +1,11 @@
 # Architecture Decision Records
 
-Index of all ADRs for the Orpheus Systems SPFx monorepo. All decisions below
-were taken in the design document of 2026-10-22 and are recorded here as
-**Accepted**. Template: one file per decision, `NNNN-short-kebab-title.md` (Structurizr/adr-tools convention; the index is `0000-index.md`).
+Index of all ADRs for the Orpheus Systems SPFx monorepo. ADR-001 to ADR-010
+record the decisions of the design document of 2026-10-22; ADR-011 onwards
+cover the Copilot contract agent. Each row carries the ADR's own status: ADR-016
+and ADR-018 are **Proposed**, all others **Accepted**. ADR-005 and ADR-006
+carry dated amendments. The Structurizr workspace imports this folder
+(`architecture/structurizr/workspace.dsl`, `!adrs`). Template: one file per decision, `NNNN-short-kebab-title.md` (Structurizr/adr-tools convention; the index is `0000-index.md`).
 
 | ADR | Title | Status | Date | Phase |
 |-----|-------|--------|------|-------|

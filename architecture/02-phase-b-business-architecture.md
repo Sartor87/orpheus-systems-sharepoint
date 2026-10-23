@@ -65,7 +65,7 @@ flowchart TD
   A[Contractor opens ContractCalendar.aspx] --> B[Select contract in header]
   B --> C[Pick selection type: on-site full/half, off-site full/half]
   C --> D[Click a day in a month grid]
-  D --> E{Weekend or holiday?}
+  D --> E{"Holiday, or weekend with Block weekends on?"}
   E -- yes --> X[Blocked, no change]
   E -- no --> F{Day already holds the same type?}
   F -- yes --> G[Remove entry]
@@ -75,7 +75,7 @@ flowchart TD
   H -- no --> J
   G --> K[Optimistic UI update, rollback on error]
   J --> K
-  K --> L[Service updates OnSiteUsedDays / OffSiteUsedDays on the contract]
+  K --> L[Service updates OnSiteUsedDays / OffSiteUsedDays on the contract, counting only days inside the contract period]
   L --> M[Stats panel refreshes: full/half counts, used vs target, remaining]
 ```
 
@@ -83,14 +83,19 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  A[Manager or admin opens New/Edit form on Contracts] --> B[Two-column Fluent UI form]
+  A0[User opens New/Edit form on Contracts] --> R{"Role check: New needs Admin or ContractManager; Edit needs Admin or the contract's own manager"}
+  R -- "fails or not allowed" --> N[Not allowed notice, no editing]
+  R -- allowed --> B[Two-column Fluent UI form]
   B --> C[Validate: ContractCode regex, LatestExecutionDate >= StartDate, targets >= 0 in 0.5 steps]
   C --> D[Query Contracts for same contractor with intersecting period]
   D --> E{Overlap found?}
   E -- yes --> F["Non-blocking notice: Overlaps with 001185_2026 until 31 Jan 2027 — bridge contract? Continue / Cancel"]
-  F -- Continue --> G[Save]
+  F -- Continue --> P
   F -- Cancel --> B
-  E -- no --> G
+  E -- no --> P{Edit changed the contract period?}
+  P -- yes --> U["Recompute used days from the entries inside the new period; warn about booked days outside it"]
+  U --> G[Save]
+  P -- no --> G
 ```
 
 ### 4.3 Generate the timesheet
