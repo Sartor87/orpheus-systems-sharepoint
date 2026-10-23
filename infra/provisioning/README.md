@@ -4,7 +4,10 @@
 [2022-09](https://github.com/pnp/PnP-Provisioning-Schema/blob/master/ProvisioningSchema-2022-09.md))
 to a SharePoint Online site. The template creates the columns, content types and lists
 that the contract calendar web part reads and writes. With `-SeedDemoData` the script
-also loads the same demo data the web part shows in local mode.
+also loads the same demo data the web part shows in local mode. With `-InstallSolutions`
+it also installs the four SPFx solutions and wires them up
+([Solutions](#solutions--installsolutions); the full walkthrough is
+[docs/deployment.md](../../docs/deployment.md)).
 
 ## Prerequisites
 
@@ -50,9 +53,48 @@ cd infra/provisioning
 
 # Provision and seed demo data (BG holidays plus the "*" ones)
 ./Provision-OrpheusSite.ps1 -SiteUrl https://<tenant>.sharepoint.com/sites/<site> -ClientId <app-client-id> -SeedDemoData -Country BG
+
+# Provision, then install and wire the four solutions (needs a site collection App Catalog)
+./Provision-OrpheusSite.ps1 -SiteUrl https://<tenant>.sharepoint.com/sites/<site> -ClientId <app-client-id> -InstallSolutions
 ```
 
 `Get-Help ./Provision-OrpheusSite.ps1 -Full` describes every parameter.
+
+## Solutions (`-InstallSolutions`)
+
+With `-InstallSolutions`, the script runs `Invoke-OrpheusSolutionInstall` from
+`OrpheusSolutions.psm1` after the lists and the seed. The steps are:
+
+1. Check that the site has a site collection App Catalog. If it has none, the run stops
+   with the admin commands to create it.
+2. Install or update `wp-contract-calendar`, `ext-app-customizer`, `ext-field-customizer`
+   and `ext-form-customizer` in the site collection App Catalog. After each one, check that
+   every component's manifest is active. If a manifest stays empty, uninstall, remove, add
+   and install the package again, cleanly.
+3. Register the `OrpheusChrome` header custom action exactly once.
+4. Bind the field customizer to `Contracts.RemainingDays`.
+5. Bind the form customizer to the list's `Orpheus Contract` content type.
+6. Create `SitePages/ContractCalendar.aspx` with the calendar web part pointed at the three
+   lists.
+
+| Parameter | Meaning |
+|---|---|
+| `-InstallSolutions` | Run the steps above. |
+| `-SolutionsPath <folder>` | Where the `.sppkg` files are: a checkout (`packages/<name>/sharepoint/solution/<name>.sppkg`) or a flat folder with the four `<name>.sppkg`. Default: this repository. |
+| `-ApprovingOrgLabel`, `-ServiceProviderLabel` | Calendar web part labels. Defaults on a new web part: `Client approval` and `Service provider`. |
+
+The script checks the four packages before it signs in, so a missing one stops the run
+before any write. Build them with `.\scripts\podman.ps1 package`. Every step is
+idempotent, and a second run reports `Unchanged`. `-WhatIf` prints the packages with their
+versions and makes no changes. The script ends with a summary table, one row per package
+and step. Prerequisites, what each step changes, and troubleshooting (empty manifests,
+duplicate headers) are in [docs/deployment.md](../../docs/deployment.md).
+
+The module's Pester tests run without a tenant:
+
+```powershell
+pwsh -NoProfile -Command "Import-Module Pester -MinimumVersion 5.0; Invoke-Pester infra/provisioning/tests/OrpheusSolutions.Tests.ps1 -Output Detailed"
+```
 
 ## What gets created
 
