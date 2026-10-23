@@ -65,17 +65,15 @@ New, Edit and Display forms for contracts: validation as you type, people and da
 
 Every component reports through one shared toast stack. The four SPFx solutions install from the site collection App Catalog.
 
-<!-- screenshots pending:
 | Toasts | App Catalog |
 |---|---|
 | ![Stacked toasts](docs/screenshots/13-toasts.png) | ![The four apps in the App Catalog](docs/screenshots/14-app-catalog.png) |
--->
 
 ### Contract Calendar agent (Microsoft 365 Copilot)
 
 "Book me on-site days from 1 to 5 December": a declarative agent in Copilot Chat books, removes and reads days through an MCP server that reuses the web part's own data layer, so both apply the same rules. See [The Copilot agent](#the-copilot-agent).
 
-<!-- screenshot pending: ![The agent in Copilot Chat](docs/screenshots/15-agent-copilot.png) -->
+![The agent in Copilot Chat](docs/screenshots/15-agent-copilot.png)
 
 ## Architecture
 
