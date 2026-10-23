@@ -1106,7 +1106,7 @@ Describe 'Set-OrpheusContractManagersGroup' {
     }
 
     It 'treats a "not found" or "does not exist" throw as missing' {
-        foreach ($message in 'Group cannot be found. not found', 'The group does not exist or is not valid.') {
+        foreach ($message in 'Group cannot be found.', 'The group does not exist or is not valid.') {
             Mock -ModuleName OrpheusSolutions Get-PnPGroup -MockWith ({ throw $message }.GetNewClosure())
 
             Set-OrpheusContractManagersGroup | Should -BeExactly 'Added'

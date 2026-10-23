@@ -561,7 +561,7 @@ function Set-OrpheusContractManagersGroup {
     $existing = $null
     try { $existing = Get-PnPGroup -Identity $groupName -ErrorAction Stop }
     catch {
-        if ($_.Exception.Message -notmatch 'not found|does not exist') { throw }
+        if ($_.Exception.Message -notmatch 'cannot be found|not found|does not exist') { throw }
     }
     if ($existing) { return 'Unchanged' }
 
