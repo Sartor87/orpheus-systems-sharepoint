@@ -36,6 +36,11 @@ const TimesheetDialog: React.FC<ITimesheetDialogProps> = ({ contract, generating
   };
   const invalid = compareKeys(from, to) > 0;
 
+  // A generation error belongs to this dialog session: closing it (Cancel, X, contract switch) clears it.
+  const clearRef = React.useRef(onClearError);
+  clearRef.current = onClearError;
+  React.useEffect(() => () => { clearRef.current(); }, []);
+
   const generate = async (): Promise<void> => {
     if (invalid || generating) { return; }
     if (await onGenerate({ from, to })) { onDismiss(); }

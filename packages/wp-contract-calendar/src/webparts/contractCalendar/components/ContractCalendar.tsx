@@ -14,7 +14,6 @@ import TimesheetDialog from './TimesheetDialog';
 import { useRangeDrag } from './useRangeDrag';
 import type { RangePreview } from './useRangeDrag';
 import { rangeMode } from './rangeSelection';
-import { orpheusBrand } from '@orpheussystems/shared-ui/brand';
 import { showBrandToastOnce } from '@orpheussystems/shared-ui/toast';
 
 /** The part of the preview inside one month, or undefined when they do not meet. */
@@ -59,7 +58,7 @@ const orpheusDark = createTheme({
 
 const ContractCalendar: React.FC<IContractCalendarProps> = ({ brandToast }) => {
   React.useEffect(() => {
-    if (brandToast) { showBrandToastOnce({ title: `Contract Calendar by ${orpheusBrand.name}` }); }
+    if (brandToast) { showBrandToastOnce(); }
   }, [brandToast]);
   const state = useCalendarState();
   const { selected, readOnly } = state;
@@ -81,6 +80,8 @@ const ContractCalendar: React.FC<IContractCalendarProps> = ({ brandToast }) => {
     '--orpheus-text': orpheusTokens.text,
     '--orpheus-text-muted': orpheusTokens.textMuted,
     '--orpheus-border': orpheusTokens.border,
+    '--orpheus-ok-on-dark': orpheusTokens.okOnDark,
+    '--orpheus-over-on-dark': orpheusTokens.overOnDark,
     fontFamily: orpheusTokens.fontStack
   } as React.CSSProperties;
 

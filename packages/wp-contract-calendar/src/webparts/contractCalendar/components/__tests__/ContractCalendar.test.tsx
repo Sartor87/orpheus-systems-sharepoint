@@ -7,6 +7,9 @@ import { DataContext } from '../../DataContext';
 import type { IContractCalendarWebPartProps } from '../../IContractCalendarWebPartProps';
 import ContractCalendar from '../ContractCalendar';
 import { ControlledService } from './controlledService';
+import { orpheusTokens } from '@orpheussystems/shared-ui/tokens';
+import { orpheusBrand } from '@orpheussystems/shared-ui/brand';
+import { activeToasts, unmountToastHost } from '@orpheussystems/shared-ui/toast';
 
 const props: IContractCalendarWebPartProps = {
   useLocalData: true,
@@ -32,14 +35,14 @@ function unmountAll(): void {
   hosts.splice(0).forEach(h => { ReactDom.unmountComponentAtNode(h); h.remove(); });
 }
 
-async function mount(demoUserId: number, service: IDataService = new LocalDataService({ demoUserId })): Promise<{ host: HTMLDivElement; service: IDataService }> {
+async function mount(demoUserId: number, service: IDataService = new LocalDataService({ demoUserId }), brandToast = false): Promise<{ host: HTMLDivElement; service: IDataService }> {
   const host = document.createElement('div');
   document.body.appendChild(host);
   hosts.push(host);
   await act(async () => {
     ReactDom.render(
       <DataContext.Provider value={{ service, props: { ...props, demoUserId } }}>
-        <ContractCalendar isDarkTheme={false} />
+        <ContractCalendar isDarkTheme={false} brandToast={brandToast} />
       </DataContext.Provider>,
       host
     );
@@ -63,6 +66,21 @@ describe('ContractCalendar', () => {
   afterAll(() => { jest.useRealTimers(); });
   afterEach(() => {
     unmountAll();
+  });
+
+  it('takes the dark-card status colours from the shared tokens', async () => {
+    const { host } = await mount(1);
+    const root = host.querySelector('section') as HTMLElement;
+    expect(root.style.getPropertyValue('--orpheus-ok-on-dark')).toBe(orpheusTokens.okOnDark);
+    expect(root.style.getPropertyValue('--orpheus-over-on-dark')).toBe(orpheusTokens.overOnDark);
+  });
+
+  it('shows the brand toast with the brand name only', async () => {
+    unmountToastHost();
+    window.localStorage.clear();
+    await mount(1, new LocalDataService({ demoUserId: 1 }), true);
+    expect(activeToasts().filter(t => t.kind === 'brand').map(t => t.title)).toEqual([orpheusBrand.name]);
+    unmountToastHost();
   });
 
   it('renders the header metadata and Monday-first months from the current month', async () => {

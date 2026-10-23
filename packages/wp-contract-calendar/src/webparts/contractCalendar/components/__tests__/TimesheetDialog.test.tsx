@@ -59,4 +59,50 @@ describe('TimesheetDialog', () => {
     expect(onClose).not.toHaveBeenCalled();
     ReactDom.unmountComponentAtNode(host);
   });
+
+  it('clears a generation error when it closes, so a reopened dialog starts clean', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    let state: ReturnType<typeof useCalendarState> | undefined;
+    const Reopenable: React.FC<{ open: boolean }> = ({ open }) => {
+      state = useCalendarState({ loadPdf: () => Promise.reject(new Error('pdf exploded')) });
+      if (!open || !state.selected) { return null; }
+      return (
+        <TimesheetDialog
+          contract={state.selected}
+          generating={state.generating}
+          error={state.timesheetError}
+          onClearError={state.clearTimesheetError}
+          onGenerate={state.generateTimesheet}
+          onDismiss={() => undefined}
+        />
+      );
+    };
+    const value = { service: new LocalDataService({ demoUserId: 1 }), props };
+    const render = async (open: boolean): Promise<void> => {
+      await act(async () => {
+        ReactDom.render(
+          <DataContext.Provider value={value}>
+            <Reopenable open={open} />
+          </DataContext.Provider>,
+          host
+        );
+      });
+      await flush();
+    };
+    try {
+      await render(true);
+      const generate = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent === 'Generate')!;
+      await act(async () => { generate.click(); });
+      await flush();
+      expect(state!.timesheetError).toContain('pdf exploded');
+      await render(false);
+      expect(state!.timesheetError).toBeUndefined();
+      await render(true);
+      expect(document.body.textContent).not.toContain('pdf exploded');
+    } finally {
+      ReactDom.unmountComponentAtNode(host);
+      host.remove();
+    }
+  });
 });

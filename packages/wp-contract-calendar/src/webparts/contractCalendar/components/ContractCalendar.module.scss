@@ -385,11 +385,11 @@ fieldset:disabled .choice {
 }
 
 .remainingOk {
-  color: #5FD08C; // green, lifted for the dark card
+  color: var(--orpheus-ok-on-dark); // green, lifted for the dark card
 }
 
 .remainingOver {
-  color: #D9822B; // 6.1:1 on bgElevated; the meter keeps $over (#C26700)
+  color: var(--orpheus-over-on-dark); // the meter keeps $over (#C26700)
 }
 
 // ---------- Messages ----------

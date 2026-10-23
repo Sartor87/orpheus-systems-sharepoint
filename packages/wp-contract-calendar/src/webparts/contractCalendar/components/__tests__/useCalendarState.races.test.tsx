@@ -3,7 +3,7 @@ import { renderHook, act } from '@testing-library/react-hooks/dom';
 import type { IDataService } from '@orpheussystems/shared-core';
 import { DataContext } from '../../DataContext';
 import type { IContractCalendarWebPartProps } from '../../IContractCalendarWebPartProps';
-import { useCalendarState } from '../useCalendarState';
+import { useCalendarState, WRITE_TIMEOUT_MS } from '../useCalendarState';
 import { ControlledService } from './controlledService';
 import { activeToasts, dismissToast, unmountToastHost } from '@orpheussystems/shared-ui/toast';
 
@@ -248,6 +248,41 @@ describe('useCalendarState service write serialization', () => {
 
     expect(result.current.entries[DAY]?.type).toBe('OnSiteHalf');
     expect((await service.inner.getEntries(1, DAY, DAY)).map(e => e.type)).toEqual(['OnSiteHalf']);
+  });
+
+  it('gives up on a hung write after the timeout, rolls it back and lets the next write for that date go out', async () => {
+    const service = new ControlledService(1);
+    const { result } = await loaded(service);
+    service.setHoldWrites(true);
+
+    act(() => start(result.current.clickDay(DAY)));             // never answered
+    expect(result.current.entries[DAY]?.type).toBe('OffSiteFull');
+    await settle(() => { jest.advanceTimersByTime(WRITE_TIMEOUT_MS); });
+
+    expect(result.current.entries[DAY]).toBeUndefined();
+    expect(errorToasts().map(t => t.text).join(' ')).toMatch(/did not answer/i);
+
+    act(() => result.current.setSelectionType('OnSiteHalf'));
+    act(() => start(result.current.clickDay(DAY)));
+    expect(service.held).toHaveLength(2);                        // not stuck behind the hung write
+    await settle(() => service.held[1].succeed());
+    expect(result.current.entries[DAY]?.type).toBe('OnSiteHalf');
+  });
+
+  it('reloads entries only after in-flight writes settle, so switching away and back shows the saved day', async () => {
+    const service = new ControlledService(1);
+    const { result } = await loaded(service);
+    expect(result.current.selected?.id).toBe(1);
+    service.setHoldWrites(true);
+
+    act(() => start(result.current.clickDay(DAY)));             // upsert held
+    await settle(() => result.current.selectContract(2));
+    await settle(() => result.current.selectContract(1));      // reload of contract 1 while the write is in flight
+    await settle(() => service.held[0].succeed());
+    await settle();
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.entries[DAY]?.type).toBe('OffSiteFull');
   });
 
   it('runs writes for different dates concurrently', async () => {

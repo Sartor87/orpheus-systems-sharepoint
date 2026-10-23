@@ -146,6 +146,21 @@ function messageOf(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+/**
+ * A service write that has not answered after this long is reported as failed and rolled back, so later writes
+ * to that date are not queued behind it forever. The request itself cannot be cancelled and may still land.
+ */
+export const WRITE_TIMEOUT_MS = 30000;
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('SharePoint did not answer in time. Reload the page to see what was saved.'));
+    }, ms);
+    p.then(v => { clearTimeout(timer); resolve(v); }, e => { clearTimeout(timer); reject(e); });
+  });
+}
+
 const MAX_TEMPLATE_ERRORS = 5;
 
 /** Duck-typed: the error class lives in the lazy PDF chunk, so instanceof is not available here. */
@@ -261,10 +276,14 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
     if (!contract) { return; }
     let cancelled = false;
     setLoadError(undefined);
-    Promise.all([
-      service.getEntries(contract.id, contract.startDate, contract.latestExecutionDate),
-      service.getHolidays(contract.country, contract.startDate, contract.latestExecutionDate)
-    ])
+    // Writes still in flight (e.g. started before a switch away and back) land first; otherwise the load could
+    // miss them and their outcome is ignored, leaving the grid and stats stale until the next reload.
+    const pending = Object.keys(writeChains.current).map(d => writeChains.current[d].catch(() => undefined));
+    Promise.all(pending)
+      .then(() => Promise.all([
+        service.getEntries(contract.id, contract.startDate, contract.latestExecutionDate),
+        service.getHolidays(contract.country, contract.startDate, contract.latestExecutionDate)
+      ]))
       .then(([list, hols]) => {
         if (cancelled) { return; }
         const map: Record<DateKey, CalendarEntry> = {};
@@ -333,7 +352,7 @@ export function useCalendarState(options: CalendarStateOptions = {}): CalendarSt
       : service.deleteEntry(contractId, date).then(() => undefined);
     const prior = writeChains.current[date];
     // Chained after the previous write for this date, whatever its outcome; issued at once when idle.
-    const op = prior ? prior.catch(() => undefined).then(send) : send();
+    const op = withTimeout(prior ? prior.catch(() => undefined).then(send) : send(), WRITE_TIMEOUT_MS);
     writeChains.current[date] = op;
     const release = (): void => {
       if (writeChains.current[date] === op) { delete writeChains.current[date]; }
