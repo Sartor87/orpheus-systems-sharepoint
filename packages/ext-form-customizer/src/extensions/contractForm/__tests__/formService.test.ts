@@ -95,6 +95,12 @@ describe('formService', () => {
     expect(c.latestExecutionDate).toBe('');
   });
 
+  it('loads a blank HoursPerDay as 8 (the list default) so an unrelated edit does not save 0 hours', async () => {
+    const { sp } = fakeSpChain({ ...spItem, HoursPerDay: null });
+    const c = await loadContract(sp, 'list-guid', 7);
+    expect(c.hoursPerDay).toBe(8);
+  });
+
   it('loads the other contracts of a contractor even when one has a null date', async () => {
     const { sp } = fakeSpChain([spItem, { ...spItem, Id: 9, StartDate: null }]);
     const others = await loadOthersOfContractor(sp, 'list-guid', 11);

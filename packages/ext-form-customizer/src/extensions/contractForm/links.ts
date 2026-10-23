@@ -1,20 +1,14 @@
-export const DEFAULT_CALENDAR_PAGE_URL = 'SitePages/ContractCalendar.aspx';
+import { DEFAULT_CALENDAR_PAGE_URL, resolveWebLink } from '@orpheussystems/shared-core/links';
 
-function resolve(webUrl: string, pageUrl: string): URL | undefined {
-  try {
-    const url = new URL(pageUrl, webUrl.replace(/\/?$/, '/'));
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url : undefined;
-  } catch {
-    return undefined;
-  }
-}
+export { DEFAULT_CALENDAR_PAGE_URL };
 
 /**
  * Calendar page with the contract preselected. `pageUrl` is web-relative, server-relative or absolute
- * (component property); anything that does not resolve to http(s) falls back to the default page.
+ * (component property, same rule as the header menu); anything that does not resolve to http(s) falls back to
+ * the default page.
  */
 export function calendarLink(webUrl: string, pageUrl: string, contractId: number): string {
-  const url = (pageUrl && resolve(webUrl, pageUrl)) || (resolve(webUrl, DEFAULT_CALENDAR_PAGE_URL) as URL);
+  const url = new URL(resolveWebLink(webUrl, pageUrl) || (resolveWebLink(webUrl, DEFAULT_CALENDAR_PAGE_URL) as string));
   url.searchParams.set('contractId', String(contractId));
   return url.toString();
 }
