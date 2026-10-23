@@ -16,8 +16,13 @@
   "scripts": {
     "build:shared": "npm run build -w @orpheussystems/shared-core -w @orpheussystems/shared-ui",
     "test:shared": "npm test -w @orpheussystems/shared-core -w @orpheussystems/shared-ui",
-    "build": "npm run build:shared && npm run build --workspaces --if-present",
-    "package": "npm run build:shared && npm run package --workspaces --if-present",
+    "build": "npm run build:shared && node scripts/ci/run-workspaces.js build --skip @orpheussystems/shared-core,@orpheussystems/shared-ui",
+    "package": "npm run build:shared && npm run package:solutions",
+    "package:solutions": "node scripts/ci/run-workspaces.js package",
+    "test:all": "npm run test:ci && node scripts/ci/run-workspaces.js test -- --maxWorkers=2",
+    "test:ci": "node --test \"scripts/ci/*.test.js\"",
+    "typecheck": "npm run typecheck -w @orpheussystems/mcp-contract-calendar",
+    "hygiene": "node scripts/ci/hygiene.js",
     "clean": "npm run clean --workspaces --if-present"
   }
 }
