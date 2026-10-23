@@ -111,6 +111,7 @@ The script's `-WhatIf` previews the whole run, list steps included, without sign
 
 - **Timesheet template columns:** `infra/provisioning/Add-TimesheetTemplateColumns.ps1` ([README](../infra/provisioning/README.md#optional-columns-for-timesheet-templates)), then the [authoring guide](timesheet-templates.md).
 - **Copilot agent:** [packages/agent-contract-calendar/demo/demo-procedure.md](../packages/agent-contract-calendar/demo/demo-procedure.md).
+- **Demo users without MFA** in a dev tenant: [demo-users-mfa.md](demo-users-mfa.md).
 
 ## Upgrading
 
