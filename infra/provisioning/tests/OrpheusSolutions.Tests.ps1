@@ -69,6 +69,18 @@ BeforeAll {
         }
     }
     # The value a PnP pipe bind was built from (its private field), e.g. Get-BindValue $Identity '_id'.
+    function New-AvailableComponent {
+        # A real PnP.Core PageComponent, as Get-PnPPageComponent -ListAvailable returns it. SharePoint
+        # spells the id with braces in upper case, which is why resolving by a bare GUID failed live.
+        param([string] $Id, [string] $Name)
+        $type = [AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GetName().Name -eq 'PnP.Core' } |
+            ForEach-Object { $_.GetType('PnP.Core.Model.SharePoint.PageComponent') } | Where-Object { $_ } | Select-Object -First 1
+        $component = [Activator]::CreateInstance($type)
+        $component.Id = $Id
+        $component.Name = $Name
+        return $component
+    }
+
     function Get-BindValue {
         param($Bind, [string] $Field)
         return $Bind.GetType().GetField($Field, [System.Reflection.BindingFlags] 'NonPublic, Instance').GetValue($Bind)
@@ -796,7 +808,10 @@ Describe 'Set-OrpheusCalendarPage' {
         Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter {
             $Method -eq 'Get' -and $Url -like "/_api/web/getfolderbyserverrelativeurl('SitePages')/files*"
         } -MockWith { [pscustomobject]@{ value = @($script:Pages | ForEach-Object { [pscustomobject]@{ Name = $_ } }) } }
-        Mock -ModuleName OrpheusSolutions Get-PnPPageComponent { $script:Components }
+        $script:Available = @(New-AvailableComponent -Id '{8E7C3D81-DB98-46C9-993E-D4C26928926F}' -Name 'ContractCalendar')
+        Mock -ModuleName OrpheusSolutions Get-PnPPageComponent -ParameterFilter { $ListAvailable } -MockWith { $script:Available }
+        Mock -ModuleName OrpheusSolutions Get-PnPPageComponent -ParameterFilter { -not $ListAvailable } -MockWith { $script:Components }
+        Mock -ModuleName OrpheusSolutions Remove-PnPPageComponent { }
         Mock -ModuleName OrpheusSolutions Add-PnPPage { }
         Mock -ModuleName OrpheusSolutions Add-PnPPageWebPart { }
         Mock -ModuleName OrpheusSolutions Set-PnPPageWebPart { }
@@ -813,7 +828,7 @@ Describe 'Set-OrpheusCalendarPage' {
         }
         Should -Invoke -ModuleName OrpheusSolutions Add-PnPPageWebPart -Times 1 -Exactly -ParameterFilter {
             $p = Get-BindValue $WebPartProperties '_hashtable'
-            $Page.Name -eq 'ContractCalendar.aspx' -and (Get-BindValue $Component '_id') -eq [guid] $script:WebPartId -and
+            $Page.Name -eq 'ContractCalendar.aspx' -and (Get-BindValue $Component '_component').Name -ceq 'ContractCalendar' -and
             $p.contractsListId -ceq 'c0000000-0000-0000-0000-00000000000a' -and
             $p.entriesListId -ceq 'e0000000-0000-0000-0000-00000000000b' -and
             $p.holidaysListId -ceq 'd0000000-0000-0000-0000-00000000000c' -and
@@ -843,7 +858,7 @@ Describe 'Set-OrpheusCalendarPage' {
 
         Set-OrpheusCalendarPage | Should -BeExactly 'Unchanged'
 
-        foreach ($name in 'Add-PnPPage', 'Add-PnPPageWebPart', 'Set-PnPPageWebPart', 'Set-PnPPage') {
+        foreach ($name in 'Add-PnPPage', 'Add-PnPPageWebPart', 'Set-PnPPageWebPart', 'Set-PnPPage', 'Remove-PnPPageComponent') {
             Should -Invoke -ModuleName OrpheusSolutions $name -Times 0 -Exactly
         }
     }
@@ -870,6 +885,36 @@ Describe 'Set-OrpheusCalendarPage' {
         Should -Invoke -ModuleName OrpheusSolutions Set-PnPPage -Times 1 -Exactly -ParameterFilter { $Publish }
         Should -Invoke -ModuleName OrpheusSolutions Add-PnPPage -Times 0 -Exactly
         Should -Invoke -ModuleName OrpheusSolutions Add-PnPPageWebPart -Times 0 -Exactly
+    }
+
+    It 'passes the available component itself, not a bare id that PnP cannot resolve' {
+        Set-OrpheusCalendarPage | Should -BeExactly 'Updated'
+
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPPageWebPart -Times 1 -Exactly -ParameterFilter {
+            $c = Get-BindValue $Component '_component'
+            $null -ne $c -and $c.Id -ceq '{8E7C3D81-DB98-46C9-993E-D4C26928926F}'
+        }
+    }
+
+    It 'throws, before adding anything, when the web part is not available on the site' {
+        $script:Available = @()
+
+        { Set-OrpheusCalendarPage } | Should -Throw '*8e7c3d81-db98-46c9-993e-d4c26928926f*not available*'
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPPageWebPart -Times 0 -Exactly
+    }
+
+    It 'removes empty web part placeholders (no web part id) and adds the real web part' {
+        $script:Components = @(
+            [pscustomobject]@{ InstanceId = [guid] '39c938ef-ed6b-4a60-a3f1-6b02ce07cd22'; WebPartId = ''; ControlType = 3; PropertiesJson = '{}' }
+            [pscustomobject]@{ InstanceId = [guid] 'e1ba7637-c079-4afa-a63d-f0a86d5fb9ff'; WebPartId = $null; ControlType = 3; PropertiesJson = '{"useLocalData":false}' }
+            [pscustomobject]@{ InstanceId = [guid] 'f0000000-0000-0000-0000-000000000009'; Text = '<p>Intro</p>' }
+        )
+
+        Set-OrpheusCalendarPage | Should -BeExactly 'Updated'
+
+        Should -Invoke -ModuleName OrpheusSolutions Remove-PnPPageComponent -Times 2 -Exactly -ParameterFilter { $Force }
+        Should -Invoke -ModuleName OrpheusSolutions Remove-PnPPageComponent -Times 0 -Exactly -ParameterFilter { "$InstanceId" -eq 'f0000000-0000-0000-0000-000000000009' }
+        Should -Invoke -ModuleName OrpheusSolutions Add-PnPPageWebPart -Times 1 -Exactly
     }
 
     It 'adds the web part to an existing page that lacks it' {
@@ -919,7 +964,7 @@ Describe 'Set-OrpheusCalendarPage' {
         $script:Components = @([pscustomobject]@{ InstanceId = $script:InstanceId; WebPartId = $script:WebPartId; PropertiesJson = '{}' })
         Set-OrpheusCalendarPage -WhatIf | Should -BeExactly 'Updated'
 
-        foreach ($name in 'Add-PnPPage', 'Add-PnPPageWebPart', 'Set-PnPPageWebPart', 'Set-PnPPage') {
+        foreach ($name in 'Add-PnPPage', 'Add-PnPPageWebPart', 'Set-PnPPageWebPart', 'Set-PnPPage', 'Remove-PnPPageComponent') {
             Should -Invoke -ModuleName OrpheusSolutions $name -Times 0 -Exactly
         }
     }
@@ -1158,7 +1203,7 @@ Describe 'Invoke-OrpheusSolutionInstall -WhatIf on a fresh site' {
         Should -Invoke -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -Times 0 -Exactly -ParameterFilter { $Method -ne 'Get' }
         foreach ($name in 'Add-PnPApp', 'Install-PnPApp', 'Update-PnPApp', 'Uninstall-PnPApp', 'Remove-PnPApp', 'Add-PnPCustomAction',
             'Remove-PnPCustomAction', 'Set-PnPField', 'Get-PnPContentType', 'Invoke-PnPQuery', 'Add-PnPPage', 'Add-PnPPageWebPart',
-            'Set-PnPPageWebPart', 'Set-PnPPage') {
+            'Set-PnPPageWebPart', 'Set-PnPPage', 'Remove-PnPPageComponent') {
             Should -Invoke -ModuleName OrpheusSolutions $name -Times 0 -Exactly
         }
     }

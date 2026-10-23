@@ -538,6 +538,19 @@ function Set-OrpheusFormCustomizer {
 
 #region Calendar page
 
+function Get-OrpheusCalendarWebPartComponent {
+    # The calendar web part from the page's available components. It is passed to Add-PnPPageWebPart
+    # as the component object: PnP resolves a bare GUID against ids spelled '{8E7C3D81-...}' and, when
+    # nothing matches, silently adds an empty web part (webPartId null), which breaks page editing.
+    param([Parameter(Mandatory)] [string] $PageName)
+    $component = @(Get-PnPPageComponent -Page $PageName -ListAvailable) |
+        Where-Object { $null -ne $_ -and (Test-SameId ([string] $_.Id) $script:WebPartId) } | Select-Object -First 1
+    if (-not $component) {
+        throw "The contract calendar web part ($script:WebPartId) is not available on this site. Install wp-contract-calendar first."
+    }
+    return $component
+}
+
 function Set-OrpheusCalendarPage {
     <#
     .SYNOPSIS
@@ -598,19 +611,39 @@ function Set-OrpheusCalendarPage {
     if (-not $pageExists) {
         if (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "SitePages/$pageName.aspx" -Action 'Create the page with the contract calendar web part and publish it') {
             $null = Add-PnPPage -Name $pageName -Title 'Contract calendar' -LayoutType Article
-            $null = Add-PnPPageWebPart -Page $pageName -Component $script:WebPartId -WebPartProperties ([hashtable] $required)
+            $component = Get-OrpheusCalendarWebPartComponent -PageName $pageName
+            $null = Add-PnPPageWebPart -Page $pageName -Component $component -WebPartProperties ([hashtable] $required)
             $null = Set-PnPPage -Identity $pageName -Publish
         }
         elseif (-not $WhatIfPreference) { return 'Skipped' }
         return 'Created'
     }
 
-    $instances = @(Get-PnPPageComponent -Page $pageName | Where-Object {
-            $null -ne $_ -and $_.PSObject.Properties['WebPartId'] -and (Test-SameId ([string] $_.WebPartId) $script:WebPartId)
+    $components = @(Get-PnPPageComponent -Page $pageName | Where-Object { $null -ne $_ })
+    # Empty web parts (a web part control with no web part id) are left by an unresolved component;
+    # they cannot render and block page editing ("Can't edit this page now"), so they are removed.
+    $placeholders = @($components | Where-Object {
+            $_.PSObject.Properties['WebPartId'] -and [string]::IsNullOrWhiteSpace([string] $_.WebPartId) -and
+            $_.PSObject.Properties['ControlType'] -and [int] $_.ControlType -eq 3
+        })
+    $removed = $false
+    if ($placeholders.Count) {
+        if (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "SitePages/$pageName.aspx" -Action "Remove $($placeholders.Count) empty web part placeholder(s)") {
+            foreach ($placeholder in $placeholders) {
+                $null = Remove-PnPPageComponent -Page $pageName -InstanceId ([guid] $placeholder.InstanceId) -Force
+            }
+            $removed = $true
+        }
+        elseif (-not $WhatIfPreference) { return 'Skipped' }
+    }
+
+    $instances = @($components | Where-Object {
+            $_.PSObject.Properties['WebPartId'] -and (Test-SameId ([string] $_.WebPartId) $script:WebPartId)
         })
     if ($instances.Count -eq 0) {
+        $component = Get-OrpheusCalendarWebPartComponent -PageName $pageName
         if (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "SitePages/$pageName.aspx" -Action 'Add the contract calendar web part and publish the page') {
-            $null = Add-PnPPageWebPart -Page $pageName -Component $script:WebPartId -WebPartProperties ([hashtable] $required)
+            $null = Add-PnPPageWebPart -Page $pageName -Component $component -WebPartProperties ([hashtable] $required)
             $null = Set-PnPPage -Identity $pageName -Publish
         }
         elseif (-not $WhatIfPreference) { return 'Skipped' }
@@ -629,7 +662,14 @@ function Set-OrpheusCalendarPage {
             -not $current.Contains($_) -or $null -eq $current[$_] -or
             $current[$_].GetType() -ne $wiring[$_].GetType() -or $current[$_] -cne $wiring[$_]
         })
-    if (-not $stale.Count) { return 'Unchanged' }
+    if (-not $stale.Count) {
+        if ($removed) {
+            $null = Set-PnPPage -Identity $pageName -Publish
+            return 'Updated'
+        }
+        if ($WhatIfPreference -and $placeholders.Count) { return 'Updated' }
+        return 'Unchanged'
+    }
 
     foreach ($key in $wiring.Keys) { $current[$key] = $wiring[$key] }
     foreach ($key in $defaults.Keys) { if (-not $current.Contains($key)) { $current[$key] = $defaults[$key] } }
