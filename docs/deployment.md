@@ -26,7 +26,7 @@ Placeholders: `<tenant>` is the tenant name, `<site>` the site's URL name, `<app
   Add-PnPSiteCollectionAppCatalog -Site https://<tenant>.sharepoint.com/sites/<site>
   ```
 
-  Without the site collection App Catalog, `-InstallSolutions` stops before it installs anything, and the error names these commands.
+  With `-InstallSolutions`, the script checks for the site collection App Catalog right after it signs in. If the site has none, the run stops before it changes anything, and the error names these commands.
 
 ## 1. Build the packages
 
@@ -50,7 +50,8 @@ A GitHub Release of a `v*` tag carries the same four files ([ci.md](ci.md)). To 
 ```powershell
 cd infra/provisioning
 
-# Preview: no sign-in, no changes. Prints the template, and the packages with their versions.
+# Preview of the whole run: no sign-in, no request to SharePoint, no changes. Covers the list
+# steps too. Prints the template, the seed data if asked, and the packages with their versions.
 ./Provision-OrpheusSite.ps1 -SiteUrl https://<tenant>.sharepoint.com/sites/<site> -ClientId <app-client-id> -InstallSolutions -WhatIf
 
 # Lists, then the solutions and their wiring
@@ -60,18 +61,30 @@ cd infra/provisioning
 #   -SeedDemoData -Country BG                    demo contracts, entries and holidays
 #   -SolutionsPath <folder>                      the .sppkg files of a Release instead of this checkout
 #   -ApprovingOrgLabel '...' -ServiceProviderLabel '...'   calendar web part labels
+#   -ForceUpload                                 upload the packages even at the same version (a same-version rebuild)
 ```
 
-The script checks the four `.sppkg` files before it signs in, so a missing package stops the run before anything is written. It then applies the list template ([what it creates](../infra/provisioning/README.md#what-gets-created)), seeds the demo data if asked, and with `-InstallSolutions` runs these steps in order:
+The script's `-WhatIf` does not sign in, so it cannot say which solution steps would change this particular site. To see that, sign in and call the module directly. This run only reads; the one POST it may send, `GetClientSideComponentsById`, is read-only:
 
-1. Checks that the site has a site collection App Catalog. This step only reads.
-2. Installs `wp-contract-calendar`, `ext-app-customizer`, `ext-field-customizer` and `ext-form-customizer` into the site collection App Catalog (`Add-PnPApp -Scope Site -Publish -Overwrite`, then install or update). It waits for each one to finish and then checks that every component's manifest is active (see [Troubleshooting](#a-component-has-no-active-manifest)).
+```powershell
+Connect-PnPOnline -Url https://<tenant>.sharepoint.com/sites/<site> -ClientId <app-client-id> -Interactive
+Import-Module ./OrpheusSolutions.psm1
+Invoke-OrpheusSolutionInstall -WhatIf | Format-Table Component, Action
+```
+
+The script checks the four `.sppkg` files before it signs in, so a missing package stops the run before anything is written. With `-InstallSolutions` it checks for the site collection App Catalog right after signing in, before any write. It then applies the list template ([what it creates](../infra/provisioning/README.md#what-gets-created)), seeds the demo data if asked, and with `-InstallSolutions` runs these steps in order:
+
+1. Checks the site collection App Catalog again. This step only reads.
+2. Installs `wp-contract-calendar`, `ext-app-customizer`, `ext-field-customizer` and `ext-form-customizer` into the site collection App Catalog. The script reads the installed and catalog versions first, and compares them with the package version from the file. When all three match, it uploads nothing. Otherwise it uploads the package (`Add-PnPApp -Scope Site -Publish -Overwrite`), installs or updates it, and waits for that to finish. In both cases it then checks that every component's manifest is active (see [Troubleshooting](#a-component-has-no-active-manifest)).
 3. Registers the header and footer: the web custom action `OrpheusChrome` for the application customizer `30930118-2d09-49f4-bdc4-fb2c9b4af49e`, with the properties `{"contractsListUrl":"Lists/Contracts","calendarPageUrl":"SitePages/ContractCalendar.aspx","showFooter":true}`.
 4. Binds the field customizer `a7721b49-8c3e-48c7-ac67-69408fcc6a03` to `Contracts.RemainingDays`, and adds the column to the default view when it is missing.
 5. Binds the form customizer `9ec4e23b-5adb-4be5-af3a-85f46fa4fc27` to the New, Edit and Display forms of the list's `Orpheus Contract` content type.
-6. Creates `SitePages/ContractCalendar.aspx` with the calendar web part (`8e7c3d81-db98-46c9-993e-d4c26928926f`) and publishes it. The web part gets `useLocalData: false` and the ids of `Lists/Contracts`, `Lists/CalendarEntries` and `Lists/Holidays`. On a page that already exists, the script sets those four values on the existing web part and keeps every other setting.
+6. Sets up `SitePages/ContractCalendar.aspx` with the calendar web part (`8e7c3d81-db98-46c9-993e-d4c26928926f`). Required values: `useLocalData: false`; the ids of `Lists/Contracts`, `Lists/CalendarEntries` and `Lists/Holidays` (lowercase, without braces); `monthsToShow: 0`; `blockWeekends: true`; `demoUserId: 1`; and the labels (default `Client approval` and `Service provider`).
+   - **No page:** creates it (Article layout), adds the web part with these values and publishes it.
+   - **A page without the web part:** adds the web part with these values and publishes the page.
+   - **A page with the web part:** changes the first instance only when `useLocalData` or a list id is missing or wrong, or a label you passed with `-ApprovingOrgLabel` or `-ServiceProviderLabel` differs. It then sets those values, adds `monthsToShow`, `blockWeekends`, `demoUserId` and the labels only where they are missing, keeps every other setting (for example the timesheet template), and publishes the page.
 
-At the end it prints a table with one row per package and step, and what happened: `Installed`, `Updated`, `Reinstalled`, `Added`, `Deduplicated`, `Created` or `Unchanged`. A run that stops partway still prints the rows that finished.
+At the end it prints a table with one row per package and step, and what happened: `Installed`, `Updated`, `Uploaded` (same version, `-ForceUpload`), `Reinstalled`, `Added`, `Deduplicated`, `Created`, `Unchanged` or `Skipped` (a write you declined under `-Confirm`). A run that stops partway prints the rows that finished, plus a `Failed: <message>` row for the step that stopped it.
 
 The script does not set the timesheet template URL or the form customizer's optional properties (`codePattern`, `defaultCountry`, `calendarPageUrl`). Set the template in the web part's property pane ([timesheet-templates.md](timesheet-templates.md)). The form properties go in the content type's `...FormClientSideComponentProperties` as JSON ([package README](../packages/ext-form-customizer/README.md#properties)).
 
@@ -85,14 +98,14 @@ The field customizer reads `OnSiteTargetDays`, `OnSiteUsedDays`, `OffSiteTargetD
 
 ## What is idempotent
 
-Run `-InstallSolutions` as often as you like. On a fully provisioned site, a second run reports `Unchanged` for every row.
+Run `-InstallSolutions` as often as you like. On a fully provisioned site, a second run writes nothing to the solutions, the header, the customizers or the page, and reports `Unchanged` for every row. The list step has its own rules ([README](../infra/provisioning/README.md#idempotency)).
 
-- **Packages.** Each package is uploaded on every run, because comparing the catalog copy is the only way to see its version. The app is then installed only when it is missing, and updated only when the installed version differs. A package older than the installed one is refused before the upload.
+- **Packages.** The installed and catalog versions are read with `Get-PnPApp` and compared with the package file before anything is written. When all three are equal, the package is not uploaded again; only the manifests are checked, read-only. Otherwise it is uploaded, then installed when it is missing or updated when the installed version differs. A package older than the installed one is refused before any upload. After a rebuild that kept the same version, pass `-ForceUpload` to deliver the new files.
 - **Header.** There is exactly one `OrpheusChrome` action. Duplicates are removed (the first one is kept), and outdated properties are updated in place. Properties count as equal when they parse to the same JSON, whatever the key order or spacing.
 - **Field and form customizers.** They are written only when the component id differs.
 - **Calendar page.** It is created only when it is missing. An existing web part is changed only when `useLocalData` or one of the three list ids is missing or wrong (or a label you passed differs). Its other settings, such as the timesheet template or a changed `monthsToShow`, stay as they are.
 
-`-WhatIf` makes no write calls. The only request it sends besides reads is the read-only `GetClientSideComponentsById`. `-Confirm` asks before each write step, and asks again before a clean reinstall.
+The script's `-WhatIf` previews the whole run, list steps included, without signing in or sending any request. The module's `-WhatIf` (above, after `Connect-PnPOnline`) reads the site and sends no write; its only POST is the read-only `GetClientSideComponentsById`. `-Confirm` asks before each write step, and again before a clean reinstall. A step you decline is reported as `Skipped`.
 
 ## Optional
 
@@ -101,13 +114,17 @@ Run `-InstallSolutions` as often as you like. On a fully provisioned site, a sec
 
 ## Upgrading
 
-Build the new versions, then run the script with `-InstallSolutions` again. Each changed package is uploaded and updated (`Updated`), and the bindings stay. If a component's manifest is empty after the update, the script does a clean reinstall by itself (`Reinstalled`; see below).
+Build the new versions, then run the script with `-InstallSolutions` again. Each package with a new version is uploaded and updated (`Updated`), packages with an unchanged version are not touched, and the bindings stay. If a component's manifest is empty after the update, the script does a clean reinstall by itself (`Reinstalled`; see below). If you rebuilt a package without raising its version, add `-ForceUpload`.
 
 ## Troubleshooting
 
-### "This site has no usable site collection App Catalog"
+### "This site has no site collection App Catalog"
 
-The site needs its own App Catalog, and that needs the tenant App Catalog. See [Prerequisites](#prerequisites) for `Register-PnPAppCatalogSite` and `Add-PnPSiteCollectionAppCatalog`. Both need a SharePoint administrator. The error also shows the underlying message, so a sign-in or permission problem shows up there too.
+The site needs its own App Catalog, and that needs the tenant App Catalog. See [Prerequisites](#prerequisites) for `Register-PnPAppCatalogSite` and `Add-PnPSiteCollectionAppCatalog`. Both need a SharePoint administrator. The check runs right after sign-in, so nothing has been written yet.
+
+### "Could not read the site collection App Catalog"
+
+The catalog exists, or its existence could not be checked, but reading it failed, for example with a 403 or throttling. The message is SharePoint's own. Check your permissions on the site and run the script again.
 
 ### "Solution package(s) not found"
 

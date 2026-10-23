@@ -65,10 +65,12 @@ cd infra/provisioning
 With `-InstallSolutions`, the script runs `Invoke-OrpheusSolutionInstall` from
 `OrpheusSolutions.psm1` after the lists and the seed. The steps are:
 
-1. Check that the site has a site collection App Catalog. If it has none, the run stops
-   with the admin commands to create it.
+1. Check that the site has a site collection App Catalog. This runs right after sign-in,
+   before the list steps. If the site has none, the run stops unchanged, with the admin
+   commands to create it.
 2. Install or update `wp-contract-calendar`, `ext-app-customizer`, `ext-field-customizer`
-   and `ext-form-customizer` in the site collection App Catalog. After each one, check that
+   and `ext-form-customizer` in the site collection App Catalog. A package whose version the
+   site already has is not uploaded again. After each one, check that
    every component's manifest is active. If a manifest stays empty, uninstall, remove, add
    and install the package again, cleanly.
 3. Register the `OrpheusChrome` header custom action exactly once.
@@ -82,6 +84,7 @@ With `-InstallSolutions`, the script runs `Invoke-OrpheusSolutionInstall` from
 | `-InstallSolutions` | Run the steps above. |
 | `-SolutionsPath <folder>` | Where the `.sppkg` files are: a checkout (`packages/<name>/sharepoint/solution/<name>.sppkg`) or a flat folder with the four `<name>.sppkg`. Default: this repository. |
 | `-ApprovingOrgLabel`, `-ServiceProviderLabel` | Calendar web part labels. Defaults on a new web part: `Client approval` and `Service provider`. |
+| `-ForceUpload` | Upload the packages even when the site already has their versions. Without it, a re-run uploads nothing for unchanged packages, so use it after a same-version rebuild. |
 
 The script checks the four packages before it signs in, so a missing one stops the run
 before any write. Build them with `.\scripts\podman.ps1 package`. Every step is
