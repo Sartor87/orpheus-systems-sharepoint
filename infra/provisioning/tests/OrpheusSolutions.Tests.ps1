@@ -138,6 +138,13 @@ Describe 'Get-MissingManifests' {
         $missing | Should -BeExactly @('9ec4e23b-5adb-4be5-af3a-85f46fa4fc27')
     }
 
+    It 'returns nothing for an empty id list, without a request' {
+        $missing = Get-MissingManifests -ComponentIds @()
+
+        @($missing).Count | Should -Be 0
+        Should -Invoke -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -Times 0 -Exactly
+    }
+
     It 'returns nothing when every manifest is present' {
         Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Url -eq '/_api/web/GetClientSideComponentsById' } -MockWith {
             New-ComponentsResponse @{ '30930118-2d09-49f4-bdc4-fb2c9b4af49e' = '{"id":"30930118"}' }
@@ -160,15 +167,17 @@ Describe 'Install-OrpheusSolution' {
 
     BeforeEach {
         New-PnPSafetyNet
-        & (Get-Module OrpheusSolutions) { $script:PollIntervalSeconds = 0 }
+        & (Get-Module OrpheusSolutions) { $script:PollIntervalSeconds = 0; $script:ManifestSettleSeconds = 1 }
 
         # A fake site collection App Catalog. Catalog = $null means the app is not in the catalog.
         # Installs and updates finish at once; set $script:Catalog.Stuck to keep InstalledVersion.
         $script:Catalog = @{ Present = $false; AppCatalogVersion = $null; InstalledVersion = $null; Stuck = $false }
         $script:Calls = [System.Collections.Generic.List[string]]::new()
-        # Manifest answers for successive GetClientSideComponentsById calls; the last one repeats.
-        $script:ManifestAnswers = [System.Collections.Generic.List[string]]::new()
-        $script:ManifestAnswers.Add('{"id":"30930118"}')
+        # The fake component manifest. ManifestMode: 'Healthy'; 'BrokenUntilReinstall' (empty until
+        # Remove-PnPApp has run, the live failure); 'AlwaysBroken'. LagPolls: the number of calls that
+        # still answer empty once the manifest would be present (activation lagging the install).
+        $script:ManifestMode = 'Healthy'
+        $script:LagPolls = 0
         $script:ManifestCalls = 0
 
         Mock -ModuleName OrpheusSolutions Get-PnPApp {
@@ -203,9 +212,11 @@ Describe 'Install-OrpheusSolution' {
             $script:Catalog.AppCatalogVersion = $null
         }
         Mock -ModuleName OrpheusSolutions Invoke-PnPSPRestMethod -ParameterFilter { $Url -eq '/_api/web/GetClientSideComponentsById' } -MockWith {
-            $index = [Math]::Min($script:ManifestCalls, $script:ManifestAnswers.Count - 1)
             $script:ManifestCalls++
-            New-ComponentsResponse @{ $script:AppCustomizerId = $script:ManifestAnswers[$index] }
+            $empty = $script:ManifestMode -eq 'AlwaysBroken' -or ($script:ManifestMode -eq 'BrokenUntilReinstall' -and -not $script:Calls.Contains('Remove'))
+            if (-not $empty -and $script:LagPolls -gt 0) { $script:LagPolls--; $empty = $true }
+            $manifest = if ($empty) { '' } else { '{"id":"30930118"}' }
+            New-ComponentsResponse @{ $script:AppCustomizerId = $manifest }
         }
     }
 
@@ -246,27 +257,94 @@ Describe 'Install-OrpheusSolution' {
         $script:Calls -join ',' | Should -BeExactly 'Add,Update'
     }
 
-    It 'reinstalls cleanly when a manifest is empty after the update' {
+    It 'reinstalls cleanly when a manifest stays empty after the update' {
         $script:Catalog.Present = $true
         $script:Catalog.AppCatalogVersion = [version] '1.0.0.0'
         $script:Catalog.InstalledVersion = [version] '1.0.0.0'
-        $script:ManifestAnswers.Insert(0, '')
+        $script:ManifestMode = 'BrokenUntilReinstall'
 
         $result = Install-OrpheusSolution -Path $script:Package
 
         $result.Action | Should -BeExactly 'Reinstalled'
         $script:Calls -join ',' | Should -BeExactly 'Add,Update,Uninstall,Remove,Add,Install'
+        # The settle poll asked more than once before deciding, and once after the reinstall.
+        $script:ManifestCalls | Should -BeGreaterThan 2
+    }
+
+    It 'does not reinstall when the manifest is empty right after the update and then appears' {
+        $script:Catalog.Present = $true
+        $script:Catalog.AppCatalogVersion = [version] '1.0.0.0'
+        $script:Catalog.InstalledVersion = [version] '1.0.0.0'
+        $script:LagPolls = 1
+
+        $result = Install-OrpheusSolution -Path $script:Package
+
+        $result.Action | Should -BeExactly 'Updated'
+        $script:Calls -join ',' | Should -BeExactly 'Add,Update'
         $script:ManifestCalls | Should -Be 2
     }
 
-    It 'throws with the component id when the manifest is still empty after the reinstall' {
+    It 'does not reinstall an unchanged solution whose manifest is briefly empty' {
         $script:Catalog.Present = $true
         $script:Catalog.AppCatalogVersion = [version] '1.0.1.0'
         $script:Catalog.InstalledVersion = [version] '1.0.1.0'
-        $script:ManifestAnswers[0] = ''
+        $script:LagPolls = 1
 
-        { Install-OrpheusSolution -Path $script:Package } | Should -Throw "*$script:AppCustomizerId*"
+        (Install-OrpheusSolution -Path $script:Package).Action | Should -BeExactly 'Unchanged'
+        $script:Calls -join ',' | Should -BeExactly 'Add'
+    }
+
+    It 'succeeds when the manifest is empty right after the reinstall and then appears' {
+        $script:Catalog.Present = $true
+        $script:Catalog.AppCatalogVersion = [version] '1.0.1.0'
+        $script:Catalog.InstalledVersion = [version] '1.0.1.0'
+        $script:ManifestMode = 'BrokenUntilReinstall'
+        $script:LagPolls = 1
+
+        (Install-OrpheusSolution -Path $script:Package).Action | Should -BeExactly 'Reinstalled'
         $script:Calls -join ',' | Should -BeExactly 'Add,Uninstall,Remove,Add,Install'
+    }
+
+    It 'throws with the component id when the manifest stays empty through the reinstall' {
+        $script:Catalog.Present = $true
+        $script:Catalog.AppCatalogVersion = [version] '1.0.1.0'
+        $script:Catalog.InstalledVersion = [version] '1.0.1.0'
+        $script:ManifestMode = 'AlwaysBroken'
+
+        { Install-OrpheusSolution -Path $script:Package } | Should -Throw "*$script:AppCustomizerId*even after a clean reinstall*"
+        $script:Calls -join ',' | Should -BeExactly 'Add,Uninstall,Remove,Add,Install'
+        $script:ManifestCalls | Should -BeGreaterThan 2
+    }
+
+    It 'asks before the clean reinstall and throws without touching the app when it is declined' {
+        $script:Catalog.Present = $true
+        $script:Catalog.AppCatalogVersion = [version] '1.0.1.0'
+        $script:Catalog.InstalledVersion = [version] '1.0.1.0'
+        $script:ManifestMode = 'AlwaysBroken'
+        Mock -ModuleName OrpheusSolutions Test-OrpheusShouldProcess -MockWith { $Cmdlet.ShouldProcess($Target, $Action) }
+        Mock -ModuleName OrpheusSolutions Test-OrpheusShouldProcess -ParameterFilter { $Action -like 'Clean reinstall*' } -MockWith { $false }
+
+        { Install-OrpheusSolution -Path $script:Package } | Should -Throw "*$script:AppCustomizerId*clean reinstall declined*"
+        $script:Calls -join ',' | Should -BeExactly 'Add'
+        Should -Invoke -ModuleName OrpheusSolutions Test-OrpheusShouldProcess -Times 1 -Exactly -ParameterFilter {
+            $Action -like 'Clean reinstall*' -and $Target -like "*$script:SolutionId*"
+        }
+    }
+
+    It 'refuses a package older than the installed version before any upload' {
+        $script:Catalog.Present = $true
+        $script:Catalog.AppCatalogVersion = [version] '1.0.2.0'
+        $script:Catalog.InstalledVersion = [version] '1.0.2.0'
+
+        { Install-OrpheusSolution -Path $script:Package } | Should -Throw '*1.0.2.0*newer than the package 1.0.1.0*'
+        $script:Calls.Count | Should -Be 0
+    }
+
+    It 'refuses a package without component entries before any upload' {
+        $empty = New-Sppkg -Path (Join-Path $TestDrive 'empty.sppkg') -ProductId $script:SolutionId -Version '1.0.1.0'
+
+        { Install-OrpheusSolution -Path $empty } | Should -Throw '*no WebPart_/Extension_ component entries*'
+        $script:Calls.Count | Should -Be 0
     }
 
     It 'throws when an install does not finish within the timeout' {
@@ -297,7 +375,7 @@ Describe 'Install-OrpheusSolution' {
         $script:Catalog.Present = $true
         $script:Catalog.AppCatalogVersion = [version] '1.0.1.0'
         $script:Catalog.InstalledVersion = [version] '1.0.1.0'
-        $script:ManifestAnswers[0] = ''
+        $script:ManifestMode = 'AlwaysBroken'
 
         (Install-OrpheusSolution -Path $script:Package -WhatIf).Action | Should -BeExactly 'Reinstalled'
         $script:Calls.Count | Should -Be 0
@@ -633,7 +711,8 @@ Describe 'Set-OrpheusCalendarPage' {
             $p.contractsListId -ceq 'c0000000-0000-0000-0000-00000000000a' -and
             $p.entriesListId -ceq 'e0000000-0000-0000-0000-00000000000b' -and
             $p.holidaysListId -ceq 'd0000000-0000-0000-0000-00000000000c' -and
-            $p.useLocalData -eq $false -and $p.monthsToShow -eq 0 -and $p.blockWeekends -eq $true -and $p.demoUserId -eq 1 -and
+            $p.useLocalData -is [bool] -and -not $p.useLocalData -and $p.monthsToShow -is [int] -and $p.monthsToShow -eq 0 -and
+            $p.blockWeekends -is [bool] -and $p.blockWeekends -and $p.demoUserId -is [int] -and $p.demoUserId -eq 1 -and
             $p.approvingOrgLabel -eq 'Client approval' -and $p.serviceProviderLabel -eq 'Service provider'
         }
         Should -Invoke -ModuleName OrpheusSolutions Set-PnPPage -Times 1 -Exactly -ParameterFilter { $Identity.Name -eq 'ContractCalendar.aspx' -and $Publish }
@@ -674,11 +753,13 @@ Describe 'Set-OrpheusCalendarPage' {
         Should -Invoke -ModuleName OrpheusSolutions Set-PnPPageWebPart -Times 1 -Exactly -ParameterFilter {
             $p = $PropertiesJson | ConvertFrom-Json
             $Page.Name -eq 'ContractCalendar.aspx' -and $Identity.InstanceId -eq $script:InstanceId -and
-            $p.timesheetTemplateUrl -eq 'x' -and $p.monthsToShow -eq 3 -and $p.useLocalData -eq $false -and
+            $p.timesheetTemplateUrl -ceq 'x' -and $p.monthsToShow -is [long] -and $p.monthsToShow -eq 3 -and
+            $p.useLocalData -is [bool] -and -not $p.useLocalData -and
             $p.contractsListId -ceq 'c0000000-0000-0000-0000-00000000000a' -and
             $p.entriesListId -ceq 'e0000000-0000-0000-0000-00000000000b' -and
             $p.holidaysListId -ceq 'd0000000-0000-0000-0000-00000000000c' -and
-            $p.blockWeekends -eq $true -and $p.demoUserId -eq 1 -and $p.approvingOrgLabel -eq 'Client approval'
+            $p.blockWeekends -is [bool] -and $p.blockWeekends -and $p.demoUserId -is [long] -and $p.demoUserId -eq 1 -and
+            $p.approvingOrgLabel -ceq 'Client approval'
         }
         Should -Invoke -ModuleName OrpheusSolutions Set-PnPPage -Times 1 -Exactly -ParameterFilter { $Publish }
         Should -Invoke -ModuleName OrpheusSolutions Add-PnPPage -Times 0 -Exactly

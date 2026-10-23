@@ -33,6 +33,10 @@ $ErrorActionPreference = 'Stop'
 # Seconds between two polls of an asynchronous App Catalog operation. Tests set it to 0.
 $script:PollIntervalSeconds = 5
 
+# Seconds to keep polling an empty component manifest before treating it as broken. Activation can
+# lag the install, so a single empty answer is not enough. Tests set it to 1.
+$script:ManifestSettleSeconds = 60
+
 # Fixed component ids from the SPFx manifests. Never change them: SharePoint binds by id.
 $script:AppCustomizerId = '30930118-2d09-49f4-bdc4-fb2c9b4af49e'
 $script:FieldCustomizerId = 'a7721b49-8c3e-48c7-ac67-69408fcc6a03'
@@ -169,8 +173,9 @@ function Get-MissingManifests {
     #>
     [CmdletBinding()]
     [OutputType([string[]])]
-    param([Parameter(Mandatory)] [string[]] $ComponentIds)
+    param([Parameter(Mandatory)] [AllowEmptyCollection()] [string[]] $ComponentIds)
 
+    if (-not $ComponentIds.Count) { return [string[]] @() }
     $ids = [string[]] @($ComponentIds | ForEach-Object { ConvertTo-NormalizedId $_ })
     $response = Invoke-OrpheusRest -Method Post -Url '/_api/web/GetClientSideComponentsById' -Body @{ componentIds = $ids }
     $active = @{}
@@ -203,6 +208,28 @@ function Wait-OrpheusCondition {
     }
 }
 
+function Wait-OrpheusManifests {
+    # Polls Get-MissingManifests every $script:PollIntervalSeconds until nothing is missing or
+    # $TimeoutSeconds pass, and returns the ids still missing then. It does not throw: the caller
+    # decides. A healthy package returns on the first call.
+    param(
+        [Parameter(Mandatory)] [string[]] $ComponentIds,
+        [Parameter(Mandatory)] [int] $TimeoutSeconds
+    )
+    $clock = [System.Diagnostics.Stopwatch]::StartNew()
+    while ($true) {
+        $missing = @(Get-MissingManifests -ComponentIds $ComponentIds)
+        if (-not $missing.Count -or $clock.Elapsed.TotalSeconds -ge $TimeoutSeconds) { return [string[]] $missing }
+        Start-Sleep -Seconds $script:PollIntervalSeconds
+    }
+}
+
+function Test-OrpheusShouldProcess {
+    # $Cmdlet.ShouldProcess behind a function, so the tests can decline one step.
+    param([Parameter(Mandatory)] $Cmdlet, [Parameter(Mandatory)] [string] $Target, [Parameter(Mandatory)] [string] $Action)
+    return $Cmdlet.ShouldProcess($Target, $Action)
+}
+
 function Get-OrpheusApp {
     # The site collection App Catalog entry for a solution id, or $null. Get-PnPApp -Identity throws
     # for a missing app, so list the catalog and filter.
@@ -227,9 +254,15 @@ function Install-OrpheusSolution {
         2. Installs it when it is not installed, updates it when the installed version differs from
            the catalog version, and otherwise does nothing.
         3. Waits until the installed version matches the catalog version.
-        4. Checks the client-side manifests. When one is empty, it does a clean reinstall:
-           uninstall, wait, remove from the catalog, upload, install, wait, and checks again. It
-           throws with the component ids when a manifest is still empty.
+        4. Checks the client-side manifests, polling for up to $script:ManifestSettleSeconds (60 s)
+           because activation can lag the install. When one stays empty, it does a clean reinstall
+           behind its own ShouldProcess: uninstall, wait, remove from the catalog, upload, install,
+           wait, and polls again. It throws with the component ids when a manifest is still empty,
+           or when the reinstall is declined.
+        It throws before any upload when the package has no component entries, or when the installed
+        or catalog version is newer than the package (a downgrade).
+        Remove-PnPApp removes the package from the site collection App Catalog, so a clean reinstall
+        also breaks the app on any other web of the site collection where it is installed.
         With -WhatIf it only reads the catalog and the manifests and returns the planned action.
     .OUTPUTS
         [pscustomobject] with Title, Version and Action ('Unchanged', 'Installed', 'Updated' or
@@ -243,9 +276,17 @@ function Install-OrpheusSolution {
     )
 
     $info = Read-SppkgInfo -Path $Path
+    if (-not $info.ComponentIds.Count) { throw "$Path`: no WebPart_/Extension_ component entries found, so the manifests cannot be checked." }
     $id = $info.SolutionId
     $app = Get-OrpheusApp -SolutionId $id
     $title = if ($app) { [string] $app.Title } else { [System.IO.Path]::GetFileNameWithoutExtension($Path) }
+    if ($app) {
+        foreach ($existing in @([string] $app.InstalledVersion, [string] $app.AppCatalogVersion)) {
+            if ($existing -and [version] $existing -gt [version] $info.Version) {
+                throw "$title ($id): version $existing in the site is newer than the package $($info.Version). Refusing to downgrade; build the current package."
+            }
+        }
+    }
 
     # The plan from the current state. The catalog copy is replaced by the upload, so an installed
     # app counts as current when its installed version equals the package version.
@@ -257,7 +298,7 @@ function Install-OrpheusSolution {
     $result = [pscustomobject]@{ Title = $title; Version = $info.Version; Action = $action }
 
     $verb = @{ Installed = 'install'; Updated = 'update to'; Unchanged = 'keep'; Reinstalled = 'reinstall' }[$action]
-    if (-not $PSCmdlet.ShouldProcess("$title $($info.Version) ($id)", "Upload to the site collection App Catalog and $verb")) {
+    if (-not (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target "$title $($info.Version) ($id)" -Action "Upload to the site collection App Catalog and $verb")) {
         return $result
     }
 
@@ -285,10 +326,15 @@ function Install-OrpheusSolution {
     }
     & $waitInstalled
 
-    $missing = @(Get-MissingManifests -ComponentIds $info.ComponentIds)
+    $missing = @(Wait-OrpheusManifests -ComponentIds $info.ComponentIds -TimeoutSeconds $script:ManifestSettleSeconds)
     if ($missing.Count) {
         # The live failure: the app reports installed, but a component has no manifest. Only a clean
-        # reinstall fixed it.
+        # reinstall fixed it. It is the most destructive step, so it asks on its own.
+        $reinstallTarget = "$title $($info.Version) ($id)"
+        $reinstallAction = "Clean reinstall (no active manifest for $($missing -join ', ')): uninstall, remove from the site collection App Catalog, upload and install"
+        if (-not (Test-OrpheusShouldProcess -Cmdlet $PSCmdlet -Target $reinstallTarget -Action $reinstallAction)) {
+            throw "$reinstallTarget`: Component manifest missing for $($missing -join ', '); clean reinstall declined."
+        }
         Write-Warning "$title`: no active manifest for $($missing -join ', '); reinstalling cleanly."
         Uninstall-PnPApp -Identity ([guid] $id) -Scope Site
         Wait-OrpheusCondition -Description "$title to be uninstalled" -TimeoutSeconds $TimeoutSeconds -Condition {
@@ -301,7 +347,7 @@ function Install-OrpheusSolution {
         & $waitInstalled
         $result.Action = 'Reinstalled'
 
-        $missing = @(Get-MissingManifests -ComponentIds $info.ComponentIds)
+        $missing = @(Wait-OrpheusManifests -ComponentIds $info.ComponentIds -TimeoutSeconds $script:ManifestSettleSeconds)
         if ($missing.Count) {
             throw "$title $($info.Version) ($id): no active manifest for component(s) $($missing -join ', ') even after a clean reinstall. Check the package and the App Catalog."
         }
