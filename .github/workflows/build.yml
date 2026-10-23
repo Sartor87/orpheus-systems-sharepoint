@@ -1,0 +1,85 @@
+# Reusable pipeline: hygiene, build, test, typecheck, production package, PowerShell tests.
+# Called by ci.yml (push / pull request) and release.yml (tags). See docs/ci.md.
+name: build
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: Build, test, package
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Same image as the dev containers, so Node, npm and Heft match local runs.
+    container:
+      image: docker.io/m365pnp/spfx:1.23.2
+      # The image defaults to user `spfx`; checkout and cache write to runner-owned paths.
+      options: --user root
+    env:
+      # The runner has more memory than the shared Podman VM; production webpack needs it.
+      NODE_OPTIONS: --max-old-space-size=3072
+      npm_config_cache: /github/home/.npm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trust the workspace for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # Before npm ci: it needs only git and node, and a leak should fail fast.
+      - name: Hygiene
+        run: npm run hygiene
+
+      - uses: actions/cache@v4
+        with:
+          path: /github/home/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: npm-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      - name: Build shared packages
+        run: npm run build:shared
+
+      - name: Typecheck MCP server
+        run: npm run typecheck
+
+      # Before the tests: Heft generates the *.module.scss typings (temp/sass-ts) that
+      # ts-jest needs in wp-contract-calendar. On a clean checkout they do not exist yet.
+      - name: Package SPFx solutions (production)
+        run: npm run package:solutions
+
+      - name: Test
+        run: npm run test:all
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sppkg
+          path: packages/*/sharepoint/solution/*.sppkg
+          if-no-files-found: error
+          retention-days: 14
+
+  powershell:
+    name: PowerShell tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      # PnP.PowerShell is only loaded for #Requires; every cmdlet is faked, nothing reaches a tenant.
+      - name: Install modules
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module PnP.PowerShell -MinimumVersion 3.0.0 -MaximumVersion 3.999.999 -Scope CurrentUser -Force
+          if (-not (Get-Module Pester -ListAvailable | Where-Object Version -ge '5.5.0')) {
+            Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck
+          }
+
+      - name: Run tests
+        run: ./scripts/ci/run-pester.ps1
