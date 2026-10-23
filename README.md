@@ -31,29 +31,25 @@ It is built with the SharePoint Framework (SPFx 1.23.2) as an npm-workspaces mon
 - Role-aware: contractors see their own contracts, contract managers the contracts they manage, site owners all of them.
 - Runs on demo data in a debug build, with a switch between demo users, so it can be tried without creating any list.
 
-<!-- screenshots pending:
 | Range selection | Overlapping contracts | Timesheet |
 |---|---|---|
 | ![Range drag](docs/screenshots/02-calendar-range-drag.png) | ![Which contract? dialog](docs/screenshots/03-overlap-dialog.png) | ![Timesheet dialog](docs/screenshots/04-timesheet-dialog.png) |
--->
 
-<!-- screenshot pending: ![First page of a generated timesheet](docs/screenshots/05-timesheet-pdf.png) -->
+![First page of a generated timesheet](docs/screenshots/05-timesheet-pdf.png)
 
 ### Header and footer (application customizer)
 
 An Orpheus header with a role-aware menu (My calendar · Contracts · Holidays) that collapses into a dropdown below 640 px, and a footer with contact and version.
 
-<!-- screenshots pending:
 | Header and footer | Compact menu |
 |---|---|
 | ![Header and footer](docs/screenshots/06-header-footer.png) | ![Compact menu](docs/screenshots/07-header-compact-menu.png) |
--->
 
 ### Remaining-days bars (field customizer)
 
 On the Contracts list, the `RemainingDays` column shows two compact bars per contract: on-site and off-site days left, or over.
 
-<!-- screenshot pending: ![Remaining-days bars on the Contracts list](docs/screenshots/08-remaining-days-bars.png) -->
+![Remaining-days bars on the Contracts list](docs/screenshots/08-remaining-days-bars.png)
 
 ### Contract form (form customizer)
 
