@@ -23,7 +23,7 @@ jobs:
       NODE_OPTIONS: --max-old-space-size=3072
       npm_config_cache: /github/home/.npm
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Trust the workspace for git
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -70,7 +70,7 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # PnP.PowerShell is only loaded for #Requires; every cmdlet is faked, nothing reaches a tenant.
       - name: Install modules
